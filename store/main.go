@@ -252,10 +252,27 @@ func main() {
 	// Register the client to the group
 	clientPath := groupPath + "/client-"
 
+	exists, _, err := conn.Exists(groupPath)
+	if err != nil {
+		log.Fatalf("Failed to check if group exists: %v", err)
+		return
+	}
+
+	// Create the group path if it does not exist
+	if !exists {
+		_, err := conn.Create(groupPath, []byte{}, 0, zk.WorldACL(zk.PermAll))
+		if err != nil {
+			log.Fatalf("Failed to create group: %v", err)
+			return
+		}
+	}
+
 	serverIP, err = getIPAddress()
 	if err != nil {
 		log.Fatalf("Get Ip address error: %v", err)
 	}
+
+	fmt.Println("serverIP:", serverIP)
 
 	data := []byte(serverIP)
 	_, err = conn.CreateProtectedEphemeralSequential(clientPath, data, zk.WorldACL(zk.PermAll))
@@ -267,8 +284,6 @@ func main() {
 
 	// Watch for changes in the group
 	go watchNodes(conn, groupPath)
-
-	fmt.Println("SessionID:", conn.State().String())
 
 	// // Get the server ID from ZooKeeper
 	// serverIDPath := "/server/id"

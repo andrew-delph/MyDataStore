@@ -1,5 +1,5 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
-load("@io_bazel_rules_docker//container:container.bzl", "container_image")
+load("@io_bazel_rules_docker//container:container.bzl", "container_image", "container_push")
 load("@io_bazel_rules_docker//go:image.bzl", "go_image")
 
 go_library(
@@ -39,11 +39,11 @@ container_image(
     # repository = "us-central1-docker.pkg.dev/builder-project/repo1/greeter_server",
 )
 
-# container_push(
-#     name = "image_push",
-#     format = "Docker",
-#     image = ":greeter_server_image",
-#     registry = "ghcr.io",
-#     repository = "andrew-delph/video-call-data-service",
-#     tag = "latest",
-# )
+container_push(
+    name = "image_push",
+    format = "Docker",
+    image = ":store_image",
+    registry = "ghcr.io",
+    repository = "andrew-delph/my-key-store",
+    tag = "latest",
+)

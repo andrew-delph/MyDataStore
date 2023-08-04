@@ -7,9 +7,11 @@ export let options = {
   duration: "30s",
 };
 
+const address = "192.168.49.2:30000"; // localhost:80
+
 export default function () {
   // Add a value to the map
-  let serverRes = http.get(`http://localhost:80`);
+  let serverRes = http.get(`http://${address}`);
 
   console.log("serverRes:", serverRes.body);
 
@@ -18,16 +20,16 @@ export default function () {
   const value = randomString(5);
 
   // Add a value to the map
-  let addRes = http.get(`http://localhost:80/add?key=${key}&value=${value}`);
+  let addRes = http.get(`http://${address}/add?key=${key}&value=${value}`);
 
   check(addRes, {
-    "Add: status was 200": (r) => r.status === 200,
+    "Base: status was 200": (r) => r.status === 200,
   });
 
   console.log("addRes:", addRes.body);
 
   // Get a value from the map
-  let getRes = http.get(`http://localhost:80/get?key=${key}`);
+  let getRes = http.get(`http://${address}/get?key=${key}`);
   check(getRes, {
     "Get: status was 200": (r) => r.status === 200,
     "Get: body contains testValue": (r) => r.body.indexOf(value) !== -1,
@@ -35,7 +37,7 @@ export default function () {
   console.log("getRes:", getRes.body);
 
   // // List all values from the map
-  // let listRes = http.get(`http://localhost:80/list`);
+  // let listRes = http.get(`http://${address}/list`);
 
   // console.log("listRes:", listRes.body);
   // check(listRes, {
