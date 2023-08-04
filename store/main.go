@@ -71,18 +71,27 @@ func baseHandler(w http.ResponseWriter, r *http.Request) {
 // 	}
 // }
 
-func watchGroup(conn *zk.Conn, path string) {
+func watchNodes(conn *zk.Conn, path string) {
 	for {
 		children, _, watchChannel, err := conn.ChildrenW(path)
 		if err != nil {
-			log.Fatalf("Failed to list children for group %s: %v", path, err)
+			log.Fatalf("Failed to list children for path %s: %v", path, err)
 			return
 		}
-		log.Printf("Group members: %v", children)
 
-		// Wait for changes in the group
+		for _, child := range children {
+			childPath := path + "/" + child
+			data, _, err := conn.Get(childPath)
+			if err != nil {
+				log.Printf("Failed to get data for child %s: %v", childPath, err)
+				continue
+			}
+			fmt.Printf("Node: %s, Data: %s\n", child, string(data))
+		}
+
+		// Wait for changes in the node
 		<-watchChannel
-		log.Println("Group membership has changed!")
+		log.Println("Node membership has changed!")
 	}
 }
 
@@ -133,7 +142,7 @@ func main() {
 	log.Println("Successfully registered to the key-store group!")
 
 	// Watch for changes in the group
-	go watchGroup(conn, groupPath)
+	go watchNodes(conn, groupPath)
 
 	// Start the http server
 	rand.Seed(time.Now().UnixNano())
