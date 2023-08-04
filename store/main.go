@@ -86,7 +86,8 @@ func watchGroup(conn *zk.Conn, path string) {
 }
 
 func main() {
-	log.Println("STARTING STARTING STARTING STARTING STARTING ")
+	log.Println("STARTING STARTING STARTING STARTING STARTING")
+
 	servers := []string{"zookeeper:2181"}
 	conn, _, err := zk.Connect(servers, time.Second)
 	if err != nil {
@@ -111,6 +112,16 @@ func main() {
 	// Start the http server
 	rand.Seed(time.Now().UnixNano())
 	serverID = fmt.Sprintf("Server-%d", rand.Int())
+
+	fmt.Println("SessionID:", conn.SessionID())
+
+	// // Get the server ID from ZooKeeper
+	// serverIDPath := "/server/id"
+	// serverIDBytes, _, err := conn.Get(serverIDPath)
+	// if err != nil {
+	// 	log.Fatalf("Failed to get server ID from ZooKeeper: %v", err)
+	// }
+	// serverID = string(serverIDBytes)
 
 	http.HandleFunc("/", baseHandler)
 

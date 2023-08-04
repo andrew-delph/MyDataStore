@@ -9,6 +9,15 @@ services:
       ZOO_PORT: 2181
       ALLOW_ANONYMOUS_LOGIN: "yes"
 
+  zoonavigator:
+    image: elkozmon/zoonavigator
+    environment:
+      CONNECTION_MYZK_CONN: "zookeeper:2181"
+      AUTO_CONNECT_CONNECTION_ID: "MYZK"
+    ports:
+      - 9000:9000
+    restart: always
+
   store:
     image: docker.io/andrew-delph/store:store_image
     scale: 2
