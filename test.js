@@ -1,9 +1,10 @@
+import { sleep } from "k6";
 import http from "k6/http";
 import { check } from "k6";
 import { randomString } from "https://jslib.k6.io/k6-utils/1.2.0/index.js";
 
 export let options = {
-  vus: 10,
+  vus: 100,
   duration: "30s",
 };
 
@@ -27,6 +28,8 @@ export default function () {
   });
 
   console.log("addRes:", addRes.body);
+
+  sleep(20);
 
   // Get a value from the map
   let getRes = http.get(`http://${address}/get?key=${key}`);
