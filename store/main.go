@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"math/rand"
 	"net"
 	"net/http"
 	"time"
@@ -44,32 +43,17 @@ func listValues() map[string]string {
 
 // HTTP handler for listing all values
 func listHandler(w http.ResponseWriter, r *http.Request) {
-	values := listValues()
-	json.NewEncoder(w).Encode(values)
+	// values := listValues()
+	json.NewEncoder(w).Encode(nodeData)
 }
-
-var serverID string
 
 func baseHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Server ID: %s\n", serverID)
+	fmt.Fprintf(w, "Server ID: %s\n", serverIP)
 }
 
-// func main() {
+var nodeData = make(map[string]string)
 
-// 	rand.Seed(time.Now().UnixNano())
-// 	serverID = fmt.Sprintf("Server-%d", rand.Int())
-
-// 	http.HandleFunc("/", baseHandler)
-
-// 	http.HandleFunc("/add", addHandler)
-// 	http.HandleFunc("/get", getHandler)
-// 	http.HandleFunc("/list", listHandler)
-
-// 	fmt.Println("Server is running on port 8080...")
-// 	if err := http.ListenAndServe(":8080", nil); err != nil {
-// 		panic(err)
-// 	}
-// }
+var serverIP string
 
 func watchNodes(conn *zk.Conn, path string) {
 	for {
@@ -79,6 +63,9 @@ func watchNodes(conn *zk.Conn, path string) {
 			return
 		}
 
+		// Temporary map to track current children
+		currentChildren := make(map[string]bool)
+
 		for _, child := range children {
 			childPath := path + "/" + child
 			data, _, err := conn.Get(childPath)
@@ -86,12 +73,21 @@ func watchNodes(conn *zk.Conn, path string) {
 				log.Printf("Failed to get data for child %s: %v", childPath, err)
 				continue
 			}
-			fmt.Printf("Node: %s, Data: %s\n", child, string(data))
+
+			// Store child data in the global map
+			nodeData[child] = string(data)
+			currentChildren[child] = true
+		}
+
+		// Remove data for nodes that no longer exist
+		for key := range nodeData {
+			if !currentChildren[key] {
+				delete(nodeData, key)
+			}
 		}
 
 		// Wait for changes in the node
 		<-watchChannel
-		log.Println("Node membership has changed!")
 	}
 }
 
@@ -128,12 +124,12 @@ func main() {
 	// Register the client to the group
 	clientPath := groupPath + "/client-"
 
-	myIp, err := getIPAddress()
+	serverIP, err := getIPAddress()
 	if err != nil {
 		log.Fatalf("Get Ip address error: %v", err)
 	}
 
-	data := []byte(myIp)
+	data := []byte(serverIP)
 	_, err = conn.CreateProtectedEphemeralSequential(clientPath, data, zk.WorldACL(zk.PermAll))
 	if err != nil {
 		log.Fatalf("Unable to register client to the group: %v", err)
@@ -143,10 +139,6 @@ func main() {
 
 	// Watch for changes in the group
 	go watchNodes(conn, groupPath)
-
-	// Start the http server
-	rand.Seed(time.Now().UnixNano())
-	serverID = fmt.Sprintf("Server-%d", rand.Int())
 
 	fmt.Println("SessionID:", conn.State().String())
 
