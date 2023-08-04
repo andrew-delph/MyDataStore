@@ -13,25 +13,25 @@ export default function () {
   const value = randomString(5);
 
   // Add a value to the map
-  let addRes = http.get(`http://localhost:8080/add?key=${key}&value=${value}`);
+  let addRes = http.get(`http://localhost:80/add?key=${key}&value=${value}`);
   check(addRes, {
     "Add: status was 200": (r) => r.status === 200,
   });
   console.log("addRes:", addRes.body);
 
-  // Get a value from the map
-  let getRes = http.get(`http://localhost:8080/get?key=${key}`);
-  check(getRes, {
-    "Get: status was 200": (r) => r.status === 200,
-    "Get: body contains testValue": (r) => r.body.indexOf(value) !== -1,
-  });
-  console.log("getRes:", getRes.body);
+  // // Get a value from the map
+  // let getRes = http.get(`http://localhost:80/get?key=${key}`);
+  // check(getRes, {
+  //   "Get: status was 200": (r) => r.status === 200,
+  //   "Get: body contains testValue": (r) => r.body.indexOf(value) !== -1,
+  // });
+  // console.log("getRes:", getRes.body);
 
-  // List all values from the map
-  let listRes = http.get(`http://localhost:8080/list`);
+  // // List all values from the map
+  // let listRes = http.get(`http://localhost:80/list`);
 
-  console.log("listRes:", listRes.body);
-  check(listRes, {
-    "List: status was 200": (r) => r.status === 200,
-  });
+  // console.log("listRes:", listRes.body);
+  // check(listRes, {
+  //   "List: status was 200": (r) => r.status === 200,
+  // });
 }

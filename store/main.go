@@ -8,11 +8,56 @@ import (
 	"net/http"
 	"time"
 
+	"crypto/sha1"
+	"encoding/hex"
+	"sort"
+
 	"github.com/go-zookeeper/zk"
 )
 
 // Global map
 var myMap = map[string]string{}
+
+func hashKey(key string) string {
+	hasher := sha1.New()
+	hasher.Write([]byte(key))
+	return hex.EncodeToString(hasher.Sum(nil))
+}
+
+func getNodeForKey(key string) string {
+	// Create a sorted slice of hashed node keys
+	var hashedNodes []string
+	for node := range nodeData {
+		hashedNodes = append(hashedNodes, hashKey(node))
+	}
+	sort.Strings(hashedNodes)
+
+	// Hash the input key
+	hashedKey := hashKey(key)
+
+	// Find the smallest hashed node key that is greater than or equal to the hashed input key
+	for _, hashedNode := range hashedNodes {
+		if hashedNode >= hashedKey {
+			// Return the corresponding node data
+			for node, _ := range nodeData {
+				if hashKey(node) == hashedNode {
+					return nodeData[node]
+				}
+			}
+		}
+	}
+
+	// If no such hashed node key is found, wrap around to the first node
+	if len(hashedNodes) > 0 {
+		for node, _ := range nodeData {
+			if hashKey(node) == hashedNodes[0] {
+				return nodeData[node]
+			}
+		}
+	}
+
+	return "" // Return an empty string or an error if no suitable node is found
+}
 
 func addValue(key, value string) {
 	myMap[key] = value
@@ -23,7 +68,11 @@ func addHandler(w http.ResponseWriter, r *http.Request) {
 	key := r.URL.Query().Get("key")
 	value := r.URL.Query().Get("value")
 	addValue(key, value)
-	fmt.Fprintf(w, "Added %s: %s to the map", key, value)
+	node := getNodeForKey(key)
+
+	log.Printf("Added %s: %s to the map on node %s\n", key, value, node)
+
+	fmt.Fprintf(w, "Added %s: %s to the map on node %s\n", key, value, node)
 }
 
 func getValue(key string) string {
@@ -111,10 +160,6 @@ func getIPAddress() (string, error) {
 	}
 
 	return "", fmt.Errorf("No IPv4 address found")
-}
-
-func hashRing(key string) (string, error) {
-	return "", fmt.Errorf("hashRing Error")
 }
 
 func main() {
