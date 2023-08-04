@@ -3,9 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
+	"sync"
 	"time"
 
 	"crypto/sha1"
@@ -15,8 +17,22 @@ import (
 	"github.com/go-zookeeper/zk"
 )
 
-// Global map
-var myMap = map[string]string{}
+var myMap sync.Map
+
+func set(key string, value string) {
+	myMap.Store(key, value)
+}
+
+func get(key string) (string, bool) {
+	if value, ok := myMap.Load(key); ok {
+		return value.(string), true
+	}
+	return "", false
+}
+
+var nodeData = make(map[string]string)
+
+var serverIP string
 
 func hashKey(key string) string {
 	hasher := sha1.New()
@@ -60,34 +76,66 @@ func getNodeForKey(key string) string {
 }
 
 func addValue(key, value string) {
-	myMap[key] = value
+	set(key, value)
+}
+
+func addRequest(ip, key, value string) {
+	url := fmt.Sprintf("http://%s:8080/add?key=%s&value=%s&local=true", ip, key, value)
+
+	// fmt.Println("addRequest URL", url)
+
+	// Creating a GET request
+	resp, err := http.Get(url)
+	if err != nil {
+		log.Fatalf("Failed to make the request: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Reading the response body
+	_, err = io.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalf("Failed to read the response body: %v", err)
+		return
+	}
+
+	// // Printing the response
+	// fmt.Println("HTTP Status Code:", resp.StatusCode)
+	// fmt.Println("Response Body:", string(body))
 }
 
 // HTTP handler for adding a value
 func addHandler(w http.ResponseWriter, r *http.Request) {
 	key := r.URL.Query().Get("key")
 	value := r.URL.Query().Get("value")
-	addValue(key, value)
-	node := getNodeForKey(key)
+	local := r.URL.Query().Get("local")
+	log.Printf("TO ADD %s:%s LOCAL=%s\n", key, value, local)
+	if local == "true" {
+		addValue(key, value)
+		fmt.Fprintf(w, "Added %s: %s to the map on LOCAL", key, value)
 
-	log.Printf("Added %s: %s to the map on node %s\n", key, value, node)
+	} else {
+		node := getNodeForKey(key)
 
-	fmt.Fprintf(w, "Added %s: %s to the map on node %s\n", key, value, node)
-}
-
-func getValue(key string) string {
-	return myMap[key]
+		addRequest(node, key, value)
+		fmt.Fprintf(w, "Added %s: %s to the map on %s", key, value, node)
+	}
 }
 
 // HTTP handler for getting a value
 func getHandler(w http.ResponseWriter, r *http.Request) {
 	key := r.URL.Query().Get("key")
-	value := getValue(key)
-	fmt.Fprintf(w, "Value for %s: %s", key, value)
+	value, exists := get(key)
+	fmt.Fprintf(w, "Value for %s: %s %b", key, value, exists)
 }
 
 func listValues() map[string]string {
-	return myMap
+	regularMap := make(map[string]string)
+	myMap.Range(func(key, value interface{}) bool {
+		regularMap[key.(string)] = value.(string)
+		return true
+	})
+	return regularMap
 }
 
 // HTTP handler for listing all values
@@ -103,10 +151,6 @@ func nodesHandler(w http.ResponseWriter, r *http.Request) {
 func baseHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Server ID: %s\n", serverIP)
 }
-
-var nodeData = make(map[string]string)
-
-var serverIP string
 
 func watchNodes(conn *zk.Conn, path string) {
 	for {
@@ -177,7 +221,7 @@ func main() {
 	// Register the client to the group
 	clientPath := groupPath + "/client-"
 
-	serverIP, err := getIPAddress()
+	serverIP, err = getIPAddress()
 	if err != nil {
 		log.Fatalf("Get Ip address error: %v", err)
 	}

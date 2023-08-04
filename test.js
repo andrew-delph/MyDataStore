@@ -3,20 +3,27 @@ import { check } from "k6";
 import { randomString } from "https://jslib.k6.io/k6-utils/1.2.0/index.js";
 
 export let options = {
-  // vus: 10, // 10 virtual users
-  // duration: "30s", // 30-second test
+  vus: 10, // 10 virtual users
+  duration: "30s", // 30-second test
 };
 
 export default function () {
+  // Add a value to the map
+  let serverRes = http.get(`http://localhost:80`);
+
+  console.log("serverRes:", serverRes.body);
+
   // the key value to insert
   const key = randomString(5);
   const value = randomString(5);
 
   // Add a value to the map
   let addRes = http.get(`http://localhost:80/add?key=${key}&value=${value}`);
+
   check(addRes, {
     "Add: status was 200": (r) => r.status === 200,
   });
+
   console.log("addRes:", addRes.body);
 
   // // Get a value from the map
