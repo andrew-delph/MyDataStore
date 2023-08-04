@@ -43,7 +43,11 @@ func listValues() map[string]string {
 
 // HTTP handler for listing all values
 func listHandler(w http.ResponseWriter, r *http.Request) {
-	// values := listValues()
+	values := listValues()
+	json.NewEncoder(w).Encode(values)
+}
+
+func nodesHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(nodeData)
 }
 
@@ -109,6 +113,10 @@ func getIPAddress() (string, error) {
 	return "", fmt.Errorf("No IPv4 address found")
 }
 
+func hashRing(key string) (string, error) {
+	return "", fmt.Errorf("hashRing Error")
+}
+
 func main() {
 	log.Println("STARTING STARTING STARTING STARTING STARTING")
 
@@ -155,6 +163,7 @@ func main() {
 	http.HandleFunc("/add", addHandler)
 	http.HandleFunc("/get", getHandler)
 	http.HandleFunc("/list", listHandler)
+	http.HandleFunc("/nodes", nodesHandler)
 
 	fmt.Println("Server is running on port 8080...")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
