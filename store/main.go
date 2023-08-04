@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"net"
 	"net/http"
 	"time"
 
@@ -85,6 +86,24 @@ func watchGroup(conn *zk.Conn, path string) {
 	}
 }
 
+func getIPAddress() (string, error) {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return "", err
+	}
+
+	for _, address := range addrs {
+		// check the address type and if it is not a loopback, return the IP
+		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String(), nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("No IPv4 address found")
+}
+
 func main() {
 	log.Println("STARTING STARTING STARTING STARTING STARTING")
 
@@ -99,7 +118,14 @@ func main() {
 
 	// Register the client to the group
 	clientPath := groupPath + "/client-"
-	_, err = conn.CreateProtectedEphemeralSequential(clientPath, []byte{}, zk.WorldACL(zk.PermAll))
+
+	myIp, err := getIPAddress()
+	if err != nil {
+		log.Fatalf("Get Ip address error: %v", err)
+	}
+
+	data := []byte(myIp)
+	_, err = conn.CreateProtectedEphemeralSequential(clientPath, data, zk.WorldACL(zk.PermAll))
 	if err != nil {
 		log.Fatalf("Unable to register client to the group: %v", err)
 	}
@@ -113,7 +139,7 @@ func main() {
 	rand.Seed(time.Now().UnixNano())
 	serverID = fmt.Sprintf("Server-%d", rand.Int())
 
-	fmt.Println("SessionID:", conn.SessionID())
+	fmt.Println("SessionID:", conn.State().String())
 
 	// // Get the server ID from ZooKeeper
 	// serverIDPath := "/server/id"
