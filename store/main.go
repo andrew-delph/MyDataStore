@@ -150,7 +150,7 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 
 	if local == "true" {
 		value, exists := get(key)
-		if exists == true {
+		if exists {
 			fmt.Fprintf(w, "Value for %s: %s", key, value)
 
 		} else {
@@ -159,7 +159,6 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 
 	} else {
 		node := getNodeForKey(key)
-
 		response := getRequest(node, key)
 		fmt.Fprint(w, response)
 	}

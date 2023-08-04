@@ -17,10 +17,10 @@ export let options = {
       executor: "constant-arrival-rate",
       rate: 100,
       preAllocatedVUs: 10,
-      maxVUs: 100,
+      maxVUs: 1000,
       exec: "default",
       startTime: "0s", // give time for the agents to be installed
-      duration: "60s",
+      duration: "1m",
     },
   },
 };
