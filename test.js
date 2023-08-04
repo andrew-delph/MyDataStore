@@ -3,8 +3,8 @@ import { check } from "k6";
 import { randomString } from "https://jslib.k6.io/k6-utils/1.2.0/index.js";
 
 export let options = {
-  vus: 10, // 10 virtual users
-  duration: "30s", // 30-second test
+  vus: 10,
+  duration: "30s",
 };
 
 export default function () {
@@ -26,13 +26,13 @@ export default function () {
 
   console.log("addRes:", addRes.body);
 
-  // // Get a value from the map
-  // let getRes = http.get(`http://localhost:80/get?key=${key}`);
-  // check(getRes, {
-  //   "Get: status was 200": (r) => r.status === 200,
-  //   "Get: body contains testValue": (r) => r.body.indexOf(value) !== -1,
-  // });
-  // console.log("getRes:", getRes.body);
+  // Get a value from the map
+  let getRes = http.get(`http://localhost:80/get?key=${key}`);
+  check(getRes, {
+    "Get: status was 200": (r) => r.status === 200,
+    "Get: body contains testValue": (r) => r.body.indexOf(value) !== -1,
+  });
+  console.log("getRes:", getRes.body);
 
   // // List all values from the map
   // let listRes = http.get(`http://localhost:80/list`);

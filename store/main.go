@@ -122,11 +122,42 @@ func addHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func getRequest(ip, key string) string {
+	url := fmt.Sprintf("http://%s:8080/get?key=%s&local=true", ip, key)
+
+	// Creating a GET request
+	resp, err := http.Get(url)
+	if err != nil {
+		log.Fatalf("Failed to make the request: %v", err)
+		return "ERROR1"
+	}
+	defer resp.Body.Close()
+
+	// Reading the response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalf("Failed to read the response body: %v", err)
+		return "ERROR2"
+	}
+
+	return string(body)
+}
+
 // HTTP handler for getting a value
 func getHandler(w http.ResponseWriter, r *http.Request) {
 	key := r.URL.Query().Get("key")
-	value, exists := get(key)
-	fmt.Fprintf(w, "Value for %s: %s %b", key, value, exists)
+	local := r.URL.Query().Get("local")
+
+	if local == "true" {
+		value, exists := get(key)
+		fmt.Fprintf(w, "Value for %s: %s %b", key, value, exists)
+
+	} else {
+		node := getNodeForKey(key)
+
+		response := getRequest(node, key)
+		fmt.Fprint(w, response)
+	}
 }
 
 func listValues() map[string]string {
