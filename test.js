@@ -41,8 +41,8 @@ export default function () {
   });
 
   // the key value to insert
-  const key = randomString(5);
-  const value = randomString(5);
+  const key = randomString(15);
+  const value = randomString(15);
 
   // Add a value to the map
   let addRes = http.get(`http://${address}/add?key=${key}&value=${value}`);
