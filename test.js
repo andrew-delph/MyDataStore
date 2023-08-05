@@ -25,7 +25,8 @@ export let options = {
   },
 };
 
-const address = "192.168.49.2:30000"; // localhost:80
+let address = "192.168.49.2:30000";
+address = "localhost:80";
 
 export default function () {
   // Add a value to the map

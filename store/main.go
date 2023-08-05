@@ -71,11 +71,12 @@ func addHandler(w http.ResponseWriter, r *http.Request) {
 
 	} else {
 		node, err := hashRingGetN(key, 1)
+
 		if err != nil {
 			log.Fatalln(err)
 		}
 
-		addRequest(node[0], key, value)
+		addRequest(nodeData[node[0]], key, value)
 		fmt.Fprintf(w, "Added %s: %s to the map on %s", key, value, node)
 	}
 }
@@ -120,7 +121,7 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Fatalln(err)
 		}
-		response := getRequest(node[0], key)
+		response := getRequest(nodeData[node[0]], key)
 		fmt.Fprint(w, response)
 	}
 }
