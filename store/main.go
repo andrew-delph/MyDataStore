@@ -13,6 +13,10 @@ import (
 	"github.com/go-zookeeper/zk"
 )
 
+var totalReplicas = 4
+var writeReplicas = 2
+var readReplicas = 2
+
 var myMap sync.Map
 
 func set(key string, value string) {
@@ -34,7 +38,7 @@ func addValue(key, value string) {
 	set(key, value)
 }
 
-func addRequest(ip, key, value string) {
+func addRequest(ch chan string, ip, key, value string) {
 	url := fmt.Sprintf("http://%s:8080/add?key=%s&value=%s&local=true", ip, key, value)
 
 	// fmt.Println("addRequest URL", url)
@@ -70,14 +74,33 @@ func addHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Added %s: %s to the map on LOCAL", key, value)
 
 	} else {
-		node, err := hashRingGetN(key, 1)
+		nodes, err := hashRingGetN(key, totalReplicas)
 
 		if err != nil {
 			log.Fatalln(err)
 		}
 
-		addRequest(nodeData[node[0]], key, value)
-		fmt.Fprintf(w, "Added %s: %s to the map on %s", key, value, node)
+		var wg sync.WaitGroup
+
+		ch := make(chan string, writeReplicas)
+
+		for _, nodeName := range nodes {
+			wg.Add(1)
+			go func(calledNode string) {
+				defer wg.Done()
+				addRequest(ch, nodeData[calledNode], key, value)
+				ch <- "done"
+			}(nodeName)
+		}
+
+		go func() {
+			defer close(ch)
+			wg.Wait()
+		}()
+
+		for i := 1; i <= writeReplicas; i++ {
+			fmt.Println("Task", <-ch, "completed")
+		}
 	}
 }
 
@@ -117,11 +140,13 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 	} else {
-		node, err := hashRingGetN(key, 1)
+		nodes, err := hashRingGetN(key, readReplicas)
 		if err != nil {
 			log.Fatalln(err)
 		}
-		response := getRequest(nodeData[node[0]], key)
+
+		// randIndex := rand.Intn(len(nodes))
+		response := getRequest(nodeData[nodes[0]], key)
 		fmt.Fprint(w, response)
 	}
 }

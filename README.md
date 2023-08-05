@@ -6,6 +6,8 @@ bazel run //:gazelle -- update-repos -from_file="store/go.mod" -to_macro=reposit
 
 ibazel -run_command_after_success='docker-compose up --force-recreate -d store' run //store:store_image
 
+while true; do docker-compose logs -f store; done
+
 # K8 commands
 
 kubectl apply -f ./resources/

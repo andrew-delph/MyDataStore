@@ -8,6 +8,7 @@ services:
       ZOO_MY_ID: 1
       ZOO_PORT: 2181
       ALLOW_ANONYMOUS_LOGIN: "yes"
+    restart: always
 
   zoonavigator:
     image: elkozmon/zoonavigator
@@ -30,7 +31,7 @@ services:
 
   store:
     image: docker.io/andrew-delph/store:store_image
-    scale: 4
+    scale: 6
     depends_on:
       - zookeeper
       - nginx

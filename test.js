@@ -5,32 +5,40 @@ import { check } from "k6";
 import { randomString } from "https://jslib.k6.io/k6-utils/1.2.0/index.js";
 
 export let options = {
-  scenarios: {
-    // disrupt: {
-    //   executor: "shared-iterations",
-    //   iterations: 1,
-    //   vus: 1,
-    //   exec: "disrupt",
-    //   startTime: "0s",
-    // },
-    load: {
-      executor: "constant-arrival-rate",
-      rate: 100,
-      preAllocatedVUs: 10,
-      maxVUs: 1000,
-      exec: "default",
-      startTime: "0s", // give time for the agents to be installed
-      duration: "1m",
-    },
-  },
+  vus: 10,
+  duration: "10s",
+
+  // iterations: 30,
+  // scenarios: {
+  //   // disrupt: {
+  //   //   executor: "shared-iterations",
+  //   //   iterations: 1,
+  //   //   vus: 1,
+  //   //   exec: "disrupt",
+  //   //   startTime: "0s",
+  //   // },
+  //   load: {
+  //     executor: "constant-arrival-rate",
+  //     rate: 100,
+  //     preAllocatedVUs: 10,
+  //     maxVUs: 1000,
+  //     exec: "default",
+  //     startTime: "0s", // give time for the agents to be installed
+  //     duration: "20m",
+  //   },
+  // },
 };
 
 let address = "192.168.49.2:30000";
 address = "localhost:80";
 
 export default function () {
-  // Add a value to the map
-  let serverRes = http.get(`http://${address}`);
+  // Get the id from the server
+  let baseRes = http.get(`http://${address}`);
+
+  check(baseRes, {
+    "Base: status was 200": (r) => r.status === 200,
+  });
 
   // the key value to insert
   const key = randomString(5);
@@ -40,10 +48,10 @@ export default function () {
   let addRes = http.get(`http://${address}/add?key=${key}&value=${value}`);
 
   check(addRes, {
-    "Base: status was 200": (r) => r.status === 200,
+    "Add: status was 200": (r) => r.status === 200,
   });
 
-  sleep(10);
+  // sleep(10);
 
   // Get a value from the map
   let getRes = http.get(`http://${address}/get?key=${key}`);
