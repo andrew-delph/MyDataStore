@@ -162,8 +162,13 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 			}(nodeName)
 		}
 
+		var found = false
+
 		go func() {
 			wg.Wait()
+			if !found {
+				http.NotFound(w, r)
+			}
 			close(ch)
 		}()
 
@@ -172,12 +177,11 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 
 			// Check if we've seen this value 3 times
 			if valueCount[result] == readReplicas {
+				found = true
 				fmt.Fprint(w, result)
 				return
 			}
 		}
-
-		http.NotFound(w, r)
 	}
 }
 
