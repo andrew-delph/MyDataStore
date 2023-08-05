@@ -104,14 +104,14 @@ func addHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getRequest(ip, key string) string {
+func getRequest(ip, key string) (string, error) {
 	url := fmt.Sprintf("http://%s:8080/get?key=%s&local=true", ip, key)
 
 	// Creating a GET request
 	resp, err := http.Get(url)
 	if err != nil {
 		log.Fatalf("Failed to make the request: %v", err)
-		return "ERROR1"
+		return "", err
 	}
 	defer resp.Body.Close()
 
@@ -119,10 +119,10 @@ func getRequest(ip, key string) string {
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatalf("Failed to read the response body: %v", err)
-		return "ERROR2"
+		return "", err
 	}
 
-	return string(body)
+	return string(body), nil
 }
 
 // HTTP handler for getting a value
@@ -133,21 +133,51 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 	if local == "true" {
 		value, exists := get(key)
 		if exists {
-			fmt.Fprintf(w, "Value for %s: %s", key, value)
-
+			fmt.Fprintf(w, "%s", value)
 		} else {
-			fmt.Fprintf(w, "Value for %s does not exist.", key)
+			http.NotFound(w, r)
 		}
-
 	} else {
-		nodes, err := hashRingGetN(key, readReplicas)
+		nodes, err := hashRingGetN(key, totalReplicas)
 		if err != nil {
 			log.Fatalln(err)
 		}
 
-		// randIndex := rand.Intn(len(nodes))
-		response := getRequest(nodeData[nodes[0]], key)
-		fmt.Fprint(w, response)
+		var wg sync.WaitGroup
+
+		ch := make(chan string, totalReplicas)
+
+		valueCount := make(map[string]int)
+
+		for _, nodeName := range nodes {
+			wg.Add(1)
+			go func(calledNode string) {
+				defer wg.Done()
+				value, err := getRequest(nodeData[calledNode], key)
+				if err != nil {
+					log.Println(err)
+				} else {
+					ch <- value
+				}
+			}(nodeName)
+		}
+
+		go func() {
+			wg.Wait()
+			close(ch)
+		}()
+
+		for result := range ch {
+			valueCount[result]++
+
+			// Check if we've seen this value 3 times
+			if valueCount[result] == readReplicas {
+				fmt.Fprint(w, result)
+				return
+			}
+		}
+
+		http.NotFound(w, r)
 	}
 }
 
