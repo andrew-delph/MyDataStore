@@ -7,11 +7,14 @@ go_library(
     srcs = [
         "main.go",
         "partition.go",
+        "utils.go",
     ],
-    importpath = "andrewdelph.com/my-key-store",
+    importpath = "andrewdelph.com/my-key-store/store",
     visibility = ["//visibility:private"],
     deps = [
+        "@com_github_deckarep_golang_set_v2//:go_default_library",
         "@com_github_go_zookeeper_zk//:go_default_library",
+        "@org_golang_x_exp//constraints:go_default_library",
     ],
 )
 
@@ -55,4 +58,10 @@ container_push(
     registry = "ghcr.io",
     repository = "andrew-delph/my-key-store",
     tag = "latest",
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["partition_test.go"],
+    embed = [":go_default_library"],
 )

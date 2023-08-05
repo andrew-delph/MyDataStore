@@ -3,7 +3,10 @@ package main
 import (
 	"crypto/sha1"
 	"encoding/hex"
+	"fmt"
 	"sort"
+
+	mapset "github.com/deckarep/golang-set/v2"
 )
 
 func hashKey(key string) string {
@@ -12,37 +15,56 @@ func hashKey(key string) string {
 	return hex.EncodeToString(hasher.Sum(nil))
 }
 
-func getNodeForKey(key string) string {
-	// Create a sorted slice of hashed node keys
-	var hashedNodes []string
-	for node := range nodeData {
-		hashedNodes = append(hashedNodes, hashKey(node))
-	}
-	sort.Strings(hashedNodes)
+type NodeHash struct {
+	Name string
+	Hash string
+}
 
-	// Hash the input key
+func hashRingGetN(key string, n int) ([]string, error) {
+	// Create a sorted slice of hashed node keys
+	var hashRing []NodeHash
+	for node := range nodeData {
+		hashRing = append(hashRing, NodeHash{Name: node, Hash: hashKey(node)})
+	}
+
+	sort.Slice(hashRing, func(i, j int) bool {
+		return hashRing[i].Hash < hashRing[j].Hash
+	})
+
+	if len(hashRing) < n {
+		nodes := make([]string, 0, len(nodeData))
+		for k := range nodeData {
+			nodes = append(nodes, k)
+		}
+		return nodes, fmt.Errorf("not enough nodes")
+	}
+
 	hashedKey := hashKey(key)
 
-	// Find the smallest hashed node key that is greater than or equal to the hashed input key
-	for _, hashedNode := range hashedNodes {
-		if hashedNode >= hashedKey {
-			// Return the corresponding node data
-			for node, _ := range nodeData {
-				if hashKey(node) == hashedNode {
-					return nodeData[node]
+	// if the hashedKey is greater than the last value. return the first n
+	if hashedKey > hashRing[len(hashRing)-1].Hash {
+		var firstN []string
+		for _, node := range hashRing[:min(n+1, len(hashRing)+1)] {
+			firstN = append(firstN, node.Name)
+		}
+		return firstN, nil
+	}
+
+	// double the length to make a circle
+	hashRing = append(hashRing, hashRing...)
+
+	replicateSet := mapset.NewSet[string]()
+
+	for i, hashedNode := range hashRing {
+		if hashedNode.Hash >= hashedKey {
+			for _, hashedNode := range hashRing[i:] {
+				replicateSet.Add(hashedNode.Name)
+				if replicateSet.Cardinality() >= n {
+					return replicateSet.ToSlice(), nil
 				}
 			}
 		}
 	}
 
-	// If no such hashed node key is found, wrap around to the first node
-	if len(hashedNodes) > 0 {
-		for node, _ := range nodeData {
-			if hashKey(node) == hashedNodes[0] {
-				return nodeData[node]
-			}
-		}
-	}
-
-	return "" // Return an empty string or an error if no suitable node is found
+	return replicateSet.ToSlice(), fmt.Errorf("did not find all nodes")
 }

@@ -70,9 +70,12 @@ func addHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Added %s: %s to the map on LOCAL", key, value)
 
 	} else {
-		node := getNodeForKey(key)
+		node, err := hashRingGetN(key, 1)
+		if err != nil {
+			log.Fatalln(err)
+		}
 
-		addRequest(node, key, value)
+		addRequest(node[0], key, value)
 		fmt.Fprintf(w, "Added %s: %s to the map on %s", key, value, node)
 	}
 }
@@ -113,8 +116,11 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 	} else {
-		node := getNodeForKey(key)
-		response := getRequest(node, key)
+		node, err := hashRingGetN(key, 1)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		response := getRequest(node[0], key)
 		fmt.Fprint(w, response)
 	}
 }
@@ -147,7 +153,6 @@ func watchNodes(conn *zk.Conn, path string) {
 		children, _, watchChannel, err := conn.ChildrenW(path)
 		if err != nil {
 			log.Fatalf("Failed to list children for path %s: %v", path, err)
-			return
 		}
 
 		// Temporary map to track current children
