@@ -44,6 +44,14 @@ type SetMessage struct {
 	AckId string
 }
 
+func NewSetMessage(key string, value string, ackID string) *SetMessage {
+	return &SetMessage{
+		Key:   key,
+		Value: value,
+		AckId: ackID,
+	}
+}
+
 func (m *SetMessage) Encode() ([]byte, error) {
 	return json.Marshal(m)
 }
@@ -58,19 +66,19 @@ func (m *SetMessage) Decode(data []byte) error {
 
 func (m *SetMessage) Handle(messageHolder *MessageHolder) {
 	fmt.Printf("Handling SetMessage: key=%s value=%s ackId=%s sender=%s\n", m.Key, m.Value, m.AckId, messageHolder.SenderName)
-}
-
-func NewSetMessage(key string, value string, ackID string) *SetMessage {
-	return &SetMessage{
-		Key:   key,
-		Value: value,
-		AckId: ackID,
-	}
+	events.SendAckMessage(m.AckId, messageHolder.SenderName)
 }
 
 type AckMessage struct {
 	AckId   string
-	success bool
+	Success bool
+}
+
+func NewAckMessage(ackID string, success bool) *AckMessage {
+	return &AckMessage{
+		AckId:   ackID,
+		Success: success,
+	}
 }
 
 func (m AckMessage) Encode() ([]byte, error) {
@@ -78,7 +86,7 @@ func (m AckMessage) Encode() ([]byte, error) {
 }
 
 func (m *AckMessage) Handle(messageHolder *MessageHolder) {
-	fmt.Println("Handling AckMessage: ", m.success, m.AckId)
+	fmt.Println("Handling AckMessage: ", m.Success, m.AckId)
 }
 
 func (m AckMessage) GetType() string {

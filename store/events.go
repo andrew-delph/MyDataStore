@@ -75,3 +75,24 @@ func (events *MyEventDelegate) SendSetMessage(key, value string, replicas int) e
 
 	return nil
 }
+
+func (events *MyEventDelegate) SendAckMessage(ackId, senderName string) error {
+
+	ackMsg := NewAckMessage(ackId, true)
+
+	node := events.nodes[senderName]
+
+	bytes, err := EncodeHolder(ackMsg)
+
+	if err != nil {
+		return fmt.Errorf("FAILED TO ENCODE: %v", err)
+	}
+
+	err = clusterNodes.SendReliable(node, bytes)
+
+	if err != nil {
+		return fmt.Errorf("FAILED TO SEND: %v", err)
+	}
+
+	return nil
+}

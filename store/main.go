@@ -24,11 +24,14 @@ func get(key string) (string, bool) {
 
 var (
 	clusterNodes *memberlist.Memberlist
+	delegate     *MyDelegate
+	events       *MyEventDelegate
+	conf         *memberlist.Config
 )
 
 func main() {
 
-	conf, delegate, events := GetConf()
+	conf, delegate, events = GetConf()
 
 	var err error
 	clusterNodes, err = memberlist.Create(conf)
