@@ -2,18 +2,16 @@
 
 bazel run //:gazelle -- update-repos -from_file="store/go.mod" -to_macro=repositories.bzl%go_repositories -prune
 
-# RUN BUILD SERVER
+# DOCKER-COMPOSE DEV
 
 ibazel -run_command_after_success='docker-compose up --force-recreate -d store' run //store:store_image
 
 while true; do docker-compose logs -f store; done
 
-# K8 commands
-
-kubectl apply -f ./resources/
-
-kubectl rollout restart deployment store
+# K8 DEV
 
 kubectl create configmap nginx-config --from-file=nginx.conf
 
-ibazel -run_command_after_success='docker-compose up --force-recreate -d store' run //store:image_push
+kubectl apply -f ./resources/
+
+ibazel -run_command_after_success='kubectl rollout restart deployment store' run //store:image_push

@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"math/rand"
 	"sync"
@@ -123,7 +123,7 @@ func main() {
 
 	conf := memberlist.DefaultLocalConfig()
 
-	conf.Logger = log.New(ioutil.Discard, "", 0)
+	conf.Logger = log.New(io.Discard, "", 0)
 	conf.BindPort = 8080
 	conf.AdvertisePort = 8080
 	conf.Delegate = d
