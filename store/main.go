@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"sync"
@@ -21,26 +20,6 @@ func get(key string) (string, bool) {
 		return value.(string), true
 	}
 	return "", false
-}
-
-type MyMessage struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
-}
-
-func (m *MyMessage) Bytes() []byte {
-	data, err := json.Marshal(m)
-	if err != nil {
-		return []byte("")
-	}
-	return data
-}
-func ParseMyMessage(data []byte) (*MyMessage, bool) {
-	msg := new(MyMessage)
-	if err := json.Unmarshal(data, &msg); err != nil {
-		return nil, false
-	}
-	return msg, true
 }
 
 var (
@@ -109,12 +88,14 @@ func main() {
 			// 	clusterNodes.SendReliable(node, m.Bytes())
 			// }
 		case data := <-delegate.msgCh:
-			msg, ok := ParseMyMessage(data)
-			if !ok {
-				continue
-			}
 
-			log.Printf("received msg: key=%s value=%s", msg.Key, msg.Value)
+			DecodeMessageHolder(data)
+			// msg, ok := ParseMyMessage(data)
+			// if !ok {
+			// 	continue
+			// }
+
+			// log.Printf("received msg: key=%s value=%s", msg.Key, msg.Value)
 
 			// if msg.Key == "ping" {
 			// 	m := new(MyMessage)

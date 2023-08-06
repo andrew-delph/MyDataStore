@@ -45,9 +45,10 @@ func (events *MyEventDelegate) NotifyUpdate(node *memberlist.Node) {
 
 func (events *MyEventDelegate) Send(key, value string, replicas int) {
 
-	m := new(MyMessage)
-	m.Key = "ping"
-	m.Value = value
+	setMsg := &SetMessage{
+		Key:   key,
+		Value: value,
+	}
 
 	nodeName, ok := events.consistent.GetNode(value)
 
@@ -60,11 +61,17 @@ func (events *MyEventDelegate) Send(key, value string, replicas int) {
 
 	node := events.nodes[nodeName]
 
-	log.Println("node obj", node)
+	bytes, err := EncodeHolder(setMsg)
 
-	err := clusterNodes.SendReliable(node, m.Bytes())
+	if err != nil {
+		log.Println("FAILED TO ENCODE", err)
+		return
+	}
+
+	err = clusterNodes.SendReliable(node, bytes)
 
 	if err != nil {
 		log.Println("FAILED TO SEND", err)
+		return
 	}
 }

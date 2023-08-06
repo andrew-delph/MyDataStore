@@ -9,6 +9,7 @@ go_library(
         "delegate.go",
         "events.go",
         "main.go",
+        "messaging.go",
         "utils.go",
     ],
     importpath = "andrewdelph.com/my-key-store/store",
@@ -21,9 +22,13 @@ go_library(
 )
 
 go_test(
-    name = "test",
-    srcs = ["partition_test.go"],
+    name = "go_default_test",
+    srcs = ["main_test.go"],
     embed = [":go_default_library"],
+    deps = [
+        "@com_github_serialx_hashring//:go_default_library",
+        "@tools_gotest//assert:go_default_library",
+    ],
 )
 
 go_binary(
@@ -60,10 +65,4 @@ container_push(
     registry = "ghcr.io",
     repository = "andrew-delph/my-key-store",
     tag = "latest",
-)
-
-go_test(
-    name = "go_default_test",
-    srcs = ["test.go"],
-    embed = [":go_default_library"],
 )
