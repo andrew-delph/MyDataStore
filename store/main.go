@@ -55,41 +55,20 @@ func main() {
 	for run {
 		select {
 		case <-tick.C:
-
 			value := randomString(5)
-			events.Send("ping", value, 1)
 
-			// m := new(MyMessage)
-			// m.Key = "ping"
-			// m.Value = value
+			key := randomString(5)
 
-			// nodeName, ok := events.consistent.GetNode(value)
+			events.Send(key, value, 1)
 
-			// if ok {
-			// 	log.Printf("node1 search %s => %s", value, nodeName)
-			// } else {
-			// 	log.Printf("no node available")
-			// }
-
-			// node := events.nodes[nodeName]
-
-			// err := clusterNodes.SendReliable(node, m.Bytes())
-
-			// if err != nil {
-			// 	log.Println("FAILED TO SEND", err)
-			// }
-
-			// // ping to all
-			// for _, node := range clusterNodes.Members() {
-			// 	if node.Name == conf.Name {
-			// 		continue // skip self
-			// 	}
-			// 	log.Printf("send to %s msg: key=%s value=%d", node.Name, m.Key, m.Value)
-			// 	clusterNodes.SendReliable(node, m.Bytes())
-			// }
 		case data := <-delegate.msgCh:
 
-			DecodeMessageHolder(data)
+			message, err := DecodeMessageHolder(data)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			message.Handle()
 			// msg, ok := ParseMyMessage(data)
 			// if !ok {
 			// 	continue
