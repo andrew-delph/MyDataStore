@@ -3,14 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
-	"math/rand"
 	"sync"
 	"time"
 
 	"github.com/hashicorp/memberlist"
-	"github.com/serialx/hashring"
 )
 
 var myMap sync.Map
@@ -24,65 +21,6 @@ func get(key string) (string, bool) {
 		return value.(string), true
 	}
 	return "", false
-}
-
-type MyDelegate struct {
-	msgCh chan []byte
-}
-
-type MyEventDelegate struct {
-	consistent *hashring.HashRing
-	nodes      map[string]*memberlist.Node
-}
-
-func (d *MyEventDelegate) NotifyJoin(node *memberlist.Node) {
-	log.Printf("join %s", node.Name)
-	if d.consistent == nil {
-		d.consistent = hashring.New([]string{node.Name})
-	} else {
-		d.consistent = d.consistent.AddNode(node.Name)
-	}
-
-	if d.nodes == nil {
-		d.nodes = make(map[string]*memberlist.Node)
-	}
-	d.nodes[node.Name] = node
-
-}
-func (d *MyEventDelegate) NotifyLeave(node *memberlist.Node) {
-	log.Printf("leave %s", node.Name)
-	if d.consistent != nil {
-		d.consistent = d.consistent.RemoveNode(node.Name)
-	}
-
-	if d.nodes != nil {
-		delete(d.nodes, node.Name)
-	}
-}
-func (d *MyEventDelegate) NotifyUpdate(node *memberlist.Node) {
-	// skip
-}
-
-func (d *MyEventDelegate) Send(node string, m MyMessage) {
-}
-
-func (d *MyDelegate) NotifyMsg(msg []byte) {
-	d.msgCh <- msg
-}
-func (d *MyDelegate) NodeMeta(limit int) []byte {
-	// not use, noop
-	return []byte("")
-}
-func (d *MyDelegate) LocalState(join bool) []byte {
-	// not use, noop
-	return []byte("")
-}
-func (d *MyDelegate) GetBroadcasts(overhead, limit int) [][]byte {
-	// not use, noop
-	return nil
-}
-func (d *MyDelegate) MergeRemoteState(buf []byte, join bool) {
-	// not use
 }
 
 type MyMessage struct {
@@ -105,29 +43,9 @@ func ParseMyMessage(data []byte) (*MyMessage, bool) {
 	return msg, true
 }
 
-var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
-
-func randomString(n int) string {
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
-	}
-	return string(b)
-}
-
 func main() {
-	msgCh := make(chan []byte)
 
-	d := new(MyDelegate)
-	d.msgCh = msgCh
-
-	conf := memberlist.DefaultLocalConfig()
-
-	conf.Logger = log.New(io.Discard, "", 0)
-	conf.BindPort = 8080
-	conf.AdvertisePort = 8080
-	conf.Delegate = d
-	conf.Events = new(MyEventDelegate)
+	conf, delegate, events := GetConf()
 
 	list, err := memberlist.Create(conf)
 	if err != nil {
@@ -160,9 +78,7 @@ func main() {
 			m.Key = "ping"
 			m.Value = value
 
-			devt := conf.Events.(*MyEventDelegate)
-
-			nodeName, ok := devt.consistent.GetNode(value)
+			nodeName, ok := events.consistent.GetNode(value)
 
 			if ok {
 				log.Printf("node1 search %s => %s", value, nodeName)
@@ -170,7 +86,7 @@ func main() {
 				log.Printf("no node available")
 			}
 
-			node := devt.nodes[nodeName]
+			node := events.nodes[nodeName]
 
 			err := list.SendReliable(node, m.Bytes())
 
@@ -186,7 +102,7 @@ func main() {
 			// 	log.Printf("send to %s msg: key=%s value=%d", node.Name, m.Key, m.Value)
 			// 	list.SendReliable(node, m.Bytes())
 			// }
-		case data := <-d.msgCh:
+		case data := <-delegate.msgCh:
 			msg, ok := ParseMyMessage(data)
 			if !ok {
 				continue
