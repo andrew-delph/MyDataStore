@@ -12,33 +12,59 @@ type MyEventDelegate struct {
 	nodes      map[string]*memberlist.Node
 }
 
-func (d *MyEventDelegate) NotifyJoin(node *memberlist.Node) {
+func GetMyEventDelegate() *MyEventDelegate {
+	events := new(MyEventDelegate)
+
+	events.consistent = hashring.New([]string{})
+
+	events.nodes = make(map[string]*memberlist.Node)
+
+	return events
+}
+
+func (events *MyEventDelegate) NotifyJoin(node *memberlist.Node) {
+
 	log.Printf("join %s", node.Name)
-	if d.consistent == nil {
-		d.consistent = hashring.New([]string{node.Name})
-	} else {
-		d.consistent = d.consistent.AddNode(node.Name)
-	}
 
-	if d.nodes == nil {
-		d.nodes = make(map[string]*memberlist.Node)
-	}
-	d.nodes[node.Name] = node
+	events.consistent = events.consistent.AddNode(node.Name)
 
+	events.nodes[node.Name] = node
 }
-func (d *MyEventDelegate) NotifyLeave(node *memberlist.Node) {
+
+func (events *MyEventDelegate) NotifyLeave(node *memberlist.Node) {
+
 	log.Printf("leave %s", node.Name)
-	if d.consistent != nil {
-		d.consistent = d.consistent.RemoveNode(node.Name)
-	}
 
-	if d.nodes != nil {
-		delete(d.nodes, node.Name)
-	}
+	events.consistent = events.consistent.RemoveNode(node.Name)
+
+	delete(events.nodes, node.Name)
 }
-func (d *MyEventDelegate) NotifyUpdate(node *memberlist.Node) {
+func (events *MyEventDelegate) NotifyUpdate(node *memberlist.Node) {
 	// skip
 }
 
-func (d *MyEventDelegate) Send(node string, m MyMessage) {
+func (events *MyEventDelegate) Send(key, value string, replicas int) {
+
+	m := new(MyMessage)
+	m.Key = "ping"
+	m.Value = value
+
+	nodeName, ok := events.consistent.GetNode(value)
+
+	if !ok {
+		log.Printf("no node available size=%d \n", events.consistent.Size())
+		return
+	}
+
+	log.Printf("node1 search %s => %s", value, nodeName)
+
+	node := events.nodes[nodeName]
+
+	log.Println("node obj", node)
+
+	err := clusterNodes.SendReliable(node, m.Bytes())
+
+	if err != nil {
+		log.Println("FAILED TO SEND", err)
+	}
 }

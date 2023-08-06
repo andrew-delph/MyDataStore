@@ -62,8 +62,8 @@ container_push(
     tag = "latest",
 )
 
-# go_test(
-#     name = "go_default_test",
-#     srcs = ["partition_test.go"],
-#     embed = [":go_default_library"],
-# )
+go_test(
+    name = "go_default_test",
+    srcs = ["test.go"],
+    embed = [":go_default_library"],
+)

@@ -4,6 +4,14 @@ type MyDelegate struct {
 	msgCh chan []byte
 }
 
+func GetMyDelegate() *MyDelegate {
+	delegate := new(MyDelegate)
+
+	delegate.msgCh = make(chan []byte)
+
+	return delegate
+}
+
 func (d *MyDelegate) NotifyMsg(msg []byte) {
 	d.msgCh <- msg
 }

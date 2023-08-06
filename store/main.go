@@ -43,17 +43,22 @@ func ParseMyMessage(data []byte) (*MyMessage, bool) {
 	return msg, true
 }
 
+var (
+	clusterNodes *memberlist.Memberlist
+)
+
 func main() {
 
 	conf, delegate, events := GetConf()
 
-	list, err := memberlist.Create(conf)
+	var err error
+	clusterNodes, err = memberlist.Create(conf)
 	if err != nil {
 		panic("Failed to create memberlist: " + err.Error())
 	}
 
 	// Join an existing cluster by specifying at least one known member.
-	n, err := list.Join([]string{"store:8080"})
+	n, err := clusterNodes.Join([]string{"store:8080"})
 	if err != nil {
 		panic("Failed to join cluster: " + err.Error())
 	}
@@ -61,11 +66,11 @@ func main() {
 	log.Println("n", n)
 
 	// Ask for members of the cluster
-	for _, member := range list.Members() {
+	for _, member := range clusterNodes.Members() {
 		fmt.Printf("Member: %s %s\n", member.Name, member.Addr)
 	}
 
-	tick := time.NewTicker(500 * time.Millisecond)
+	tick := time.NewTicker(5000 * time.Millisecond)
 
 	run := true
 	for run {
@@ -73,34 +78,35 @@ func main() {
 		case <-tick.C:
 
 			value := randomString(5)
+			events.Send("ping", value, 1)
 
-			m := new(MyMessage)
-			m.Key = "ping"
-			m.Value = value
+			// m := new(MyMessage)
+			// m.Key = "ping"
+			// m.Value = value
 
-			nodeName, ok := events.consistent.GetNode(value)
+			// nodeName, ok := events.consistent.GetNode(value)
 
-			if ok {
-				log.Printf("node1 search %s => %s", value, nodeName)
-			} else {
-				log.Printf("no node available")
-			}
+			// if ok {
+			// 	log.Printf("node1 search %s => %s", value, nodeName)
+			// } else {
+			// 	log.Printf("no node available")
+			// }
 
-			node := events.nodes[nodeName]
+			// node := events.nodes[nodeName]
 
-			err := list.SendReliable(node, m.Bytes())
+			// err := clusterNodes.SendReliable(node, m.Bytes())
 
-			if err != nil {
-				log.Println("FAILED TO SEND", err)
-			}
+			// if err != nil {
+			// 	log.Println("FAILED TO SEND", err)
+			// }
 
 			// // ping to all
-			// for _, node := range list.Members() {
+			// for _, node := range clusterNodes.Members() {
 			// 	if node.Name == conf.Name {
 			// 		continue // skip self
 			// 	}
 			// 	log.Printf("send to %s msg: key=%s value=%d", node.Name, m.Key, m.Value)
-			// 	list.SendReliable(node, m.Bytes())
+			// 	clusterNodes.SendReliable(node, m.Bytes())
 			// }
 		case data := <-delegate.msgCh:
 			msg, ok := ParseMyMessage(data)
@@ -133,13 +139,13 @@ func main() {
 			// 	}
 
 			// 	// pong to all
-			// 	// list.SendToAddress()
-			// 	for _, node := range list.Members() {
+			// 	// clusterNodes.SendToAddress()
+			// 	for _, node := range clusterNodes.Members() {
 			// 		if node.Name == conf.Name {
 			// 			continue // skip self
 			// 		}
 			// 		log.Printf("send to %s msg: key=%s value=%d", node.Name, m.Key, m.Value)
-			// 		list.SendReliable(node, m.Bytes())
+			// 		clusterNodes.SendReliable(node, m.Bytes())
 			// 	}
 			// }
 			// default:

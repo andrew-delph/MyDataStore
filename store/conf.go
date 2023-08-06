@@ -9,10 +9,8 @@ import (
 
 func GetConf() (*memberlist.Config, *MyDelegate, *MyEventDelegate) {
 
-	delegate := new(MyDelegate)
-	events := new(MyEventDelegate)
-
-	delegate.msgCh = make(chan []byte)
+	delegate := GetMyDelegate()
+	events := GetMyEventDelegate()
 
 	conf := memberlist.DefaultLocalConfig()
 	conf.Logger = log.New(io.Discard, "", 0)
