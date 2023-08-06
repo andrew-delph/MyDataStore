@@ -106,11 +106,12 @@ func TestEncodeDecodeMessageHolderWithSetMessage(t *testing.T) {
 	}
 
 	// Decode MessageHolder
-	decodedMessage, err := DecodeMessageHolder(encodedHolder)
+	decodedMessageHolder, decodedMessage, err := DecodeMessageHolder(encodedHolder)
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	log.Println("decodedMessageHolder", decodedMessageHolder)
 	log.Println("decodedMessage", decodedMessage)
 
 	assert.Equal(t, decodedMessage.GetType(), "SetMessage", "Both should be SetMessage")

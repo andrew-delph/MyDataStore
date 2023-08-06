@@ -28,7 +28,7 @@ func ParseMyMessage(data []byte) (*MyMessage, bool) {
 type Message interface {
 	Encode() ([]byte, error)
 	Decode([]byte) error
-	Handle()
+	Handle(messageHolder *MessageHolder)
 	GetType() string
 }
 
@@ -41,6 +41,7 @@ type MessageHolder struct {
 type SetMessage struct {
 	Key   string
 	Value string
+	AckId string
 }
 
 func (m *SetMessage) Encode() ([]byte, error) {
@@ -55,11 +56,20 @@ func (m *SetMessage) Decode(data []byte) error {
 	return json.Unmarshal(data, m)
 }
 
-func (m *SetMessage) Handle() {
-	fmt.Println("Handling SetMessage: ", m.Key, m.Value)
+func (m *SetMessage) Handle(messageHolder *MessageHolder) {
+	fmt.Printf("Handling SetMessage: key=%s value=%s ackId=%s sender=%s\n", m.Key, m.Value, m.AckId, messageHolder.SenderName)
+}
+
+func NewSetMessage(key string, value string, ackID string) *SetMessage {
+	return &SetMessage{
+		Key:   key,
+		Value: value,
+		AckId: ackID,
+	}
 }
 
 type AckMessage struct {
+	AckId   string
 	success bool
 }
 
@@ -67,8 +77,8 @@ func (m AckMessage) Encode() ([]byte, error) {
 	return json.Marshal(m)
 }
 
-func (m *AckMessage) Handle() {
-	fmt.Println("Handling AckMessage: ", m.success)
+func (m *AckMessage) Handle(messageHolder *MessageHolder) {
+	fmt.Println("Handling AckMessage: ", m.success, m.AckId)
 }
 
 func (m AckMessage) GetType() string {
@@ -97,12 +107,12 @@ func EncodeHolder(msg Message) ([]byte, error) {
 	return bytes, err
 }
 
-func DecodeMessageHolder(data []byte) (Message, error) {
+func DecodeMessageHolder(data []byte) (*MessageHolder, Message, error) {
 	holder := &MessageHolder{}
 	err := json.Unmarshal(data, holder)
 	if err != nil {
 		fmt.Println("Failed to decode holder: ", err)
-		return nil, err
+		return nil, nil, err
 	}
 
 	switch holder.MessageType {
@@ -110,16 +120,16 @@ func DecodeMessageHolder(data []byte) (Message, error) {
 		msg := &SetMessage{}
 		err := msg.Decode(holder.MessageBytes)
 		if err != nil {
-			return nil, fmt.Errorf("failed to Decode SetMessage: %v", err)
+			return holder, nil, fmt.Errorf("failed to Decode SetMessage: %v", err)
 		}
-		return msg, nil
+		return holder, msg, nil
 	case "AckMessage":
 		msg := &AckMessage{}
 		err := msg.Decode(holder.MessageBytes)
 		if err != nil {
-			return nil, fmt.Errorf("failed to Decode AckMessage: %v", err)
+			return holder, nil, fmt.Errorf("failed to Decode AckMessage: %v", err)
 		}
-		return msg, nil
+		return holder, msg, nil
 	}
-	return nil, fmt.Errorf("unknown message type: %s", holder.MessageType)
+	return holder, nil, fmt.Errorf("unknown message type: %s", holder.MessageType)
 }

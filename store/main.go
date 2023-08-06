@@ -59,19 +59,19 @@ func main() {
 
 			key := randomString(5)
 
-			err := events.Send(key, value, 1)
+			err := events.SendSetMessage(key, value, 1)
 			if err != nil {
 				log.Fatal(err)
 			}
 
 		case data := <-delegate.msgCh:
 
-			message, err := DecodeMessageHolder(data)
+			messageHolder, message, err := DecodeMessageHolder(data)
 			if err != nil {
 				log.Fatal(err)
 			}
 
-			message.Handle()
+			message.Handle(messageHolder)
 			// msg, ok := ParseMyMessage(data)
 			// if !ok {
 			// 	continue

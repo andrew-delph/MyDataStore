@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/google/uuid"
 	"github.com/hashicorp/memberlist"
 	"github.com/serialx/hashring"
 )
@@ -44,12 +45,11 @@ func (events *MyEventDelegate) NotifyUpdate(node *memberlist.Node) {
 	// skip
 }
 
-func (events *MyEventDelegate) Send(key, value string, replicas int) error {
+func (events *MyEventDelegate) SendSetMessage(key, value string, replicas int) error {
 
-	setMsg := &SetMessage{
-		Key:   key,
-		Value: value,
-	}
+	ackId := uuid.New().String()
+
+	setMsg := NewSetMessage(key, value, ackId)
 
 	nodeName, ok := events.consistent.GetNode(value)
 

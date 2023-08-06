@@ -15,6 +15,7 @@ go_library(
     importpath = "andrewdelph.com/my-key-store/store",
     visibility = ["//visibility:private"],
     deps = [
+        "@com_github_google_uuid//:go_default_library",
         "@com_github_hashicorp_memberlist//:go_default_library",
         "@com_github_serialx_hashring//:go_default_library",
         "@org_golang_x_exp//constraints:go_default_library",
@@ -26,6 +27,7 @@ go_test(
     srcs = ["main_test.go"],
     embed = [":go_default_library"],
     deps = [
+        "@com_github_hashicorp_memberlist//:go_default_library",
         "@com_github_serialx_hashring//:go_default_library",
         "@tools_gotest//assert:go_default_library",
     ],
