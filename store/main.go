@@ -3,324 +3,220 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"log"
-	"net"
-	"net/http"
-	"sync"
+	"math/rand"
 	"time"
 
-	"github.com/go-zookeeper/zk"
+	"github.com/hashicorp/memberlist"
+	"github.com/serialx/hashring"
 )
 
-var totalReplicas = 4
-var writeReplicas = 2
-var readReplicas = 2
-
-var myMap sync.Map
-
-func set(key string, value string) {
-	myMap.Store(key, value)
+type MyDelegate struct {
+	msgCh chan []byte
 }
 
-func get(key string) (string, bool) {
-	if value, ok := myMap.Load(key); ok {
-		return value.(string), true
-	}
-	return "", false
+type MyEventDelegate struct {
+	consistent *hashring.HashRing
+	nodes      map[string]*memberlist.Node
 }
 
-var nodeData = make(map[string]string)
-
-var serverIP string
-
-func addValue(key, value string) {
-	set(key, value)
-}
-
-func addRequest(ch chan string, ip, key, value string) {
-	url := fmt.Sprintf("http://%s:8080/add?key=%s&value=%s&local=true", ip, key, value)
-
-	// fmt.Println("addRequest URL", url)
-
-	// Creating a GET request
-	resp, err := http.Get(url)
-	if err != nil {
-		log.Fatalf("Failed to make the request: %v", err)
-		return
-	}
-	defer resp.Body.Close()
-
-	// Reading the response body
-	_, err = io.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatalf("Failed to read the response body: %v", err)
-		return
-	}
-
-	// // Printing the response
-	// fmt.Println("HTTP Status Code:", resp.StatusCode)
-	// fmt.Println("Response Body:", string(body))
-}
-
-// HTTP handler for adding a value
-func addHandler(w http.ResponseWriter, r *http.Request) {
-	key := r.URL.Query().Get("key")
-	value := r.URL.Query().Get("value")
-	local := r.URL.Query().Get("local")
-	log.Printf("TO ADD %s:%s LOCAL=%s\n", key, value, local)
-	if local == "true" {
-		addValue(key, value)
-		fmt.Fprintf(w, "Added %s: %s to the map on LOCAL", key, value)
-
+func (d *MyEventDelegate) NotifyJoin(node *memberlist.Node) {
+	log.Printf("join %s", node.Name)
+	if d.consistent == nil {
+		d.consistent = hashring.New([]string{node.Name})
 	} else {
-		nodes, err := hashRingGetN(key, totalReplicas)
+		d.consistent = d.consistent.AddNode(node.Name)
+	}
 
-		if err != nil {
-			log.Fatalln(err)
-		}
+	if d.nodes == nil {
+		d.nodes = make(map[string]*memberlist.Node)
+	}
+	d.nodes[node.Name] = node
 
-		var wg sync.WaitGroup
+}
+func (d *MyEventDelegate) NotifyLeave(node *memberlist.Node) {
+	log.Printf("leave %s", node.Name)
+	if d.consistent != nil {
+		d.consistent = d.consistent.RemoveNode(node.Name)
+	}
 
-		ch := make(chan string, writeReplicas)
-
-		for _, nodeName := range nodes {
-			wg.Add(1)
-			go func(calledNode string) {
-				defer wg.Done()
-				addRequest(ch, nodeData[calledNode], key, value)
-				ch <- "done"
-			}(nodeName)
-		}
-
-		go func() {
-			defer close(ch)
-			wg.Wait()
-		}()
-
-		for i := 1; i <= writeReplicas; i++ {
-			fmt.Println("Task", <-ch, "completed")
-		}
+	if d.nodes != nil {
+		delete(d.nodes, node.Name)
 	}
 }
+func (d *MyEventDelegate) NotifyUpdate(node *memberlist.Node) {
+	// skip
+}
 
-func getRequest(ip, key string) (string, error) {
-	url := fmt.Sprintf("http://%s:8080/get?key=%s&local=true", ip, key)
+func (d *MyEventDelegate) Send(node string, m MyMessage) {
+}
 
-	// Creating a GET request
-	resp, err := http.Get(url)
+func (d *MyDelegate) NotifyMsg(msg []byte) {
+	d.msgCh <- msg
+}
+func (d *MyDelegate) NodeMeta(limit int) []byte {
+	// not use, noop
+	return []byte("")
+}
+func (d *MyDelegate) LocalState(join bool) []byte {
+	// not use, noop
+	return []byte("")
+}
+func (d *MyDelegate) GetBroadcasts(overhead, limit int) [][]byte {
+	// not use, noop
+	return nil
+}
+func (d *MyDelegate) MergeRemoteState(buf []byte, join bool) {
+	// not use
+}
+
+type MyMessage struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+func (m *MyMessage) Bytes() []byte {
+	data, err := json.Marshal(m)
 	if err != nil {
-		log.Fatalf("Failed to make the request: %v", err)
-		return "", err
+		return []byte("")
 	}
-	defer resp.Body.Close()
-
-	// Reading the response body
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatalf("Failed to read the response body: %v", err)
-		return "", err
+	return data
+}
+func ParseMyMessage(data []byte) (*MyMessage, bool) {
+	msg := new(MyMessage)
+	if err := json.Unmarshal(data, &msg); err != nil {
+		return nil, false
 	}
-
-	return string(body), nil
+	return msg, true
 }
 
-// HTTP handler for getting a value
-func getHandler(w http.ResponseWriter, r *http.Request) {
-	key := r.URL.Query().Get("key")
-	local := r.URL.Query().Get("local")
+var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 
-	if local == "true" {
-		value, exists := get(key)
-		if exists {
-			fmt.Fprintf(w, "%s", value)
-		} else {
-			http.NotFound(w, r)
-		}
-	} else {
-		nodes, err := hashRingGetN(key, totalReplicas)
-		if err != nil {
-			log.Fatalln(err)
-		}
-
-		var wg sync.WaitGroup
-
-		ch := make(chan string, readReplicas)
-
-		valueCount := make(map[string]int)
-
-		for _, nodeName := range nodes {
-			wg.Add(1)
-			go func(calledNode string) {
-				defer wg.Done()
-				value, err := getRequest(nodeData[calledNode], key)
-				if err != nil {
-					log.Println(err)
-				} else {
-					ch <- value
-				}
-			}(nodeName)
-		}
-
-		go func() {
-			wg.Wait()
-			close(ch)
-		}()
-
-		for result := range ch {
-			valueCount[result]++
-
-			// Check if we've seen this value 3 times
-			if valueCount[result] == readReplicas {
-				fmt.Fprint(w, result)
-				return
-			}
-		}
-		http.NotFound(w, r)
+func randomString(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
 	}
-}
-
-func listValues() map[string]string {
-	regularMap := make(map[string]string)
-	myMap.Range(func(key, value interface{}) bool {
-		regularMap[key.(string)] = value.(string)
-		return true
-	})
-	return regularMap
-}
-
-// HTTP handler for listing all values
-func listHandler(w http.ResponseWriter, r *http.Request) {
-	values := listValues()
-	json.NewEncoder(w).Encode(values)
-}
-
-func nodesHandler(w http.ResponseWriter, r *http.Request) {
-	json.NewEncoder(w).Encode(nodeData)
-}
-
-func baseHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Server ID: %s\n", serverIP)
-}
-
-func watchNodes(conn *zk.Conn, path string) {
-	for {
-		children, _, watchChannel, err := conn.ChildrenW(path)
-		if err != nil {
-			log.Fatalf("Failed to list children for path %s: %v", path, err)
-		}
-
-		// Temporary map to track current children
-		currentChildren := make(map[string]bool)
-
-		for _, child := range children {
-			childPath := path + "/" + child
-			data, _, err := conn.Get(childPath)
-			if err != nil {
-				log.Printf("Failed to get data for child %s: %v", childPath, err)
-				continue
-			}
-
-			// Store child data in the global map
-			nodeData[child] = string(data)
-			currentChildren[child] = true
-		}
-
-		// Remove data for nodes that no longer exist
-		for key := range nodeData {
-			if !currentChildren[key] {
-				delete(nodeData, key)
-			}
-		}
-
-		// Wait for changes in the node
-		<-watchChannel
-	}
-}
-
-func getIPAddress() (string, error) {
-	addrs, err := net.InterfaceAddrs()
-	if err != nil {
-		return "", err
-	}
-
-	for _, address := range addrs {
-		// check the address type and if it is not a loopback, return the IP
-		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-			if ipnet.IP.To4() != nil {
-				return ipnet.IP.String(), nil
-			}
-		}
-	}
-
-	return "", fmt.Errorf("No IPv4 address found")
+	return string(b)
 }
 
 func main() {
-	log.Println("STARTING STARTING STARTING STARTING STARTING")
+	msgCh := make(chan []byte)
 
-	servers := []string{"zookeeper:2181"}
-	conn, _, err := zk.Connect(servers, time.Second)
+	d := new(MyDelegate)
+	d.msgCh = msgCh
+
+	conf := memberlist.DefaultLocalConfig()
+
+	conf.Logger = log.New(ioutil.Discard, "", 0)
+	conf.BindPort = 8080
+	conf.AdvertisePort = 8080
+	conf.Delegate = d
+	conf.Events = new(MyEventDelegate)
+
+	list, err := memberlist.Create(conf)
 	if err != nil {
-		log.Fatalf("Unable to connect to ZooKeeper: %v", err)
-	}
-	defer conn.Close()
-
-	groupPath := "/key-store"
-
-	// Register the client to the group
-	clientPath := groupPath + "/client-"
-
-	exists, _, err := conn.Exists(groupPath)
-	if err != nil {
-		log.Fatalf("Failed to check if group exists: %v", err)
-		return
+		panic("Failed to create memberlist: " + err.Error())
 	}
 
-	// Create the group path if it does not exist
-	if !exists {
-		_, err := conn.Create(groupPath, []byte{}, 0, zk.WorldACL(zk.PermAll))
-		if err != nil {
-			log.Fatalf("Failed to create group: %v", err)
-			return
+	// Join an existing cluster by specifying at least one known member.
+	n, err := list.Join([]string{"store:8080"})
+	if err != nil {
+		panic("Failed to join cluster: " + err.Error())
+	}
+
+	log.Println("n", n)
+
+	// Ask for members of the cluster
+	for _, member := range list.Members() {
+		fmt.Printf("Member: %s %s\n", member.Name, member.Addr)
+	}
+
+	tick := time.NewTicker(500 * time.Millisecond)
+
+	run := true
+	for run {
+		select {
+		case <-tick.C:
+
+			value := randomString(5)
+
+			m := new(MyMessage)
+			m.Key = "ping"
+			m.Value = value
+
+			devt := conf.Events.(*MyEventDelegate)
+
+			nodeName, ok := devt.consistent.GetNode(value)
+
+			if ok {
+				log.Printf("node1 search %s => %s", value, nodeName)
+			} else {
+				log.Printf("no node available")
+			}
+
+			node := devt.nodes[nodeName]
+
+			err := list.SendReliable(node, m.Bytes())
+
+			if err != nil {
+				log.Println("FAILED TO SEND", err)
+			}
+
+			// // ping to all
+			// for _, node := range list.Members() {
+			// 	if node.Name == conf.Name {
+			// 		continue // skip self
+			// 	}
+			// 	log.Printf("send to %s msg: key=%s value=%d", node.Name, m.Key, m.Value)
+			// 	list.SendReliable(node, m.Bytes())
+			// }
+		case data := <-d.msgCh:
+			msg, ok := ParseMyMessage(data)
+			if !ok {
+				continue
+			}
+
+			log.Printf("received msg: key=%s value=%s", msg.Key, msg.Value)
+
+			// if msg.Key == "ping" {
+			// 	m := new(MyMessage)
+			// 	m.Key = "pong"
+			// 	m.Value = msg.Value + 1
+
+			// 	devt := conf.Events.(*MyEventDelegate)
+			// 	if devt == nil {
+			// 		log.Printf("consistent isnt initialized")
+			// 		continue
+			// 	}
+			// 	log.Printf("current node size: %d", devt.consistent.Size())
+
+			// 	keys := []string{"hello", "world"}
+			// 	for _, key := range keys {
+			// 		node, ok := devt.consistent.GetNode(key)
+			// 		if ok {
+			// 			log.Printf("node1 search %s => %s", key, node)
+			// 		} else {
+			// 			log.Printf("no node available")
+			// 		}
+			// 	}
+
+			// 	// pong to all
+			// 	// list.SendToAddress()
+			// 	for _, node := range list.Members() {
+			// 		if node.Name == conf.Name {
+			// 			continue // skip self
+			// 		}
+			// 		log.Printf("send to %s msg: key=%s value=%d", node.Name, m.Key, m.Value)
+			// 		list.SendReliable(node, m.Bytes())
+			// 	}
+			// }
+			// default:
+			// 	log.Println("waiting...")
+			// 	time.Sleep(5 * time.Second)
 		}
 	}
 
-	serverIP, err = getIPAddress()
-	if err != nil {
-		log.Fatalf("Get Ip address error: %v", err)
-	}
-
-	fmt.Println("serverIP:", serverIP)
-
-	data := []byte(serverIP)
-	_, err = conn.CreateProtectedEphemeralSequential(clientPath, data, zk.WorldACL(zk.PermAll))
-	if err != nil {
-		log.Fatalf("Unable to register client to the group: %v", err)
-	}
-
-	log.Println("Successfully registered to the key-store group!")
-
-	// Watch for changes in the group
-	go watchNodes(conn, groupPath)
-
-	// // Get the server ID from ZooKeeper
-	// serverIDPath := "/server/id"
-	// serverIDBytes, _, err := conn.Get(serverIDPath)
-	// if err != nil {
-	// 	log.Fatalf("Failed to get server ID from ZooKeeper: %v", err)
-	// }
-	// serverID = string(serverIDBytes)
-
-	http.HandleFunc("/", baseHandler)
-
-	http.HandleFunc("/add", addHandler)
-	http.HandleFunc("/get", getHandler)
-	http.HandleFunc("/list", listHandler)
-	http.HandleFunc("/nodes", nodesHandler)
-
-	fmt.Println("Server is running on port 8080...")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
-		panic(err)
-	}
+	log.Printf("bye..............................")
 }

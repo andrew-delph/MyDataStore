@@ -6,7 +6,6 @@ go_library(
     name = "go_default_library",
     srcs = [
         "main.go",
-        "partition.go",
         "utils.go",
     ],
     importpath = "andrewdelph.com/my-key-store/store",
@@ -14,6 +13,8 @@ go_library(
     deps = [
         "@com_github_deckarep_golang_set_v2//:go_default_library",
         "@com_github_go_zookeeper_zk//:go_default_library",
+        "@com_github_hashicorp_memberlist//:go_default_library",
+        "@com_github_serialx_hashring//:go_default_library",
         "@org_golang_x_exp//constraints:go_default_library",
     ],
 )
@@ -60,8 +61,8 @@ container_push(
     tag = "latest",
 )
 
-go_test(
-    name = "go_default_test",
-    srcs = ["partition_test.go"],
-    embed = [":go_default_library"],
-)
+# go_test(
+#     name = "go_default_test",
+#     srcs = ["partition_test.go"],
+#     embed = [":go_default_library"],
+# )

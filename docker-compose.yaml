@@ -1,25 +1,25 @@
 version: "3.1"
 services:
-  zookeeper:
-    image: "zookeeper:latest"
-    ports:
-      - "2181:2181"
-    environment:
-      ZOO_MY_ID: 1
-      ZOO_PORT: 2181
-      ALLOW_ANONYMOUS_LOGIN: "yes"
-    restart: always
+  # zookeeper:
+  #   image: "zookeeper:latest"
+  #   ports:
+  #     - "2181:2181"
+  #   environment:
+  #     ZOO_MY_ID: 1
+  #     ZOO_PORT: 2181
+  #     ALLOW_ANONYMOUS_LOGIN: "yes"
+  #   restart: always
 
-  zoonavigator:
-    image: elkozmon/zoonavigator
-    environment:
-      CONNECTION_MYZK_CONN: "zookeeper:2181"
-      AUTO_CONNECT_CONNECTION_ID: "MYZK"
-    depends_on:
-      - zookeeper
-    ports:
-      - 9000:9000
-    restart: always
+  # zoonavigator:
+  #   image: elkozmon/zoonavigator
+  #   environment:
+  #     CONNECTION_MYZK_CONN: "zookeeper:2181"
+  #     AUTO_CONNECT_CONNECTION_ID: "MYZK"
+  #   depends_on:
+  #     - zookeeper
+  #   ports:
+  #     - 9000:9000
+  #   restart: always
 
   nginx:
     image: nginx:alpine
@@ -31,8 +31,8 @@ services:
 
   store:
     image: docker.io/andrew-delph/store:store_image
-    scale: 6
+    scale: 3
     depends_on:
-      - zookeeper
+      # - zookeeper
       - nginx
     restart: always
