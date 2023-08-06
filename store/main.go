@@ -6,11 +6,25 @@ import (
 	"io/ioutil"
 	"log"
 	"math/rand"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/memberlist"
 	"github.com/serialx/hashring"
 )
+
+var myMap sync.Map
+
+func set(key string, value string) {
+	myMap.Store(key, value)
+}
+
+func get(key string) (string, bool) {
+	if value, ok := myMap.Load(key); ok {
+		return value.(string), true
+	}
+	return "", false
+}
 
 type MyDelegate struct {
 	msgCh chan []byte
