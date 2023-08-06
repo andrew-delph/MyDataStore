@@ -4,9 +4,34 @@ import (
 	"log"
 	"testing"
 
+	"github.com/hashicorp/memberlist"
 	"github.com/serialx/hashring"
 	"gotest.tools/assert"
 )
+
+// Define an interface to abstract the Memberlist
+type Memberlister interface {
+	LocalNode() Noder
+}
+
+// Define an interface to abstract the Node
+type Noder interface {
+	Name() string
+}
+
+// Then create structs that implement these interfaces
+
+type MockMemberlist struct{}
+
+func (m *MockMemberlist) LocalNode() Noder {
+	return &MockNode{}
+}
+
+type MockNode struct{}
+
+func (m *MockNode) Name() string {
+	return "mock node name"
+}
 
 func TestHashRing(t *testing.T) {
 	// Create an empty hash ring
@@ -48,6 +73,12 @@ func TestEncodeDecodeSetMessage(t *testing.T) {
 }
 
 func TestEncodeDecodeMessageHolderWithSetMessage(t *testing.T) {
+	var err error
+	clusterNodes, err = memberlist.Create(memberlist.DefaultLocalConfig())
+	if err != nil {
+		t.Fatalf("Failed to memberlist.Create: %v", err)
+	}
+
 	setMsg := &SetMessage{
 		Key:   "testKey",
 		Value: "testValue",

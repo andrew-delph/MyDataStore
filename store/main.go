@@ -59,7 +59,10 @@ func main() {
 
 			key := randomString(5)
 
-			events.Send(key, value, 1)
+			err := events.Send(key, value, 1)
+			if err != nil {
+				log.Fatal(err)
+			}
 
 		case data := <-delegate.msgCh:
 

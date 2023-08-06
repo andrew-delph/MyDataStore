@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/hashicorp/memberlist"
@@ -43,7 +44,7 @@ func (events *MyEventDelegate) NotifyUpdate(node *memberlist.Node) {
 	// skip
 }
 
-func (events *MyEventDelegate) Send(key, value string, replicas int) {
+func (events *MyEventDelegate) Send(key, value string, replicas int) error {
 
 	setMsg := &SetMessage{
 		Key:   key,
@@ -53,25 +54,24 @@ func (events *MyEventDelegate) Send(key, value string, replicas int) {
 	nodeName, ok := events.consistent.GetNode(value)
 
 	if !ok {
-		log.Printf("no node available size=%d \n", events.consistent.Size())
-		return
+		return fmt.Errorf("no node available size=%d", events.consistent.Size())
 	}
 
-	log.Printf("node1 search %s => %s", value, nodeName)
+	// log.Printf("node1 search %s => %s", value, nodeName)
 
 	node := events.nodes[nodeName]
 
 	bytes, err := EncodeHolder(setMsg)
 
 	if err != nil {
-		log.Println("FAILED TO ENCODE", err)
-		return
+		return fmt.Errorf("FAILED TO ENCODE: %v", err)
 	}
 
 	err = clusterNodes.SendReliable(node, bytes)
 
 	if err != nil {
-		log.Println("FAILED TO SEND", err)
-		return
+		return fmt.Errorf("FAILED TO SEND: %v", err)
 	}
+
+	return nil
 }

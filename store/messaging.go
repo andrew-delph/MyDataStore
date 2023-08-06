@@ -34,6 +34,7 @@ type Message interface {
 
 type MessageHolder struct {
 	MessageType  string
+	SenderName   string
 	MessageBytes []byte
 }
 
@@ -88,6 +89,7 @@ func EncodeHolder(msg Message) ([]byte, error) {
 	holder := MessageHolder{
 		MessageType:  msg.GetType(),
 		MessageBytes: messageBytes,
+		SenderName:   clusterNodes.LocalNode().Name,
 	}
 
 	bytes, err := json.Marshal(holder)
@@ -111,7 +113,6 @@ func DecodeMessageHolder(data []byte) (Message, error) {
 			return nil, fmt.Errorf("failed to Decode SetMessage: %v", err)
 		}
 		return msg, nil
-		// msg.Handle()
 	case "AckMessage":
 		msg := &AckMessage{}
 		err := msg.Decode(holder.MessageBytes)
@@ -119,9 +120,6 @@ func DecodeMessageHolder(data []byte) (Message, error) {
 			return nil, fmt.Errorf("failed to Decode AckMessage: %v", err)
 		}
 		return msg, nil
-		// msg.Handle()
-		// default:
-		// 	return nil, errors.New("Unknown message type DEFAULT CASE")
 	}
 	return nil, fmt.Errorf("unknown message type: %s", holder.MessageType)
 }
