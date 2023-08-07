@@ -6,8 +6,8 @@ import { randomString } from "https://jslib.k6.io/k6-utils/1.2.0/index.js";
 import { textSummary } from "https://jslib.k6.io/k6-summary/0.0.2/index.js";
 
 export let options = {
-  vus: 100,
-  duration: "10s",
+  // vus: 100,
+  // duration: "5m",
   // iterations: 30,
   // scenarios: {
   //   // disrupt: {
@@ -46,7 +46,8 @@ export default function () {
   let baseRes = http.get(`http://${address}`);
 
   check(baseRes, {
-    "Base: status was 200": (r) => r.status === 200,
+    "Base: status was 200": (r) =>
+      r.status === 200 || console.error(`Base Error: Status was ${r.status}`),
   });
 
   // the key value to insert
@@ -60,16 +61,21 @@ export default function () {
   let setRes = http.get(`http://${address}/set?key=${key}&value=${value}`);
 
   check(setRes, {
-    "Set: status was 200": (r) => r.status === 200,
+    "Set: status was 200": (r) =>
+      r.status === 200 || console.error(`Set Error: Status was ${r.status}`),
   });
 
   // sleep(10);
 
   // Get a value from the map
   let getRes = http.get(`http://${address}/get?key=${key}`);
+
   check(getRes, {
-    "Get: status was 200": (r) => r.status === 200,
-    "Get: body contains testValue": (r) => r.body.indexOf(value) !== -1,
+    "Get: status was 200": (r) =>
+      r.status === 200 || console.error(`Get Error: Status was ${r.status}`),
+    "Get: body contains testValue": (r) =>
+      r.body.indexOf(value) !== -1 ||
+      console.error(`Get Error: Body does not contain ${value}`),
   });
 
   // console.log("getRes.body", getRes.body);

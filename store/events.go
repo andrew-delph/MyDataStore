@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/memberlist"
@@ -83,9 +84,16 @@ func (events *MyEventDelegate) SendSetMessage(key, value string, replicas int) e
 
 	ackSet := make(map[string]bool)
 
+	timeout := time.After(2 * time.Second)
+
 	for len(ackSet) < replicas {
-		ackMessageHolder := <-ackChannel
-		ackSet[ackMessageHolder.SenderName] = true
+		select {
+		case ackMessageHolder := <-ackChannel:
+			ackSet[ackMessageHolder.SenderName] = true
+		case <-timeout:
+			log.Println("TIME OUT REACHED!!!")
+			return fmt.Errorf("timeout waiting for acknowledgements")
+		}
 	}
 
 	log.Println("SET ACK COMPLETE", replicas)
@@ -112,8 +120,6 @@ func (events *MyEventDelegate) SendGetMessage(key string, replicas int) (string,
 
 	for _, nodeName := range nodes {
 
-		log.Printf("node1 search %s => %s", key, nodeName)
-
 		node := events.nodes[nodeName]
 
 		bytes, err := EncodeHolder(getMsg)
@@ -131,20 +137,27 @@ func (events *MyEventDelegate) SendGetMessage(key string, replicas int) (string,
 
 	ackSet := make(map[string]int)
 
+	timeout := time.After(2 * time.Second)
+
 	for len(ackSet) < replicas {
-		ackMessageHolder := <-ackChannel
+		select {
+		case ackMessageHolder := <-ackChannel:
 
-		ackMessage := &AckMessage{}
-		err := ackMessage.Decode(ackMessageHolder.MessageBytes)
-		if err != nil {
-			return "", fmt.Errorf("failed to Decode AckMessage: %v", err)
-		}
+			ackMessage := &AckMessage{}
+			err := ackMessage.Decode(ackMessageHolder.MessageBytes)
+			if err != nil {
+				return "", fmt.Errorf("failed to Decode AckMessage: %v", err)
+			}
 
-		ackValue := ackMessage.Value
-		ackSet[ackValue]++
+			ackValue := ackMessage.Value
+			ackSet[ackValue]++
 
-		if ackSet[ackValue] == replicas {
-			return ackValue, nil
+			if ackSet[ackValue] == replicas {
+				return ackValue, nil
+			}
+		case <-timeout:
+			log.Println("TIME OUT REACHED!!!")
+			return "", fmt.Errorf("timeout waiting for acknowledgements")
 		}
 	}
 
