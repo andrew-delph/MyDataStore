@@ -35,6 +35,8 @@ func main() {
 
 	logrus.Info("starting")
 
+	go randomCrash()
+
 	initCache()
 
 	logrus.SetLevel(logrus.WarnLevel)

@@ -8,7 +8,8 @@ import (
 )
 
 // Define a global cache variable
-var storeCache = cache.New(0*time.Minute, 10*time.Minute)
+
+var storeCache *cache.Cache
 
 // Function to set a value in the global cache
 func setValue(key string, value string) {
@@ -27,14 +28,20 @@ func getValue(key string) (string, bool) {
 
 func initCache() {
 	// Ticker to trigger saveCacheToFile every 5 minutes
-	ticker := time.NewTicker(5 * time.Minute)
-	defer ticker.Stop()
+
+	storeCache = cache.New(0*time.Minute, 1*time.Minute)
+	err := storeCache.LoadFile("/store/cache.json")
+	if err != nil {
+		logrus.Warnf("failed to load from file: %v", err)
+	}
+
+	ticker := time.NewTicker(10 * time.Second)
 
 	// Goroutine to periodically save the cache to a file
 	go func() {
 		for range ticker.C {
 			logrus.Info("saving cache to file")
-			storeCache.SaveFile("cache.json")
+			storeCache.SaveFile("/store/cache.json")
 		}
 	}()
 }
