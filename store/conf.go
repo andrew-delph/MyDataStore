@@ -14,8 +14,8 @@ func GetConf() (*memberlist.Config, *MyDelegate, *MyEventDelegate) {
 
 	conf := memberlist.DefaultLocalConfig()
 	conf.Logger = log.New(io.Discard, "", 0)
-	conf.BindPort = 8080
-	conf.AdvertisePort = 8080
+	conf.BindPort = 8081
+	conf.AdvertisePort = 8081
 	conf.Delegate = delegate
 	conf.Events = events
 

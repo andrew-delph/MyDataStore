@@ -11,11 +11,11 @@ import (
 
 var myMap sync.Map
 
-func set(key string, value string) {
+func setValue(key string, value string) {
 	myMap.Store(key, value)
 }
 
-func get(key string) (string, bool) {
+func getValue(key string) (string, bool) {
 	if value, ok := myMap.Load(key); ok {
 		return value.(string), true
 	}
@@ -27,14 +27,14 @@ var (
 	delegate     *MyDelegate
 	events       *MyEventDelegate
 	conf         *memberlist.Config
-	ackMap       map[string]chan string
+	ackMap       map[string]chan *MessageHolder
 )
 
 func main() {
 
 	conf, delegate, events = GetConf()
 
-	ackMap = make(map[string]chan string)
+	ackMap = make(map[string]chan *MessageHolder)
 
 	var err error
 	clusterNodes, err = memberlist.Create(conf)
@@ -43,7 +43,7 @@ func main() {
 	}
 
 	// Join an existing cluster by specifying at least one known member.
-	n, err := clusterNodes.Join([]string{"store:8080"})
+	n, err := clusterNodes.Join([]string{"store:8081"})
 	if err != nil {
 		panic("Failed to join cluster: " + err.Error())
 	}
@@ -55,17 +55,21 @@ func main() {
 		fmt.Printf("Member: %s %s\n", member.Name, member.Addr)
 	}
 
-	tick := time.NewTicker(500 * time.Millisecond)
+	tick := time.NewTicker(50000 * time.Millisecond)
+
+	go startHttpServer()
 
 	run := true
 	for run {
 		select {
 		case <-tick.C:
-			value := randomString(5)
+			// value := randomString(5)
 
-			key := randomString(5)
+			// key := randomString(5)
 
-			go events.SendSetMessage(key, value, 2)
+			log.Println("TICK VALUE")
+
+			// go events.SendSetMessage(key, value, 2)
 
 		case data := <-delegate.msgCh:
 
@@ -75,48 +79,7 @@ func main() {
 			}
 
 			message.Handle(messageHolder)
-			// msg, ok := ParseMyMessage(data)
-			// if !ok {
-			// 	continue
-			// }
 
-			// log.Printf("received msg: key=%s value=%s", msg.Key, msg.Value)
-
-			// if msg.Key == "ping" {
-			// 	m := new(MyMessage)
-			// 	m.Key = "pong"
-			// 	m.Value = msg.Value + 1
-
-			// 	devt := conf.Events.(*MyEventDelegate)
-			// 	if devt == nil {
-			// 		log.Printf("consistent isnt initialized")
-			// 		continue
-			// 	}
-			// 	log.Printf("current node size: %d", devt.consistent.Size())
-
-			// 	keys := []string{"hello", "world"}
-			// 	for _, key := range keys {
-			// 		node, ok := devt.consistent.GetNode(key)
-			// 		if ok {
-			// 			log.Printf("node1 search %s => %s", key, node)
-			// 		} else {
-			// 			log.Printf("no node available")
-			// 		}
-			// 	}
-
-			// 	// pong to all
-			// 	// clusterNodes.SendToAddress()
-			// 	for _, node := range clusterNodes.Members() {
-			// 		if node.Name == conf.Name {
-			// 			continue // skip self
-			// 		}
-			// 		log.Printf("send to %s msg: key=%s value=%d", node.Name, m.Key, m.Value)
-			// 		clusterNodes.SendReliable(node, m.Bytes())
-			// 	}
-			// }
-			// default:
-			// 	log.Println("waiting...")
-			// 	time.Sleep(5 * time.Second)
 		}
 	}
 

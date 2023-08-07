@@ -51,9 +51,9 @@ func (events *MyEventDelegate) SendSetMessage(key, value string, replicas int) e
 
 	setMsg := NewSetMessage(key, value, ackId)
 
-	nodes, ok := events.consistent.GetNodes(value, replicas)
+	nodes, ok := events.consistent.GetNodes(key, replicas)
 
-	ackChannel := make(chan string, replicas)
+	ackChannel := make(chan *MessageHolder, replicas)
 	defer close(ackChannel)
 
 	ackMap[ackId] = ackChannel
@@ -64,7 +64,7 @@ func (events *MyEventDelegate) SendSetMessage(key, value string, replicas int) e
 
 	for _, nodeName := range nodes {
 
-		log.Printf("node1 search %s => %s", value, nodeName)
+		log.Printf("node1 search %s => %s", key, nodeName)
 
 		node := events.nodes[nodeName]
 
@@ -84,8 +84,8 @@ func (events *MyEventDelegate) SendSetMessage(key, value string, replicas int) e
 	ackSet := make(map[string]bool)
 
 	for len(ackSet) < replicas {
-		nodeAck := <-ackChannel
-		ackSet[nodeAck] = true
+		ackMessageHolder := <-ackChannel
+		ackSet[ackMessageHolder.SenderName] = true
 	}
 
 	log.Println("ACK COMPLETE", replicas)
@@ -93,9 +93,9 @@ func (events *MyEventDelegate) SendSetMessage(key, value string, replicas int) e
 	return nil
 }
 
-func (events *MyEventDelegate) SendAckMessage(ackId, senderName string) error {
+func (events *MyEventDelegate) SendAckMessage(value, ackId, senderName string, success bool) error {
 
-	ackMsg := NewAckMessage(ackId, true)
+	ackMsg := NewAckMessage(ackId, success, "")
 
 	node := events.nodes[senderName]
 
@@ -112,4 +112,52 @@ func (events *MyEventDelegate) SendAckMessage(ackId, senderName string) error {
 	}
 
 	return nil
+}
+
+func (events *MyEventDelegate) SendGetMessage(key string, replicas int) (string, error) {
+
+	ackId := uuid.New().String()
+
+	getMsg := NewGetMessage(key, ackId)
+
+	nodes, ok := events.consistent.GetNodes(key, replicas)
+
+	ackChannel := make(chan *MessageHolder, replicas)
+	defer close(ackChannel)
+
+	ackMap[ackId] = ackChannel
+
+	if !ok {
+		return "", fmt.Errorf("no node available size=%d", events.consistent.Size())
+	}
+
+	for _, nodeName := range nodes {
+
+		log.Printf("node1 search %s => %s", key, nodeName)
+
+		node := events.nodes[nodeName]
+
+		bytes, err := EncodeHolder(getMsg)
+
+		if err != nil {
+			return "", fmt.Errorf("FAILED TO ENCODE: %v", err)
+		}
+
+		err = clusterNodes.SendReliable(node, bytes)
+
+		if err != nil {
+			return "", fmt.Errorf("FAILED TO SEND: %v", err)
+		}
+	}
+
+	ackSet := make(map[string]bool)
+
+	for len(ackSet) < replicas {
+		ackMessageHolder := <-ackChannel
+		ackSet[ackMessageHolder.SenderName] = true
+	}
+
+	log.Println("ACK COMPLETE", replicas)
+
+	return "value", nil
 }

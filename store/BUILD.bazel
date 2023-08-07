@@ -5,6 +5,7 @@ load("@io_bazel_rules_docker//go:image.bzl", "go_image")
 go_library(
     name = "go_default_library",
     srcs = [
+        "api.go",
         "conf.go",
         "delegate.go",
         "events.go",

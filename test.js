@@ -3,11 +3,11 @@ import { sleep } from "k6";
 import http from "k6/http";
 import { check } from "k6";
 import { randomString } from "https://jslib.k6.io/k6-utils/1.2.0/index.js";
+import { textSummary } from "https://jslib.k6.io/k6-summary/0.0.2/index.js";
 
 export let options = {
-  vus: 100,
-  duration: "5m",
-
+  // vus: 100,
+  // duration: "5m",
   // iterations: 30,
   // scenarios: {
   //   // disrupt: {
@@ -32,6 +32,15 @@ export let options = {
 let address = "192.168.49.2:30000";
 address = "localhost:80";
 
+export function handleSummary(data) {
+  let output = data;
+
+  delete output.metrics;
+
+  return {
+    stdout: textSummary(output, { indent: " ", enableColors: true }),
+  };
+}
 export default function () {
   // Get the id from the server
   let baseRes = http.get(`http://${address}`);
@@ -44,11 +53,11 @@ export default function () {
   const key = randomString(15);
   const value = randomString(15);
 
-  // Add a value to the map
-  let addRes = http.get(`http://${address}/add?key=${key}&value=${value}`);
+  // Set a value to the map
+  let setRes = http.get(`http://${address}/set?key=${key}&value=${value}`);
 
-  check(addRes, {
-    "Add: status was 200": (r) => r.status === 200,
+  check(setRes, {
+    "Set: status was 200": (r) => r.status === 200,
   });
 
   // sleep(10);

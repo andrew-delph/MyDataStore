@@ -67,18 +67,51 @@ func (m *SetMessage) Decode(data []byte) error {
 
 func (m *SetMessage) Handle(messageHolder *MessageHolder) {
 	log.Printf("Handling SetMessage: key=%s value=%s ackId=%s sender=%s\n", m.Key, m.Value, m.AckId, messageHolder.SenderName)
-	events.SendAckMessage(m.AckId, messageHolder.SenderName)
+	setValue(m.Key, m.Value)
+	events.SendAckMessage("", m.AckId, messageHolder.SenderName, true)
+}
+
+type GetMessage struct {
+	Key   string
+	AckId string
+}
+
+func NewGetMessage(key string, ackID string) *GetMessage {
+	return &GetMessage{
+		Key:   key,
+		AckId: ackID,
+	}
+}
+
+func (m *GetMessage) Encode() ([]byte, error) {
+	return json.Marshal(m)
+}
+
+func (m GetMessage) GetType() string {
+	return "GetMessage"
+}
+
+func (m *GetMessage) Decode(data []byte) error {
+	return json.Unmarshal(data, m)
+}
+
+func (m *GetMessage) Handle(messageHolder *MessageHolder) {
+	log.Printf("Handling GetMessage: key=%s ackId=%s sender=%s\n", m.Key, m.AckId, messageHolder.SenderName)
+	value, exists := getValue(m.Key)
+	events.SendAckMessage(value, m.AckId, messageHolder.SenderName, exists)
 }
 
 type AckMessage struct {
 	AckId   string
 	Success bool
+	Value   string
 }
 
-func NewAckMessage(ackID string, success bool) *AckMessage {
+func NewAckMessage(ackID string, success bool, value string) *AckMessage {
 	return &AckMessage{
 		AckId:   ackID,
 		Success: success,
+		Value:   value,
 	}
 }
 
@@ -95,7 +128,7 @@ func (m *AckMessage) Handle(messageHolder *MessageHolder) {
 		return
 	}
 
-	ackChannel <- messageHolder.SenderName
+	ackChannel <- messageHolder
 }
 
 func (m AckMessage) GetType() string {
@@ -145,6 +178,13 @@ func DecodeMessageHolder(data []byte) (*MessageHolder, Message, error) {
 		err := msg.Decode(holder.MessageBytes)
 		if err != nil {
 			return holder, nil, fmt.Errorf("failed to Decode AckMessage: %v", err)
+		}
+		return holder, msg, nil
+	case "GetMessage":
+		msg := &GetMessage{}
+		err := msg.Decode(holder.MessageBytes)
+		if err != nil {
+			return holder, nil, fmt.Errorf("failed to Decode GetMessage: %v", err)
 		}
 		return holder, msg, nil
 	}
