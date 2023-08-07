@@ -27,14 +27,23 @@ var (
 	delegate     *MyDelegate
 	events       *MyEventDelegate
 	conf         *memberlist.Config
-	ackMap       map[string]chan *MessageHolder
+	ackMap       sync.Map
 )
+
+func setAckChannel(key string, ch chan *MessageHolder) {
+	ackMap.Store(key, ch)
+}
+
+func getAckChannel(key string) (chan *MessageHolder, bool) {
+	if value, ok := ackMap.Load(key); ok {
+		return value.(chan *MessageHolder), true
+	}
+	return nil, false
+}
 
 func main() {
 
 	conf, delegate, events = GetConf()
-
-	ackMap = make(map[string]chan *MessageHolder)
 
 	var err error
 	clusterNodes, err = memberlist.Create(conf)

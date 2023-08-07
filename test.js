@@ -6,8 +6,8 @@ import { randomString } from "https://jslib.k6.io/k6-utils/1.2.0/index.js";
 import { textSummary } from "https://jslib.k6.io/k6-summary/0.0.2/index.js";
 
 export let options = {
-  // vus: 100,
-  // duration: "5m",
+  vus: 100,
+  duration: "10s",
   // iterations: 30,
   // scenarios: {
   //   // disrupt: {
@@ -72,7 +72,7 @@ export default function () {
     "Get: body contains testValue": (r) => r.body.indexOf(value) !== -1,
   });
 
-  console.log("getRes.body", getRes.body);
+  // console.log("getRes.body", getRes.body);
 
   // // List all values from the map
   // let listRes = http.get(`http://${address}/list`);

@@ -122,7 +122,7 @@ func (m AckMessage) Encode() ([]byte, error) {
 
 func (m *AckMessage) Handle(messageHolder *MessageHolder) {
 	log.Printf("Handling AckMessage. sender=%s success=%t ackId=%s value=%s", messageHolder.SenderName, m.Success, m.AckId, m.Value)
-	ackChannel, exists := ackMap[m.AckId]
+	ackChannel, exists := getAckChannel(m.AckId)
 
 	if !exists {
 		log.Println("ackChannel does not exist")

@@ -56,7 +56,7 @@ func (events *MyEventDelegate) SendSetMessage(key, value string, replicas int) e
 	ackChannel := make(chan *MessageHolder, replicas)
 	defer close(ackChannel)
 
-	ackMap[ackId] = ackChannel
+	setAckChannel(ackId, ackChannel)
 
 	if !ok {
 		return fmt.Errorf("no node available size=%d", events.consistent.Size())
@@ -104,7 +104,7 @@ func (events *MyEventDelegate) SendGetMessage(key string, replicas int) (string,
 	ackChannel := make(chan *MessageHolder, replicas)
 	defer close(ackChannel)
 
-	ackMap[ackId] = ackChannel
+	setAckChannel(ackId, ackChannel)
 
 	if !ok {
 		return "", fmt.Errorf("no node available size=%d", events.consistent.Size())
