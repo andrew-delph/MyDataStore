@@ -3,7 +3,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+
+	"github.com/sirupsen/logrus"
 )
 
 type MyMessage struct {
@@ -67,7 +68,7 @@ func (m *SetMessage) Decode(data []byte) error {
 }
 
 func (m *SetMessage) Handle(messageHolder *MessageHolder) {
-	log.Printf("Handling SetMessage: key=%s value=%s ackId=%s sender=%s\n", m.Key, m.Value, m.AckId, messageHolder.SenderName)
+	logrus.Debugf("Handling SetMessage: key=%s value=%s ackId=%s sender=%s\n", m.Key, m.Value, m.AckId, messageHolder.SenderName)
 	setValue(m.Key, m.Value)
 	events.SendAckMessage("", m.AckId, messageHolder.SenderName, true)
 }
@@ -97,7 +98,7 @@ func (m *GetMessage) Decode(data []byte) error {
 }
 
 func (m *GetMessage) Handle(messageHolder *MessageHolder) {
-	log.Printf("Handling GetMessage: key=%s ackId=%s sender=%s\n", m.Key, m.AckId, messageHolder.SenderName)
+	logrus.Debugf("Handling GetMessage: key=%s ackId=%s sender=%s\n", m.Key, m.AckId, messageHolder.SenderName)
 	value, exists := getValue(m.Key)
 	events.SendAckMessage(value, m.AckId, messageHolder.SenderName, exists)
 }
@@ -121,11 +122,11 @@ func (m AckMessage) Encode() ([]byte, error) {
 }
 
 func (m *AckMessage) Handle(messageHolder *MessageHolder) {
-	log.Printf("Handling AckMessage. sender=%s success=%t ackId=%s value=%s", messageHolder.SenderName, m.Success, m.AckId, m.Value)
+	logrus.Debugf("Handling AckMessage. sender=%s success=%t ackId=%s value=%s", messageHolder.SenderName, m.Success, m.AckId, m.Value)
 	ackChannel, exists := getAckChannel(m.AckId)
 
 	if !exists {
-		log.Println("ackChannel does not exist")
+		logrus.Warn("ackChannel does not exist")
 		return
 	}
 
@@ -162,7 +163,7 @@ func DecodeMessageHolder(data []byte) (*MessageHolder, Message, error) {
 	holder := &MessageHolder{}
 	err := json.Unmarshal(data, holder)
 	if err != nil {
-		fmt.Println("Failed to decode holder: ", err)
+		logrus.Error("Failed to decode holder: ", err)
 		return nil, nil, err
 	}
 

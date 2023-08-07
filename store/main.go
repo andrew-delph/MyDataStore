@@ -1,12 +1,11 @@
 package main
 
 import (
-	"fmt"
-	"log"
 	"sync"
 	"time"
 
 	"github.com/hashicorp/memberlist"
+	"github.com/sirupsen/logrus"
 )
 
 var myMap sync.Map
@@ -47,25 +46,27 @@ func deleteAckChannel(key string) {
 
 func main() {
 
+	logrus.SetLevel(logrus.WarnLevel)
+
 	conf, delegate, events = GetConf()
 
 	var err error
 	clusterNodes, err = memberlist.Create(conf)
 	if err != nil {
-		panic("Failed to create memberlist: " + err.Error())
+		logrus.Panic("Failed to create memberlist: " + err.Error())
 	}
 
 	// Join an existing cluster by specifying at least one known member.
 	n, err := clusterNodes.Join([]string{"store:8081"})
 	if err != nil {
-		panic("Failed to join cluster: " + err.Error())
+		logrus.Panic("Failed to join cluster: " + err.Error())
 	}
 
-	log.Println("n", n)
+	logrus.Info("n", n)
 
 	// Ask for members of the cluster
 	for _, member := range clusterNodes.Members() {
-		fmt.Printf("Member: %s %s\n", member.Name, member.Addr)
+		logrus.Infof("Member: %s %s\n", member.Name, member.Addr)
 	}
 
 	tick := time.NewTicker(50000 * time.Millisecond)
@@ -80,7 +81,7 @@ func main() {
 
 			// key := randomString(5)
 
-			log.Println("TICK VALUE")
+			logrus.Debug("TICK VALUE")
 
 			// go events.SendSetMessage(key, value, 2)
 
@@ -88,7 +89,7 @@ func main() {
 
 			messageHolder, message, err := DecodeMessageHolder(data)
 			if err != nil {
-				log.Fatal(err)
+				logrus.Fatal(err)
 			}
 
 			message.Handle(messageHolder)
@@ -96,5 +97,5 @@ func main() {
 		}
 	}
 
-	log.Printf("bye..............................")
+	logrus.Info("bye..............................")
 }

@@ -27,6 +27,7 @@ require (
 	github.com/miekg/dns v1.1.26 // indirect
 	github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529 // indirect
 	github.com/serialx/hashring v0.0.0-20200727003509-22c0c7ab6b1b
+	github.com/sirupsen/logrus v1.9.3
 	golang.org/x/crypto v0.0.0-20190923035154-9ee001bba392 // indirect
 	golang.org/x/net v0.0.0-20190923162816-aa69164e4478 // indirect
 	golang.org/x/sys v0.1.0 // indirect

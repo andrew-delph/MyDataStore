@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"logrus"
 	"testing"
 
 	"github.com/hashicorp/memberlist"
@@ -42,8 +42,8 @@ func TestHashRing(t *testing.T) {
 	hashRing = hashRing.AddNode("node2")
 
 	// Print the nodes in the hash ring
-	log.Println(hashRing.GetNode("test"))
-	log.Println("size", hashRing.Size())
+	logrus.Println(hashRing.GetNode("test"))
+	logrus.Println("size", hashRing.Size())
 }
 
 func TestEncodeDecodeSetMessage(t *testing.T) {
@@ -111,8 +111,8 @@ func TestEncodeDecodeMessageHolderWithSetMessage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	log.Println("decodedMessageHolder", decodedMessageHolder)
-	log.Println("decodedMessage", decodedMessage)
+	logrus.Println("decodedMessageHolder", decodedMessageHolder)
+	logrus.Println("decodedMessage", decodedMessage)
 
 	assert.Equal(t, decodedMessage.GetType(), "SetMessage", "Both should be SetMessage")
 

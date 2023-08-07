@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/memberlist"
 	"github.com/serialx/hashring"
+	"github.com/sirupsen/logrus"
 )
 
 type MyEventDelegate struct {
@@ -27,7 +27,7 @@ func GetMyEventDelegate() *MyEventDelegate {
 
 func (events *MyEventDelegate) NotifyJoin(node *memberlist.Node) {
 
-	log.Printf("join %s", node.Name)
+	logrus.Infof("join %s", node.Name)
 
 	events.consistent = events.consistent.AddNode(node.Name)
 
@@ -36,7 +36,7 @@ func (events *MyEventDelegate) NotifyJoin(node *memberlist.Node) {
 
 func (events *MyEventDelegate) NotifyLeave(node *memberlist.Node) {
 
-	log.Printf("leave %s", node.Name)
+	logrus.Infof("leave %s", node.Name)
 
 	events.consistent = events.consistent.RemoveNode(node.Name)
 
@@ -66,7 +66,7 @@ func (events *MyEventDelegate) SendSetMessage(key, value string, replicas int) e
 
 	for _, nodeName := range nodes {
 
-		log.Printf("node1 search %s => %s", key, nodeName)
+		logrus.Debugf("node1 search %s => %s", key, nodeName)
 
 		node := events.nodes[nodeName]
 
@@ -92,12 +92,12 @@ func (events *MyEventDelegate) SendSetMessage(key, value string, replicas int) e
 		case ackMessageHolder := <-ackChannel:
 			ackSet[ackMessageHolder.SenderName] = true
 		case <-timeout:
-			log.Println("TIME OUT REACHED!!!")
+			logrus.Warn("TIME OUT REACHED!!!")
 			return fmt.Errorf("timeout waiting for acknowledgements")
 		}
 	}
 
-	log.Println("SET ACK COMPLETE", replicas)
+	logrus.Debug("SET ACK COMPLETE", replicas)
 
 	return nil
 }
@@ -158,12 +158,12 @@ func (events *MyEventDelegate) SendGetMessage(key string, replicas int) (string,
 				return ackValue, nil
 			}
 		case <-timeout:
-			log.Println("TIME OUT REACHED!!!")
+			logrus.Warn("TIME OUT REACHED!!!")
 			return "", fmt.Errorf("timeout waiting for acknowledgements")
 		}
 	}
 
-	log.Println("GET ACK COMPLETE", replicas)
+	logrus.Debug("GET ACK COMPLETE", replicas)
 
 	return "", fmt.Errorf("value not found for key= %s", key)
 }

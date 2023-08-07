@@ -3,10 +3,11 @@ package main
 import (
 	"fmt"
 	"net/http"
+
+	"github.com/sirupsen/logrus"
 )
 
 func baseHandler(w http.ResponseWriter, r *http.Request) {
-
 	fmt.Fprint(w, "server is running")
 }
 
@@ -49,7 +50,7 @@ func startHttpServer() {
 	http.HandleFunc("/set", setHandler)
 	http.HandleFunc("/get", getHandler)
 
-	fmt.Println("Server is running on http://localhost:8080")
+	logrus.Info("Server is running on http://localhost:8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		panic(err)
 	}
