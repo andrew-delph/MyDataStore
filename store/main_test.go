@@ -1,8 +1,9 @@
 package main
 
 import (
-	"logrus"
 	"testing"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/hashicorp/memberlist"
 	"github.com/serialx/hashring"
