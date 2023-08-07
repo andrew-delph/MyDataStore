@@ -37,6 +37,7 @@ type MessageHolder struct {
 	MessageType  string
 	SenderName   string
 	MessageBytes []byte
+	Message      Message
 }
 
 type SetMessage struct {
@@ -120,7 +121,7 @@ func (m AckMessage) Encode() ([]byte, error) {
 }
 
 func (m *AckMessage) Handle(messageHolder *MessageHolder) {
-	log.Println("Handling AckMessage: ", m.Success, m.AckId)
+	log.Printf("Handling AckMessage. sender=%s success=%t ackId=%s value=%s", messageHolder.SenderName, m.Success, m.AckId, m.Value)
 	ackChannel, exists := ackMap[m.AckId]
 
 	if !exists {
@@ -173,18 +174,18 @@ func DecodeMessageHolder(data []byte) (*MessageHolder, Message, error) {
 			return holder, nil, fmt.Errorf("failed to Decode SetMessage: %v", err)
 		}
 		return holder, msg, nil
-	case "AckMessage":
-		msg := &AckMessage{}
-		err := msg.Decode(holder.MessageBytes)
-		if err != nil {
-			return holder, nil, fmt.Errorf("failed to Decode AckMessage: %v", err)
-		}
-		return holder, msg, nil
 	case "GetMessage":
 		msg := &GetMessage{}
 		err := msg.Decode(holder.MessageBytes)
 		if err != nil {
 			return holder, nil, fmt.Errorf("failed to Decode GetMessage: %v", err)
+		}
+		return holder, msg, nil
+	case "AckMessage":
+		msg := &AckMessage{}
+		err := msg.Decode(holder.MessageBytes)
+		if err != nil {
+			return holder, nil, fmt.Errorf("failed to Decode AckMessage: %v", err)
 		}
 		return holder, msg, nil
 	}

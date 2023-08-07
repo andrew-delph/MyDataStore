@@ -50,8 +50,11 @@ export default function () {
   });
 
   // the key value to insert
-  const key = randomString(15);
-  const value = randomString(15);
+  let key = randomString(15);
+  let value = randomString(15);
+
+  // key = "key1";
+  // value = "value1";
 
   // Set a value to the map
   let setRes = http.get(`http://${address}/set?key=${key}&value=${value}`);
@@ -68,6 +71,8 @@ export default function () {
     "Get: status was 200": (r) => r.status === 200,
     "Get: body contains testValue": (r) => r.body.indexOf(value) !== -1,
   });
+
+  console.log("getRes.body", getRes.body);
 
   // // List all values from the map
   // let listRes = http.get(`http://${address}/list`);

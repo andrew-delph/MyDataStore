@@ -88,28 +88,7 @@ func (events *MyEventDelegate) SendSetMessage(key, value string, replicas int) e
 		ackSet[ackMessageHolder.SenderName] = true
 	}
 
-	log.Println("ACK COMPLETE", replicas)
-
-	return nil
-}
-
-func (events *MyEventDelegate) SendAckMessage(value, ackId, senderName string, success bool) error {
-
-	ackMsg := NewAckMessage(ackId, success, "")
-
-	node := events.nodes[senderName]
-
-	bytes, err := EncodeHolder(ackMsg)
-
-	if err != nil {
-		return fmt.Errorf("FAILED TO ENCODE: %v", err)
-	}
-
-	err = clusterNodes.SendReliable(node, bytes)
-
-	if err != nil {
-		return fmt.Errorf("FAILED TO SEND: %v", err)
-	}
+	log.Println("SET ACK COMPLETE", replicas)
 
 	return nil
 }
@@ -150,14 +129,47 @@ func (events *MyEventDelegate) SendGetMessage(key string, replicas int) (string,
 		}
 	}
 
-	ackSet := make(map[string]bool)
+	ackSet := make(map[string]int)
 
 	for len(ackSet) < replicas {
 		ackMessageHolder := <-ackChannel
-		ackSet[ackMessageHolder.SenderName] = true
+
+		ackMessage := &AckMessage{}
+		err := ackMessage.Decode(ackMessageHolder.MessageBytes)
+		if err != nil {
+			return "", fmt.Errorf("failed to Decode AckMessage: %v", err)
+		}
+
+		ackValue := ackMessage.Value
+		ackSet[ackValue]++
+
+		if ackSet[ackValue] == replicas {
+			return ackValue, nil
+		}
 	}
 
-	log.Println("ACK COMPLETE", replicas)
+	log.Println("GET ACK COMPLETE", replicas)
 
-	return "value", nil
+	return "", fmt.Errorf("value not found for key= %s", key)
+}
+
+func (events *MyEventDelegate) SendAckMessage(value, ackId, senderName string, success bool) error {
+
+	ackMsg := NewAckMessage(ackId, success, value)
+
+	node := events.nodes[senderName]
+
+	bytes, err := EncodeHolder(ackMsg)
+
+	if err != nil {
+		return fmt.Errorf("FAILED TO ENCODE: %v", err)
+	}
+
+	err = clusterNodes.SendReliable(node, bytes)
+
+	if err != nil {
+		return fmt.Errorf("FAILED TO SEND: %v", err)
+	}
+
+	return nil
 }

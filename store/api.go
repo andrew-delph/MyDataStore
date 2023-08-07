@@ -33,7 +33,7 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 	// Get the key from the query parameters
 	key := r.URL.Query().Get("key")
 
-	value, err := events.SendGetMessage("12312312", 2)
+	value, err := events.SendGetMessage(key, 2)
 
 	if err != nil {
 		errorMessage := fmt.Sprintf("Could not set value: key = '%s', value = '%s'. Error = %v", key, value, err)
