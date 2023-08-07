@@ -51,27 +51,44 @@ func (events *MyEventDelegate) SendSetMessage(key, value string, replicas int) e
 
 	setMsg := NewSetMessage(key, value, ackId)
 
-	nodeName, ok := events.consistent.GetNode(value)
+	nodes, ok := events.consistent.GetNodes(value, replicas)
+
+	ackChannel := make(chan string, replicas)
+	defer close(ackChannel)
+
+	ackMap[ackId] = ackChannel
 
 	if !ok {
 		return fmt.Errorf("no node available size=%d", events.consistent.Size())
 	}
 
-	// log.Printf("node1 search %s => %s", value, nodeName)
+	for _, nodeName := range nodes {
 
-	node := events.nodes[nodeName]
+		log.Printf("node1 search %s => %s", value, nodeName)
 
-	bytes, err := EncodeHolder(setMsg)
+		node := events.nodes[nodeName]
 
-	if err != nil {
-		return fmt.Errorf("FAILED TO ENCODE: %v", err)
+		bytes, err := EncodeHolder(setMsg)
+
+		if err != nil {
+			return fmt.Errorf("FAILED TO ENCODE: %v", err)
+		}
+
+		err = clusterNodes.SendReliable(node, bytes)
+
+		if err != nil {
+			return fmt.Errorf("FAILED TO SEND: %v", err)
+		}
 	}
 
-	err = clusterNodes.SendReliable(node, bytes)
+	ackSet := make(map[string]bool)
 
-	if err != nil {
-		return fmt.Errorf("FAILED TO SEND: %v", err)
+	for len(ackSet) < replicas {
+		nodeAck := <-ackChannel
+		ackSet[nodeAck] = true
 	}
+
+	log.Println("ACK COMPLETE")
 
 	return nil
 }

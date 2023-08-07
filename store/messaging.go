@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 )
 
 type MyMessage struct {
@@ -65,7 +66,7 @@ func (m *SetMessage) Decode(data []byte) error {
 }
 
 func (m *SetMessage) Handle(messageHolder *MessageHolder) {
-	fmt.Printf("Handling SetMessage: key=%s value=%s ackId=%s sender=%s\n", m.Key, m.Value, m.AckId, messageHolder.SenderName)
+	log.Printf("Handling SetMessage: key=%s value=%s ackId=%s sender=%s\n", m.Key, m.Value, m.AckId, messageHolder.SenderName)
 	events.SendAckMessage(m.AckId, messageHolder.SenderName)
 }
 
@@ -86,7 +87,15 @@ func (m AckMessage) Encode() ([]byte, error) {
 }
 
 func (m *AckMessage) Handle(messageHolder *MessageHolder) {
-	fmt.Println("Handling AckMessage: ", m.Success, m.AckId)
+	log.Println("Handling AckMessage: ", m.Success, m.AckId)
+	ackChannel, exists := ackMap[m.AckId]
+
+	if !exists {
+		log.Println("ackChannel does not exist")
+		return
+	}
+
+	ackChannel <- messageHolder.SenderName
 }
 
 func (m AckMessage) GetType() string {

@@ -27,11 +27,14 @@ var (
 	delegate     *MyDelegate
 	events       *MyEventDelegate
 	conf         *memberlist.Config
+	ackMap       map[string]chan string
 )
 
 func main() {
 
 	conf, delegate, events = GetConf()
+
+	ackMap = make(map[string]chan string)
 
 	var err error
 	clusterNodes, err = memberlist.Create(conf)
@@ -52,7 +55,7 @@ func main() {
 		fmt.Printf("Member: %s %s\n", member.Name, member.Addr)
 	}
 
-	tick := time.NewTicker(5000 * time.Millisecond)
+	tick := time.NewTicker(500 * time.Millisecond)
 
 	run := true
 	for run {
@@ -62,10 +65,7 @@ func main() {
 
 			key := randomString(5)
 
-			err := events.SendSetMessage(key, value, 1)
-			if err != nil {
-				log.Fatal(err)
-			}
+			go events.SendSetMessage(key, value, 2)
 
 		case data := <-delegate.msgCh:
 
