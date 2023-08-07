@@ -58,6 +58,7 @@ func (events *MyEventDelegate) SendSetMessage(key, value string, replicas int) e
 	defer close(ackChannel)
 
 	setAckChannel(ackId, ackChannel)
+	defer deleteAckChannel(ackId)
 
 	if !ok {
 		return fmt.Errorf("no node available size=%d", events.consistent.Size())
@@ -113,6 +114,7 @@ func (events *MyEventDelegate) SendGetMessage(key string, replicas int) (string,
 	defer close(ackChannel)
 
 	setAckChannel(ackId, ackChannel)
+	defer deleteAckChannel(ackId)
 
 	if !ok {
 		return "", fmt.Errorf("no node available size=%d", events.consistent.Size())

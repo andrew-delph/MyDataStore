@@ -41,6 +41,10 @@ func getAckChannel(key string) (chan *MessageHolder, bool) {
 	return nil, false
 }
 
+func deleteAckChannel(key string) {
+	ackMap.Delete(key)
+}
+
 func main() {
 
 	conf, delegate, events = GetConf()
