@@ -88,7 +88,7 @@ func (events *MyEventDelegate) SendSetMessage(key, value string, replicas int) e
 		ackSet[nodeAck] = true
 	}
 
-	log.Println("ACK COMPLETE")
+	log.Println("ACK COMPLETE", replicas)
 
 	return nil
 }
