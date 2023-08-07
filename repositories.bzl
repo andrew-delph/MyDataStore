@@ -15,19 +15,6 @@ def go_repositories():
     )
 
     go_repository(
-        name = "com_github_deckarep_golang_set_v2",
-        importpath = "github.com/deckarep/golang-set/v2",
-        sum = "h1:vjmkvJt/IV27WXPyYQpAh4bRyWJc5Y435D17XQ9QU5A=",
-        version = "v2.3.1",
-    )
-
-    go_repository(
-        name = "com_github_go_zookeeper_zk",
-        importpath = "github.com/go-zookeeper/zk",
-        sum = "h1:7M2kwOsc//9VeeFiPtf+uSJlVpU66x9Ba5+8XK7/TDg=",
-        version = "v1.0.3",
-    )
-    go_repository(
         name = "com_github_google_btree",
         importpath = "github.com/google/btree",
         sum = "h1:964Od4U6p2jUkFxvCydnIczKteheJEzHRToSGK3Bnlw=",
@@ -108,6 +95,13 @@ def go_repositories():
         version = "v0.0.0-20180627143212-57f6aae5913c",
     )
     go_repository(
+        name = "com_github_patrickmn_go_cache",
+        importpath = "github.com/patrickmn/go-cache",
+        sum = "h1:HRMgzkcYKYpi3C8ajMPV8OFXaaRUnok+kx1WdO15EQc=",
+        version = "v2.1.0+incompatible",
+    )
+
+    go_repository(
         name = "com_github_pkg_errors",
         importpath = "github.com/pkg/errors",
         sum = "h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=",
@@ -158,12 +152,6 @@ def go_repositories():
         version = "v0.0.0-20161208181325-20d25e280405",
     )
 
-    go_repository(
-        name = "in_gopkg_urfave_cli_v1",
-        importpath = "gopkg.in/urfave/cli.v1",
-        sum = "h1:NdAVW6RYxDif9DhDHaAortIu956m2c0v+09AZBPTbE0=",
-        version = "v1.20.0",
-    )
     go_repository(
         name = "in_gopkg_yaml_v3",
         importpath = "gopkg.in/yaml.v3",

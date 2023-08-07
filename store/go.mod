@@ -3,8 +3,8 @@ module andrewdelph.com/my-key-store
 go 1.20
 
 require (
-	github.com/deckarep/golang-set/v2 v2.3.1
 	github.com/hashicorp/memberlist v0.5.0
+	github.com/patrickmn/go-cache v2.1.0+incompatible
 	golang.org/x/exp v0.0.0-20230801115018-d63ba01acd4b
 )
 
@@ -15,7 +15,6 @@ require (
 
 require (
 	github.com/armon/go-metrics v0.0.0-20180917152333-f0300d1749da // indirect
-	github.com/go-zookeeper/zk v1.0.3 // indirect
 	github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c // indirect
 	github.com/google/uuid v1.3.0
 	github.com/hashicorp/errwrap v1.0.0 // indirect
@@ -31,6 +30,5 @@ require (
 	golang.org/x/crypto v0.0.0-20190923035154-9ee001bba392 // indirect
 	golang.org/x/net v0.0.0-20190923162816-aa69164e4478 // indirect
 	golang.org/x/sys v0.1.0 // indirect
-	gopkg.in/urfave/cli.v1 v1.20.0
 	gotest.tools v2.2.0+incompatible
 )

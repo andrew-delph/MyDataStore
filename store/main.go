@@ -8,19 +8,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var myMap sync.Map
-
-func setValue(key string, value string) {
-	myMap.Store(key, value)
-}
-
-func getValue(key string) (string, bool) {
-	if value, ok := myMap.Load(key); ok {
-		return value.(string), true
-	}
-	return "", false
-}
-
 var (
 	clusterNodes *memberlist.Memberlist
 	delegate     *MyDelegate
@@ -45,6 +32,10 @@ func deleteAckChannel(key string) {
 }
 
 func main() {
+
+	logrus.Info("starting")
+
+	initCache()
 
 	logrus.SetLevel(logrus.WarnLevel)
 
