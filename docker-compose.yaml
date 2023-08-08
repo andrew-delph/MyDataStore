@@ -31,7 +31,7 @@ services:
 
   store:
     image: docker.io/andrew-delph/store:store_image
-    scale: 5
+    scale: 10
     depends_on:
       # - zookeeper
       - nginx

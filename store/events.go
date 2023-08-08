@@ -46,15 +46,15 @@ func (events *MyEventDelegate) NotifyUpdate(node *memberlist.Node) {
 	// skip
 }
 
-func (events *MyEventDelegate) SendSetMessage(key, value string, replicas int) error {
+func (events *MyEventDelegate) SendSetMessage(key, value string) error {
 
 	ackId := uuid.New().String()
 
 	setMsg := NewSetMessage(key, value, ackId)
 
-	nodes, ok := events.consistent.GetNodes(key, replicas)
+	nodes, ok := events.consistent.GetNodes(key, totalReplicas)
 
-	ackChannel := make(chan *MessageHolder, replicas)
+	ackChannel := make(chan *MessageHolder, totalReplicas)
 	defer close(ackChannel)
 
 	setAckChannel(ackId, ackChannel)
@@ -87,30 +87,28 @@ func (events *MyEventDelegate) SendSetMessage(key, value string, replicas int) e
 
 	timeout := time.After(2 * time.Second)
 
-	for len(ackSet) < replicas {
+	for len(ackSet) < writeResponse {
 		select {
 		case ackMessageHolder := <-ackChannel:
 			ackSet[ackMessageHolder.SenderName] = true
 		case <-timeout:
-			logrus.Warn("TIME OUT REACHED!!!")
+			logrus.Warn("TIME OUT REACHED!!!", "len(ackSet)", len(ackSet))
 			return fmt.Errorf("timeout waiting for acknowledgements")
 		}
 	}
 
-	logrus.Debug("SET ACK COMPLETE", replicas)
-
 	return nil
 }
 
-func (events *MyEventDelegate) SendGetMessage(key string, replicas int) (string, error) {
+func (events *MyEventDelegate) SendGetMessage(key string) (string, error) {
 
 	ackId := uuid.New().String()
 
 	getMsg := NewGetMessage(key, ackId)
 
-	nodes, ok := events.consistent.GetNodes(key, replicas)
+	nodes, ok := events.consistent.GetNodes(key, totalReplicas)
 
-	ackChannel := make(chan *MessageHolder, replicas)
+	ackChannel := make(chan *MessageHolder, totalReplicas)
 	defer close(ackChannel)
 
 	setAckChannel(ackId, ackChannel)
@@ -141,7 +139,7 @@ func (events *MyEventDelegate) SendGetMessage(key string, replicas int) (string,
 
 	timeout := time.After(2 * time.Second)
 
-	for len(ackSet) < replicas {
+	for true {
 		select {
 		case ackMessageHolder := <-ackChannel:
 
@@ -154,7 +152,7 @@ func (events *MyEventDelegate) SendGetMessage(key string, replicas int) (string,
 			ackValue := ackMessage.Value
 			ackSet[ackValue]++
 
-			if ackSet[ackValue] == replicas {
+			if ackSet[ackValue] == readResponse {
 				return ackValue, nil
 			}
 		case <-timeout:
@@ -162,8 +160,6 @@ func (events *MyEventDelegate) SendGetMessage(key string, replicas int) (string,
 			return "", fmt.Errorf("timeout waiting for acknowledgements")
 		}
 	}
-
-	logrus.Debug("GET ACK COMPLETE", replicas)
 
 	return "", fmt.Errorf("value not found for key= %s", key)
 }
