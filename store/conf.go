@@ -13,6 +13,7 @@ var (
 	writeResponse int           = 3
 	readResponse  int           = 1
 	saveInterval  time.Duration = 60 * time.Second
+	defaultTimeout time.Duration = 2 * time.Second
 )
 
 func GetConf() (*memberlist.Config, *MyDelegate, *MyEventDelegate) {

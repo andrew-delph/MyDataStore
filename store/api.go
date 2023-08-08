@@ -42,7 +42,7 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprintf(w, "Value for key '%s' is: %s", key, value)
+	fmt.Fprintf(w, "Value for key '%s' is: '%s'", key, value)
 }
 
 func startHttpServer() {

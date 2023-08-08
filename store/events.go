@@ -85,7 +85,7 @@ func (events *MyEventDelegate) SendSetMessage(key, value string) error {
 
 	ackSet := make(map[string]bool)
 
-	timeout := time.After(2 * time.Second)
+	timeout := time.After(defaultTimeout)
 
 	for {
 		select {
@@ -139,7 +139,7 @@ func (events *MyEventDelegate) SendGetMessage(key string) (string, error) {
 
 	ackSet := make(map[string]int)
 
-	timeout := time.After(2 * time.Second)
+	timeout := time.After(defaultTimeout)
 
 	for {
 		select {
