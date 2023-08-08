@@ -43,8 +43,8 @@ func TestHashRing1(t *testing.T) {
 func TestHashRing2(t *testing.T) {
 	// using hashring.go
 
-	c1, _ := GetHashRing()
-	c2, _ := GetHashRing()
+	c1 := GetHashRing()
+	c2 := GetHashRing()
 
 	// Add some members to the consistent hash table.
 	// Add function calculates average load and distributes partitions over members
@@ -101,7 +101,7 @@ func TestHashRing2(t *testing.T) {
 }
 
 func TestPartitions(t *testing.T) {
-	c, cfg := GetHashRing()
+	c := GetHashRing()
 
 	for i := 0; i < 8; i++ {
 		AddNode(c, fmt.Sprintf("node%d.olricmq", i))
@@ -109,7 +109,7 @@ func TestPartitions(t *testing.T) {
 
 	// Store current layout of partitions
 	owners := make(map[int]string)
-	for partID := 0; partID < cfg.PartitionCount; partID++ {
+	for partID := 0; partID < hashRingConf.PartitionCount; partID++ {
 		owners[partID] = c.GetPartitionOwner(partID).String()
 	}
 

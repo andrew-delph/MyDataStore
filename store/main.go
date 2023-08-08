@@ -39,6 +39,8 @@ func main() {
 
 	logrus.SetFormatter(&logrus.JSONFormatter{})
 
+	InitStore()
+
 	data, err2 := os.ReadFile("/etc/hostname")
 	if err2 != nil {
 		logrus.Errorf("Error reading /etc/hostname: %v", err2)
@@ -49,9 +51,7 @@ func main() {
 
 	logrus.Infof("starting! %s", hostname)
 
-	initStore()
-
-	// logrus.SetLevel(logrus.WarnLevel)
+	// logrus.SetLevel(logrus.DebugLevel)
 
 	conf, delegate, events = GetConf()
 
@@ -66,6 +66,12 @@ func main() {
 	if err != nil {
 		logrus.Panic("Failed to join cluster: " + err.Error())
 	}
+
+	myPartions := GetMemberPartions(events.consistent, hostname)
+
+	logrus.Debugf("myPartions %v", myPartions)
+
+	LoadPartitions(myPartions)
 
 	logrus.Info("n", n)
 

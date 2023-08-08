@@ -69,8 +69,15 @@ func (m *SetMessage) Decode(data []byte) error {
 
 func (m *SetMessage) Handle(messageHolder *MessageHolder) {
 	logrus.Debugf("Handling SetMessage: key=%s value=%s ackId=%s sender=%s\n", m.Key, m.Value, m.AckId, messageHolder.SenderName)
-	setValue(m.Key, m.Value)
-	events.SendAckMessage("", m.AckId, messageHolder.SenderName, true)
+	partitionId := FindPartitionID(events.consistent, m.Key)
+	err := setValue(partitionId, m.Key, m.Value)
+	if err != nil {
+		logrus.Errorf("failed to set %s : %s error= %v", m.Key, m.Value, err)
+		// TODO send success false.
+	} else {
+		events.SendAckMessage("", m.AckId, messageHolder.SenderName, true)
+	}
+
 }
 
 type GetMessage struct {
@@ -99,7 +106,8 @@ func (m *GetMessage) Decode(data []byte) error {
 
 func (m *GetMessage) Handle(messageHolder *MessageHolder) {
 	logrus.Debugf("Handling GetMessage: key=%s ackId=%s sender=%s\n", m.Key, m.AckId, messageHolder.SenderName)
-	value, exists := getValue(m.Key)
+	partitionId := FindPartitionID(events.consistent, m.Key)
+	value, exists, _ := getValue(partitionId, m.Key)
 	events.SendAckMessage(value, m.AckId, messageHolder.SenderName, exists)
 }
 

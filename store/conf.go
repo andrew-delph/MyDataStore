@@ -9,10 +9,10 @@ import (
 )
 
 var (
-	totalReplicas int           = 4
-	writeResponse int           = 3
-	readResponse  int           = 1
-	saveInterval  time.Duration = 60 * time.Second
+	totalReplicas  int           = 1
+	writeResponse  int           = 1
+	readResponse   int           = 1
+	saveInterval   time.Duration = 2 * 60 * time.Second
 	defaultTimeout time.Duration = 2 * time.Second
 )
 

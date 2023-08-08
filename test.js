@@ -6,17 +6,14 @@ import { randomString } from "https://jslib.k6.io/k6-utils/1.2.0/index.js";
 import { textSummary } from "https://jslib.k6.io/k6-summary/0.0.2/index.js";
 
 export let options = {
-  // vus: 5,
-  // duration: "30s",
-  // iterations: 30,
   scenarios: {
-    disrupt: {
-      executor: "shared-iterations",
-      iterations: 1,
-      vus: 1,
-      exec: "disrupt",
-      startTime: "10s",
-    },
+    // disrupt: {
+    //   executor: "shared-iterations",
+    //   iterations: 1,
+    //   vus: 1,
+    //   exec: "disrupt",
+    //   startTime: "10s",
+    // },
     load: {
       executor: "constant-vus",
       vus: 5,
@@ -62,7 +59,7 @@ export default function () {
       r.status === 200 || console.error(`Set Error: Status was ${r.status}`),
   });
 
-  sleep(30);
+  sleep(3);
 
   // Get a value from the map
   let getRes = http.get(`http://${address}/get?key=${key}`);
