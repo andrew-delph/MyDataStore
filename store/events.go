@@ -18,7 +18,7 @@ type MyEventDelegate struct {
 func GetMyEventDelegate() *MyEventDelegate {
 	events := new(MyEventDelegate)
 
-	events.consistent = GetHashRing()
+	events.consistent, _ = GetHashRing()
 
 	events.nodes = make(map[string]*memberlist.Node)
 

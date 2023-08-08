@@ -17,7 +17,7 @@ func (m HashRingMember) String() string {
 	return string(m)
 }
 
-func GetHashRing() *consistent.Consistent {
+func GetHashRing() (*consistent.Consistent, consistent.Config) {
 	cfg := consistent.Config{
 		PartitionCount:    271,
 		ReplicationFactor: 40,
@@ -25,7 +25,7 @@ func GetHashRing() *consistent.Consistent {
 		Hasher:            hasher{},
 	}
 	hashring := consistent.New(nil, cfg)
-	return hashring
+	return hashring, cfg
 }
 
 func AddNode(hashring *consistent.Consistent, nodeName string) {
@@ -35,8 +35,14 @@ func AddNode(hashring *consistent.Consistent, nodeName string) {
 
 func RemoveNode(hashring *consistent.Consistent, member string) {
 	hashring.Remove(member)
+
 }
 
+func FindPartitionID(hashring *consistent.Consistent, key string) int {
+	keyBytes := []byte(key)
+
+	return hashring.FindPartitionID(keyBytes)
+}
 func GetMembers(hashring *consistent.Consistent) []HashRingMember {
 	return ConvertHashRingMemberArray(hashring.GetMembers())
 }

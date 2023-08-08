@@ -43,8 +43,8 @@ func TestHashRing1(t *testing.T) {
 func TestHashRing2(t *testing.T) {
 	// using hashring.go
 
-	c1 := GetHashRing()
-	c2 := GetHashRing()
+	c1, _ := GetHashRing()
+	c2, _ := GetHashRing()
 
 	// Add some members to the consistent hash table.
 	// Add function calculates average load and distributes partitions over members
@@ -98,4 +98,31 @@ func TestHashRing2(t *testing.T) {
 	RemoveNode(c1, removeMember)
 
 	logrus.Info(GetMembers(c1))
+}
+
+func TestPartitions(t *testing.T) {
+	c, cfg := GetHashRing()
+
+	for i := 0; i < 8; i++ {
+		AddNode(c, fmt.Sprintf("node%d.olricmq", i))
+	}
+
+	// Store current layout of partitions
+	owners := make(map[int]string)
+	for partID := 0; partID < cfg.PartitionCount; partID++ {
+		owners[partID] = c.GetPartitionOwner(partID).String()
+	}
+
+	AddNode(c, fmt.Sprintf("node%d.olricmq", 9))
+
+	// Get the new layout and compare with the previous
+	var changed int
+	for partID, member := range owners {
+		owner := c.GetPartitionOwner(partID)
+		if member != owner.String() {
+			changed++
+			fmt.Printf("partID: %3d moved to %s from %s\n", partID, owner.String(), member)
+		}
+	}
+	fmt.Printf("\n%d%% of the partitions are relocated\n", (100*changed)/cfg.PartitionCount)
 }
