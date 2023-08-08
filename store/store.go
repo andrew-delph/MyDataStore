@@ -27,15 +27,15 @@ func getValue(key string) (string, bool) {
 	return "", false
 }
 
-func initCache() {
+func initStore() {
 	// Ticker to trigger saveCacheToFile every 5 minutes
 
-	cacheFileName := fmt.Sprintf("/store/%s.json", hostname)
+	storeFileName := fmt.Sprintf("/store/%s.json", hostname)
 
 	storeCache = cache.New(0*time.Minute, 1*time.Minute)
-	err := storeCache.LoadFile(cacheFileName)
+	err := storeCache.LoadFile(storeFileName)
 	if err != nil {
-		logrus.Errorf("failed to load from file: %s : %v", cacheFileName, err)
+		logrus.Errorf("failed to load from file: %s : %v", storeFileName, err)
 	}
 
 	ticker := time.NewTicker(saveInterval)
@@ -43,8 +43,8 @@ func initCache() {
 	// Goroutine to periodically save the cache to a file
 	go func() {
 		for range ticker.C {
-			logrus.Warnf("saving cache to file %s", cacheFileName)
-			storeCache.SaveFile(cacheFileName)
+			logrus.Warnf("saving cache to file %s", storeFileName)
+			storeCache.SaveFile(storeFileName)
 		}
 	}()
 }

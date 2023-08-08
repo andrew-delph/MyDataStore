@@ -49,7 +49,7 @@ func main() {
 
 	logrus.Infof("starting! %s", hostname)
 
-	initCache()
+	initStore()
 
 	// logrus.SetLevel(logrus.WarnLevel)
 

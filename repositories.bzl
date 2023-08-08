@@ -14,6 +14,13 @@ def go_repositories():
         version = "v0.10.0",
     )
     go_repository(
+        name = "com_github_cbergoon_merkletree",
+        importpath = "github.com/cbergoon/merkletree",
+        sum = "h1:Bttqr3OuoiZEo4ed1L7fTasHka9II+BF9fhBfbNEEoQ=",
+        version = "v0.2.0",
+    )
+
+    go_repository(
         name = "com_github_cespare_xxhash",
         importpath = "github.com/cespare/xxhash",
         sum = "h1:a6HrQnmkObjyL+Gs60czilIUGqrzKutQD6XZog3p+ko=",
