@@ -12,7 +12,7 @@ export let options = {
     //   iterations: 1,
     //   vus: 1,
     //   exec: "disrupt",
-    //   startTime: "10s",
+    //   startTime: "5s",
     // },
     load: {
       executor: "constant-vus",
@@ -59,7 +59,7 @@ export default function () {
       r.status === 200 || console.error(`Set Error: Status was ${r.status}`),
   });
 
-  sleep(3);
+  sleep(20);
 
   // Get a value from the map
   let getRes = http.get(`http://${address}/get?key=${key}`);

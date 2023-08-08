@@ -12,7 +12,7 @@ var (
 	totalReplicas  int           = 1
 	writeResponse  int           = 1
 	readResponse   int           = 1
-	saveInterval   time.Duration = 2 * 60 * time.Second
+	saveInterval   time.Duration = 30 * time.Second
 	defaultTimeout time.Duration = 2 * time.Second
 )
 

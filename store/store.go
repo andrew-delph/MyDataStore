@@ -86,12 +86,12 @@ func LoadPartitions(partitions []int) {
 }
 
 func saveStore() {
-	logrus.Warn("Saving store.")
+	logrus.Debugf("Saving store: %s", hostname)
 
 	for partitionId, value := range partitionStore.Items() {
 		partition := value.Object.(*cache.Cache)
 		partitionFileName := fmt.Sprintf("/store/%s_%s.json", hostname, partitionId)
-		logrus.Warnf("saving partition to file %s", partitionFileName)
+		logrus.Debugf("saving partition to file %s", partitionFileName)
 		err := partition.SaveFile(partitionFileName)
 		if err != nil {
 			logrus.Error(err)
