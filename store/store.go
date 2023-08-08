@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"time"
 
@@ -82,15 +83,28 @@ func PartitionMerkleTree(partitionId int) (*merkletree.MerkleTree, error) {
 	partition, err := getPartition(partitionId)
 	if err != nil {
 		logrus.Debug(err)
+		return nil, err
 	}
+
+	items := partition.Items()
+
+	// Extract keys and sort them
+	var keys []string
+	for key := range items {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	// Build content list in sorted order of keys
 	var contentList []merkletree.Content
-	for key, valueObj := range partition.Items() {
+	for _, key := range keys {
+		valueObj := items[key]
 		value := valueObj.Object.(string)
 		logrus.Infof("item %s %s", key, value)
 		contentList = append(contentList, MerkleContent{key: key, value: value})
 	}
-	return merkletree.NewTree(contentList)
 
+	return merkletree.NewTree(contentList)
 }
 
 func InitStore() {
