@@ -8,7 +8,18 @@ import (
 	"testing"
 
 	"github.com/cbergoon/merkletree"
+	"gotest.tools/assert"
 )
+
+func TestStore(t *testing.T) {
+
+	setValue(1, "key1", "value2")
+
+	value, _, _ := getValue(1, "key1")
+
+	assert.Equal(t, value, "value2", "Both should be SetMessage")
+
+}
 
 // TestContent implements the Content interface provided by merkletree and represents the content stored in the tree.
 type TestContent struct {

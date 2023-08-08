@@ -124,5 +124,5 @@ func TestPartitions(t *testing.T) {
 			fmt.Printf("partID: %3d moved to %s from %s\n", partID, owner.String(), member)
 		}
 	}
-	fmt.Printf("\n%d%% of the partitions are relocated\n", (100*changed)/cfg.PartitionCount)
+	fmt.Printf("\n%d%% of the partitions are relocated\n", (100*changed)/hashRingConf.PartitionCount)
 }

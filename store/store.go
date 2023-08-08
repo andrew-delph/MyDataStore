@@ -11,7 +11,7 @@ import (
 
 // Define a global cache variable
 
-var partitionStore *cache.Cache
+var partitionStore *cache.Cache = cache.New(0*time.Minute, 1*time.Minute)
 
 // Function to set a value in the global cache
 func setValue(partitionId int, key string, value string) error {
@@ -54,7 +54,6 @@ func getPartition(partitionId int) (*cache.Cache, error) {
 }
 
 func InitStore() {
-	partitionStore = cache.New(0*time.Minute, 1*time.Minute)
 	ticker := time.NewTicker(saveInterval)
 
 	logrus.Warnf("store saveInterval %v", saveInterval)
