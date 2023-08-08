@@ -28,11 +28,11 @@ func randomString(n int) string {
 func randomCrash() {
 	for {
 		// Sleep for a random duration between 2 to 5 minutes
-		sleepDuration := randomDuration(1*time.Minute, 2*time.Minute)
+		sleepDuration := randomDuration(30*time.Second, 2*time.Minute)
 		logrus.Warn("sleepDuration ", sleepDuration)
 		time.Sleep(sleepDuration)
 
-		// Crash by causing a panic
+		// Crash by causing a logrus.Panic
 		causePanic()
 	}
 }

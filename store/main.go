@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -31,15 +33,27 @@ func deleteAckChannel(key string) {
 	ackMap.Delete(key)
 }
 
+var hostname string
+
 func main() {
 
-	logrus.Info("starting")
+	logrus.SetFormatter(&logrus.JSONFormatter{})
+
+	data, err2 := os.ReadFile("/etc/hostname")
+	if err2 != nil {
+		logrus.Errorf("Error reading /etc/hostname: %v", err2)
+		return
+	}
+
+	hostname = strings.TrimSpace(string(data))
+
+	logrus.Infof("starting! %s", hostname)
 
 	go randomCrash()
 
 	initCache()
 
-	logrus.SetLevel(logrus.WarnLevel)
+	// logrus.SetLevel(logrus.WarnLevel)
 
 	conf, delegate, events = GetConf()
 

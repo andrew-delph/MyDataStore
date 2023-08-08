@@ -16,6 +16,8 @@ kubectl apply -f ./resources/
 
 ibazel -run_command_after_success='kubectl rollout restart deployment store' run //store:image_push
 
+while true; do kubectl logs -f deployment/store; done
+
 # TEST
 
 ibazel run //store:go_default_test

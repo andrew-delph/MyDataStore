@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/patrickmn/go-cache"
@@ -29,10 +30,12 @@ func getValue(key string) (string, bool) {
 func initCache() {
 	// Ticker to trigger saveCacheToFile every 5 minutes
 
+	cacheFileName := fmt.Sprintf("/store/%s.json", hostname)
+
 	storeCache = cache.New(0*time.Minute, 1*time.Minute)
-	err := storeCache.LoadFile("/store/cache.json")
+	err := storeCache.LoadFile(cacheFileName)
 	if err != nil {
-		logrus.Warnf("failed to load from file: %v", err)
+		logrus.Errorf("failed to load from file: %s : %v", cacheFileName, err)
 	}
 
 	ticker := time.NewTicker(10 * time.Second)
@@ -40,8 +43,8 @@ func initCache() {
 	// Goroutine to periodically save the cache to a file
 	go func() {
 		for range ticker.C {
-			logrus.Info("saving cache to file")
-			storeCache.SaveFile("/store/cache.json")
+			logrus.Warnf("saving cache to file %s", cacheFileName)
+			storeCache.SaveFile(cacheFileName)
 		}
 	}()
 }

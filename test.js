@@ -7,7 +7,7 @@ import { textSummary } from "https://jslib.k6.io/k6-summary/0.0.2/index.js";
 
 export let options = {
   vus: 5,
-  duration: "20s",
+  duration: "10m",
   // iterations: 30,
   // scenarios: {
   //   // disrupt: {
@@ -29,7 +29,7 @@ export let options = {
   // },
 };
 
-let address = "192.168.49.2:30000";
+let address = "192.168.49.2:30033";
 address = "localhost:80";
 
 export function handleSummary(data) {
@@ -65,7 +65,7 @@ export default function () {
       r.status === 200 || console.error(`Set Error: Status was ${r.status}`),
   });
 
-  // sleep(10);
+  sleep(30);
 
   // Get a value from the map
   let getRes = http.get(`http://${address}/get?key=${key}`);
