@@ -34,6 +34,7 @@ func deleteAckChannel(key string) {
 }
 
 var hostname string
+var myPartions []int
 
 func main() {
 
@@ -51,7 +52,7 @@ func main() {
 
 	logrus.Infof("starting! %s", hostname)
 
-	// logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetLevel(logrus.WarnLevel)
 
 	conf, delegate, events = GetConf()
 
@@ -67,12 +68,6 @@ func main() {
 		logrus.Panic("Failed to join cluster: " + err.Error())
 	}
 
-	myPartions := GetMemberPartions(events.consistent, hostname)
-
-	logrus.Debugf("myPartions %v", myPartions)
-
-	LoadPartitions(myPartions)
-
 	logrus.Info("n", n)
 
 	// Ask for members of the cluster
@@ -83,6 +78,24 @@ func main() {
 	tick := time.NewTicker(50000 * time.Millisecond)
 
 	go startHttpServer()
+
+	// verify partitions every x seconds
+
+	partitionTimer := time.NewTicker(1000 * time.Millisecond)
+	go func() {
+		for range partitionTimer.C {
+			myPartions = GetMemberPartions(events.consistent, hostname)
+
+			for _, partitionId := range myPartions {
+				partitionTree, err := PartitionMerkleTree(partitionId)
+				if err != nil {
+					logrus.Debug(err)
+					continue
+				}
+				events.SendPartitionHashMessage(partitionTree.Root.Hash, partitionId)
+			}
+		}
+	}()
 
 	run := true
 	for run {

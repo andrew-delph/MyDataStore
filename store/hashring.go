@@ -78,6 +78,17 @@ func GetClosestN(hashring *consistent.Consistent, key string, count int) ([]Hash
 	return ConvertHashRingMemberArray(members), nil
 }
 
+func GetClosestNForPartition(hashring *consistent.Consistent, partitionId, count int) ([]HashRingMember, error) {
+
+	members, err := hashring.GetClosestNForPartition(partitionId, count)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return ConvertHashRingMemberArray(members), nil
+}
+
 func ConvertHashRingMemberArray(members []consistent.Member) []HashRingMember {
 	var hashRingMembers []HashRingMember
 	for _, member := range members {

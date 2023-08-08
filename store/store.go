@@ -87,6 +87,9 @@ func PartitionMerkleTree(partitionId int) (*merkletree.MerkleTree, error) {
 	}
 
 	items := partition.Items()
+	if len(items) == 0 {
+		return nil, fmt.Errorf("partition.Items() is %d", 0)
+	}
 
 	// Extract keys and sort them
 	var keys []string
@@ -100,7 +103,6 @@ func PartitionMerkleTree(partitionId int) (*merkletree.MerkleTree, error) {
 	for _, key := range keys {
 		valueObj := items[key]
 		value := valueObj.Object.(string)
-		logrus.Infof("item %s %s", key, value)
 		contentList = append(contentList, MerkleContent{key: key, value: value})
 	}
 

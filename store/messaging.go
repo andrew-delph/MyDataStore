@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 
@@ -68,6 +69,7 @@ func (m *SetMessage) Decode(data []byte) error {
 }
 
 func (m *SetMessage) Handle(messageHolder *MessageHolder) {
+
 	logrus.Debugf("Handling SetMessage: key=%s value=%s ackId=%s sender=%s\n", m.Key, m.Value, m.AckId, messageHolder.SenderName)
 	partitionId := FindPartitionID(events.consistent, m.Key)
 	err := setValue(partitionId, m.Key, m.Value)
@@ -109,6 +111,48 @@ func (m *GetMessage) Handle(messageHolder *MessageHolder) {
 	partitionId := FindPartitionID(events.consistent, m.Key)
 	value, exists, _ := getValue(partitionId, m.Key)
 	events.SendAckMessage(value, m.AckId, messageHolder.SenderName, exists)
+}
+
+type PartitionHashMessage struct {
+	AckId       string
+	Hash        []byte
+	PartitionId int
+}
+
+func NewPartitionHashMessage(ackID string, hash []byte, partitionId int) *PartitionHashMessage {
+	return &PartitionHashMessage{
+		AckId:       ackID,
+		Hash:        hash,
+		PartitionId: partitionId,
+	}
+}
+
+func (m PartitionHashMessage) Encode() ([]byte, error) {
+	return json.Marshal(m)
+}
+
+func (m *PartitionHashMessage) Handle(messageHolder *MessageHolder) {
+	logrus.Debugf("Handling PartitionHashMessage. sender=%s partitionId=%d ackId=%s", messageHolder.SenderName, m.PartitionId, m.AckId)
+
+	partitionTree, err := PartitionMerkleTree(m.PartitionId)
+	if err != nil {
+		logrus.Error(err)
+		return
+	}
+
+	equalPartitions := bytes.Equal(m.Hash, partitionTree.Root.Hash)
+
+	logrus.Info("equalPartitions ", equalPartitions)
+
+	events.SendAckMessage("", m.AckId, messageHolder.SenderName, equalPartitions)
+}
+
+func (m PartitionHashMessage) GetType() string {
+	return "PartitionHashMessage"
+}
+
+func (m *PartitionHashMessage) Decode(data []byte) error {
+	return json.Unmarshal(data, m)
 }
 
 type AckMessage struct {
@@ -195,6 +239,13 @@ func DecodeMessageHolder(data []byte) (*MessageHolder, Message, error) {
 		err := msg.Decode(holder.MessageBytes)
 		if err != nil {
 			return holder, nil, fmt.Errorf("failed to Decode AckMessage: %v", err)
+		}
+		return holder, msg, nil
+	case "PartitionHashMessage":
+		msg := &PartitionHashMessage{}
+		err := msg.Decode(holder.MessageBytes)
+		if err != nil {
+			return holder, nil, fmt.Errorf("failed to Decode PartitionHashMessage: %v", err)
 		}
 		return holder, msg, nil
 	}

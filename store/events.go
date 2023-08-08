@@ -32,6 +32,10 @@ func (events *MyEventDelegate) NotifyJoin(node *memberlist.Node) {
 	AddNode(events.consistent, node.Name)
 
 	events.nodes[node.Name] = node
+
+	myPartions = GetMemberPartions(events.consistent, hostname)
+	logrus.Debugf("myPartions %v", myPartions)
+	LoadPartitions(myPartions)
 }
 
 func (events *MyEventDelegate) NotifyLeave(node *memberlist.Node) {
@@ -41,6 +45,10 @@ func (events *MyEventDelegate) NotifyLeave(node *memberlist.Node) {
 	RemoveNode(events.consistent, node.Name)
 
 	delete(events.nodes, node.Name)
+
+	myPartions = GetMemberPartions(events.consistent, hostname)
+	logrus.Debugf("myPartions %v", myPartions)
+	LoadPartitions(myPartions)
 }
 func (events *MyEventDelegate) NotifyUpdate(node *memberlist.Node) {
 	// skip
@@ -158,6 +166,59 @@ func (events *MyEventDelegate) SendGetMessage(key string) (string, error) {
 		case <-timeout:
 			logrus.Warn("TIME OUT REACHED!!!")
 			return "", fmt.Errorf("timeout waiting for acknowledgements")
+		}
+	}
+
+}
+
+func (events *MyEventDelegate) SendPartitionHashMessage(hash []byte, partitionId int) error {
+
+	ackId := uuid.New().String()
+
+	partitionMsg := NewPartitionHashMessage(ackId, hash, partitionId)
+
+	nodes, err := GetClosestNForPartition(events.consistent, partitionId, totalReplicas)
+	if err != nil {
+		return err
+	}
+
+	ackChannel := make(chan *MessageHolder, totalReplicas)
+	defer close(ackChannel)
+
+	setAckChannel(ackId, ackChannel)
+	defer deleteAckChannel(ackId)
+
+	for _, node := range nodes {
+
+		node := events.nodes[node.String()]
+
+		bytes, err := EncodeHolder(partitionMsg)
+
+		if err != nil {
+			return fmt.Errorf("FAILED TO ENCODE: %v", err)
+		}
+
+		err = clusterNodes.SendReliable(node, bytes)
+
+		if err != nil {
+			return fmt.Errorf("FAILED TO SEND: %v", err)
+		}
+	}
+
+	ackSet := make(map[string]bool)
+
+	timeout := time.After(time.Second * 10)
+
+	for {
+		select {
+		case ackMessageHolder := <-ackChannel:
+			ackSet[ackMessageHolder.SenderName] = true
+			if len(ackSet) >= readResponse {
+				return nil
+			}
+		case <-timeout:
+			logrus.Warn("TIME OUT REACHED!!!", "len(ackSet)", len(ackSet))
+			return fmt.Errorf("timeout waiting for acknowledgements")
 		}
 	}
 
