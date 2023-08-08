@@ -38,7 +38,7 @@ func initCache() {
 		logrus.Errorf("failed to load from file: %s : %v", cacheFileName, err)
 	}
 
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(saveInterval)
 
 	// Goroutine to periodically save the cache to a file
 	go func() {

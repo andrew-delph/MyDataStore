@@ -75,7 +75,9 @@ export default function () {
       r.status === 200 || console.error(`Get Error: Status was ${r.status}`),
     "Get: body contains testValue": (r) =>
       r.body.indexOf(value) !== -1 ||
-      console.error(`Get Error: Body does not contain ${value}`),
+      console.error(
+        `Get Error: Body does not contain ${value}. body = ${r.body}`
+      ),
   });
 
   // console.log("getRes.body", getRes.body);

@@ -3,21 +3,19 @@ package main
 import (
 	"io"
 	"log"
+	"time"
 
 	"github.com/hashicorp/memberlist"
 )
 
 var (
-	totalReplicas int
-	writeResponse int
-	readResponse  int
+	totalReplicas int           = 4
+	writeResponse int           = 3
+	readResponse  int           = 1
+	saveInterval  time.Duration = 60 * time.Second
 )
 
 func GetConf() (*memberlist.Config, *MyDelegate, *MyEventDelegate) {
-
-	totalReplicas = 4
-	writeResponse = 3
-	readResponse = 1
 
 	delegate := GetMyDelegate()
 	events := GetMyEventDelegate()
