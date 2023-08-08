@@ -87,17 +87,19 @@ func (events *MyEventDelegate) SendSetMessage(key, value string) error {
 
 	timeout := time.After(2 * time.Second)
 
-	for len(ackSet) < writeResponse {
+	for {
 		select {
 		case ackMessageHolder := <-ackChannel:
 			ackSet[ackMessageHolder.SenderName] = true
+			if len(ackSet) >= writeResponse {
+				return nil
+			}
 		case <-timeout:
 			logrus.Warn("TIME OUT REACHED!!!", "len(ackSet)", len(ackSet))
 			return fmt.Errorf("timeout waiting for acknowledgements")
 		}
 	}
 
-	return nil
 }
 
 func (events *MyEventDelegate) SendGetMessage(key string) (string, error) {
@@ -139,7 +141,7 @@ func (events *MyEventDelegate) SendGetMessage(key string) (string, error) {
 
 	timeout := time.After(2 * time.Second)
 
-	for true {
+	for {
 		select {
 		case ackMessageHolder := <-ackChannel:
 
@@ -161,7 +163,6 @@ func (events *MyEventDelegate) SendGetMessage(key string) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("value not found for key= %s", key)
 }
 
 func (events *MyEventDelegate) SendAckMessage(value, ackId, senderName string, success bool) error {
