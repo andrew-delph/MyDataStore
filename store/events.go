@@ -4,21 +4,21 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/buraksezer/consistent"
 	"github.com/google/uuid"
 	"github.com/hashicorp/memberlist"
-	"github.com/serialx/hashring"
 	"github.com/sirupsen/logrus"
 )
 
 type MyEventDelegate struct {
-	consistent *hashring.HashRing
+	consistent *consistent.Consistent
 	nodes      map[string]*memberlist.Node
 }
 
 func GetMyEventDelegate() *MyEventDelegate {
 	events := new(MyEventDelegate)
 
-	events.consistent = hashring.New([]string{})
+	events.consistent = GetHashRing()
 
 	events.nodes = make(map[string]*memberlist.Node)
 
@@ -29,7 +29,7 @@ func (events *MyEventDelegate) NotifyJoin(node *memberlist.Node) {
 
 	logrus.Infof("join %s", node.Name)
 
-	events.consistent = events.consistent.AddNode(node.Name)
+	AddNode(events.consistent, node.Name)
 
 	events.nodes[node.Name] = node
 }
@@ -38,7 +38,7 @@ func (events *MyEventDelegate) NotifyLeave(node *memberlist.Node) {
 
 	logrus.Infof("leave %s", node.Name)
 
-	events.consistent = events.consistent.RemoveNode(node.Name)
+	RemoveNode(events.consistent, node.Name)
 
 	delete(events.nodes, node.Name)
 }
@@ -52,7 +52,10 @@ func (events *MyEventDelegate) SendSetMessage(key, value string) error {
 
 	setMsg := NewSetMessage(key, value, ackId)
 
-	nodes, ok := events.consistent.GetNodes(key, totalReplicas)
+	nodes, err := GetClosestN(events.consistent, key, totalReplicas)
+	if err != nil {
+		return err
+	}
 
 	ackChannel := make(chan *MessageHolder, totalReplicas)
 	defer close(ackChannel)
@@ -60,15 +63,11 @@ func (events *MyEventDelegate) SendSetMessage(key, value string) error {
 	setAckChannel(ackId, ackChannel)
 	defer deleteAckChannel(ackId)
 
-	if !ok {
-		return fmt.Errorf("no node available size=%d", events.consistent.Size())
-	}
+	for _, node := range nodes {
 
-	for _, nodeName := range nodes {
+		logrus.Debugf("node1 search %s => %s", key, node.String())
 
-		logrus.Debugf("node1 search %s => %s", key, nodeName)
-
-		node := events.nodes[nodeName]
+		node := events.nodes[node.String()]
 
 		bytes, err := EncodeHolder(setMsg)
 
@@ -108,7 +107,10 @@ func (events *MyEventDelegate) SendGetMessage(key string) (string, error) {
 
 	getMsg := NewGetMessage(key, ackId)
 
-	nodes, ok := events.consistent.GetNodes(key, totalReplicas)
+	nodes, err := GetClosestN(events.consistent, key, totalReplicas)
+	if err != nil {
+		return "", err
+	}
 
 	ackChannel := make(chan *MessageHolder, totalReplicas)
 	defer close(ackChannel)
@@ -116,13 +118,9 @@ func (events *MyEventDelegate) SendGetMessage(key string) (string, error) {
 	setAckChannel(ackId, ackChannel)
 	defer deleteAckChannel(ackId)
 
-	if !ok {
-		return "", fmt.Errorf("no node available size=%d", events.consistent.Size())
-	}
+	for _, node := range nodes {
 
-	for _, nodeName := range nodes {
-
-		node := events.nodes[nodeName]
+		node := events.nodes[node.String()]
 
 		bytes, err := EncodeHolder(getMsg)
 

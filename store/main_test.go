@@ -6,7 +6,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/hashicorp/memberlist"
-	"github.com/serialx/hashring"
 	"gotest.tools/assert"
 )
 
@@ -32,19 +31,6 @@ type MockNode struct{}
 
 func (m *MockNode) Name() string {
 	return "mock node name"
-}
-
-func TestHashRing(t *testing.T) {
-	// Create an empty hash ring
-	hashRing := hashring.New([]string{})
-
-	// Add two nodes to the hash ring
-	hashRing = hashRing.AddNode("node1")
-	hashRing = hashRing.AddNode("node2")
-
-	// Print the nodes in the hash ring
-	logrus.Println(hashRing.GetNode("test"))
-	logrus.Println("size", hashRing.Size())
 }
 
 func TestEncodeDecodeSetMessage(t *testing.T) {

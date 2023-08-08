@@ -49,8 +49,6 @@ func main() {
 
 	logrus.Infof("starting! %s", hostname)
 
-	go randomCrash()
-
 	initCache()
 
 	// logrus.SetLevel(logrus.WarnLevel)

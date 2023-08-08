@@ -45,10 +45,15 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Value for key '%s' is: '%s'", key, value)
 }
 
+func panicHandler(w http.ResponseWriter, r *http.Request) {
+	logrus.Panic("Recieved panic request")
+}
+
 func startHttpServer() {
 	http.HandleFunc("/", baseHandler)
 	http.HandleFunc("/set", setHandler)
 	http.HandleFunc("/get", getHandler)
+	http.HandleFunc("/panic", panicHandler)
 
 	logrus.Info("Server is running on http://localhost:8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {

@@ -6,27 +6,24 @@ import { randomString } from "https://jslib.k6.io/k6-utils/1.2.0/index.js";
 import { textSummary } from "https://jslib.k6.io/k6-summary/0.0.2/index.js";
 
 export let options = {
-  vus: 15,
-  duration: "10m",
+  // vus: 5,
+  // duration: "30s",
   // iterations: 30,
-  // scenarios: {
-  //   // disrupt: {
-  //   //   executor: "shared-iterations",
-  //   //   iterations: 1,
-  //   //   vus: 1,
-  //   //   exec: "disrupt",
-  //   //   startTime: "0s",
-  //   // },
-  //   load: {
-  //     executor: "constant-arrival-rate",
-  //     rate: 100,
-  //     preAllocatedVUs: 10,
-  //     maxVUs: 1000,
-  //     exec: "default",
-  //     startTime: "0s", // give time for the agents to be installed
-  //     duration: "20m",
-  //   },
-  // },
+  scenarios: {
+    disrupt: {
+      executor: "shared-iterations",
+      iterations: 1,
+      vus: 1,
+      exec: "disrupt",
+      startTime: "10s",
+    },
+    load: {
+      executor: "constant-vus",
+      vus: 5,
+      duration: "30s",
+      exec: "default",
+    },
+  },
 };
 
 let address = "192.168.49.2:30033";
@@ -91,20 +88,11 @@ export default function () {
   // });
 }
 
-// export function disrupt() {
-//   console.log(1);
-//   const disruptor = new PodDisruptor({
-//     namespace: "default",
-//     select: { labels: { "io.kompose.service": "store" } },
-//   });
+export function disrupt() {
+  let panicRes = http.get(`http://${address}/panic`);
 
-//   // Disrupt the targets by injecting HTTP faults into them for 30 seconds
-//   const fault = {
-//     averageDelay: "1s",
-//     errorRate: 0.1,
-//     errorCode: 500,
-//   };
-//   console.log(2);
-//   disruptor.injectHTTPFaults(fault, "1s");
-//   console.log(3);
-// }
+  check(panicRes, {
+    "Panic: status was 502": (r) =>
+      r.status === 502 || console.error(`Base Error: Status was ${r.status}`),
+  });
+}
