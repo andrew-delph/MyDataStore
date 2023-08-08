@@ -8,16 +8,56 @@ import (
 	"testing"
 
 	"github.com/cbergoon/merkletree"
-	"gotest.tools/assert"
+	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestStore(t *testing.T) {
 
-	setValue(1, "key1", "value2")
+	setValue(1, "key1", "value1")
 
 	value, _, _ := getValue(1, "key1")
 
-	assert.Equal(t, value, "value2", "Both should be SetMessage")
+	assert.Equal(t, value, "value1", "Both should be SetMessage")
+
+}
+
+func TestStoreMerkleTree(t *testing.T) {
+
+	setValue(1, "key1", "value1")
+	setValue(1, "key2", "value2")
+	setValue(1, "key3", "value3")
+
+	tree1, err := PartitionMerkleTree(1)
+	if err != nil {
+		t.Error(err)
+	}
+
+	_, err = tree1.VerifyTree()
+	if err != nil {
+		t.Error(err)
+	}
+
+	tree2, err := PartitionMerkleTree(1)
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = tree1.RebuildTree()
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = tree2.RebuildTree()
+	if err != nil {
+		t.Error(err)
+	}
+
+	logrus.Info(tree1.Root.Hash)
+
+	logrus.Info(tree2.Root.Hash)
+
+	assert.EqualValues(t, tree1.Root.Hash, tree2.Root.Hash, "Tree hashes don't match")
 
 }
 

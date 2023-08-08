@@ -1,10 +1,13 @@
 package main
 
 import (
+	"crypto/md5"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
 
+	"github.com/cbergoon/merkletree"
 	"github.com/patrickmn/go-cache"
 	"github.com/sirupsen/logrus"
 )
@@ -51,6 +54,43 @@ func getPartition(partitionId int) (*cache.Cache, error) {
 		}
 	}
 	return nil, fmt.Errorf("partion not found: %d", partitionId)
+}
+
+type MerkleContent struct {
+	key   string
+	value string
+}
+
+func (content MerkleContent) CalculateHash() ([]byte, error) {
+	h := md5.New()
+	if _, err := h.Write([]byte(content.key + content.value)); err != nil {
+		return nil, err
+	}
+
+	return h.Sum(nil), nil
+}
+
+func (content MerkleContent) Equals(other merkletree.Content) (bool, error) {
+	otherTC, ok := other.(MerkleContent)
+	if !ok {
+		return false, errors.New("value is not of type MerkleContent")
+	}
+	return content.key == otherTC.key && content.value == otherTC.value, nil
+}
+
+func PartitionMerkleTree(partitionId int) (*merkletree.MerkleTree, error) {
+	partition, err := getPartition(partitionId)
+	if err != nil {
+		logrus.Debug(err)
+	}
+	var contentList []merkletree.Content
+	for key, valueObj := range partition.Items() {
+		value := valueObj.Object.(string)
+		logrus.Infof("item %s %s", key, value)
+		contentList = append(contentList, MerkleContent{key: key, value: value})
+	}
+	return merkletree.NewTree(contentList)
+
 }
 
 func InitStore() {
