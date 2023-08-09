@@ -128,13 +128,13 @@ func LoadPartitions(partitions []int) {
 		partitionFileName := fmt.Sprintf("/store/%s_%s.json", hostname, strconv.Itoa(partitionId))
 		partition, err := getPartition(partitionId)
 		if err != nil {
-			logrus.Errorf("failed getPartition: %v , %v", partitionId, err)
+			logrus.Debugf("failed getPartition: %v , %v", partitionId, err)
 			continue
 		}
 
 		err = partition.LoadFile(partitionFileName)
 		if err != nil {
-			logrus.Errorf("failed to load from file: %s : %v", partitionFileName, err)
+			logrus.Debugf("failed to load from file: %s : %v", partitionFileName, err)
 		}
 	}
 

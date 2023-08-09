@@ -37,7 +37,7 @@ var hostname string
 var myPartions []int
 
 func main() {
-
+	logrus.SetLevel(logrus.WarnLevel)
 	logrus.SetFormatter(&logrus.JSONFormatter{})
 
 	InitStore()
@@ -51,8 +51,6 @@ func main() {
 	hostname = strings.TrimSpace(string(data))
 
 	logrus.Infof("starting! %s", hostname)
-
-	logrus.SetLevel(logrus.WarnLevel)
 
 	conf, delegate, events = GetConf()
 

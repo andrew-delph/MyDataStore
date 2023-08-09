@@ -6,21 +6,21 @@ import { randomString } from "https://jslib.k6.io/k6-utils/1.2.0/index.js";
 import { textSummary } from "https://jslib.k6.io/k6-summary/0.0.2/index.js";
 
 export let options = {
-  scenarios: {
-    // disrupt: {
-    //   executor: "shared-iterations",
-    //   iterations: 1,
-    //   vus: 1,
-    //   exec: "disrupt",
-    //   startTime: "5s",
-    // },
-    load: {
-      executor: "constant-vus",
-      vus: 5,
-      duration: "30s",
-      exec: "default",
-    },
-  },
+  // scenarios: {
+  //   // disrupt: {
+  //   //   executor: "shared-iterations",
+  //   //   iterations: 1,
+  //   //   vus: 1,
+  //   //   exec: "disrupt",
+  //   //   startTime: "5s",
+  //   // },
+  //   load: {
+  //     executor: "constant-vus",
+  //     vus: 5,
+  //     duration: "30s",
+  //     exec: "default",
+  //   },
+  // },
 };
 
 let address = "192.168.49.2:30033";
