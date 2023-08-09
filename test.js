@@ -6,7 +6,7 @@ import { randomString } from "https://jslib.k6.io/k6-utils/1.2.0/index.js";
 import { textSummary } from "https://jslib.k6.io/k6-summary/0.0.2/index.js";
 
 export let options = {
-  iterations: 5,
+  iterations: 500000,
   // scenarios: {
   //   // disrupt: {
   //   //   executor: "shared-iterations",

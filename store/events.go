@@ -113,7 +113,7 @@ func (events *MyEventDelegate) SendSetMessage(key, value string) error {
 				return nil
 			}
 		case <-timeout:
-			logrus.Warn("TIME OUT REACHED!!!", "len(ackSet)", len(ackSet))
+			logrus.Debug("SET TIME OUT REACHED!!! len(ackSet) = ", len(ackSet))
 			return fmt.Errorf("timeout waiting for acknowledgements")
 		}
 	}
@@ -245,7 +245,7 @@ func (events *MyEventDelegate) SendRequestPartitionInfoMessage(hash []byte, part
 			}
 
 			if len(ackSet) >= readResponse {
-				logrus.Warnf("The partition %d is healthy. health neighbors are %d", partitionId, len(ackSet))
+				logrus.Debugf("The partition %d is healthy. health neighbors are %d", partitionId, len(ackSet))
 
 				partitionVerified[partitionId] = true
 				return nil
