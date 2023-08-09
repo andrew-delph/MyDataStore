@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"math/rand"
 
 	"github.com/sirupsen/logrus"
 )
@@ -68,10 +69,10 @@ func (m *SetMessage) Decode(data []byte) error {
 }
 
 func (m *SetMessage) Handle(messageHolder *MessageHolder) {
-	// randomNumber := rand.Float64()
-	// if randomNumber < 0.5 {
-	// 	return
-	// }
+	randomNumber := rand.Float64()
+	if randomNumber < 0.1 {
+		return
+	}
 	logrus.Debugf("Handling SetMessage: key=%s value=%s ackId=%s sender=%s\n", m.Key, m.Value, m.AckId, messageHolder.SenderName)
 	partitionId := FindPartitionID(events.consistent, m.Key)
 	err := setValue(partitionId, m.Key, m.Value)

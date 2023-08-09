@@ -223,7 +223,10 @@ func (events *MyEventDelegate) SendRequestPartitionInfoMessage(hash []byte, part
 		}
 	}
 
-	ackSet := make(map[string]bool)
+	equalPartitionSet := make(map[string]bool)
+
+	healthyPartitionSet := make(map[string]bool)
+	unHealthyPartitionSet := make(map[string]bool)
 
 	timeout := time.After(time.Second * 10)
 
@@ -241,23 +244,34 @@ func (events *MyEventDelegate) SendRequestPartitionInfoMessage(hash []byte, part
 			areEqual := bytes.Equal(partitionTree.Root.Hash, responsePartitionInfo.Hash)
 
 			if areEqual {
-				ackSet[ackMessageHolder.SenderName] = true
+				equalPartitionSet[ackMessageHolder.SenderName] = true
 			}
 
-			if len(ackSet) >= readResponse {
-				logrus.Debugf("The partition %d is healthy. health neighbors are %d", partitionId, len(ackSet))
+			if responsePartitionInfo.Healthy {
+				healthyPartitionSet[ackMessageHolder.SenderName] = true
+			} else {
+				unHealthyPartitionSet[ackMessageHolder.SenderName] = true
+			}
+
+			if len(equalPartitionSet) >= readResponse {
+				logrus.Debugf("The partition %d is healthy. health neighbors are %d", partitionId, len(equalPartitionSet))
 
 				partitionVerified[partitionId] = true
 				return nil
 			}
 		case <-timeout:
 
-			keys := make([]string, 0, len(ackSet))
-			for key := range ackSet {
-				keys = append(keys, key)
+			healthNodes := make([]string, 0, len(healthyPartitionSet))
+			for key := range healthyPartitionSet {
+				healthNodes = append(healthNodes, key)
 			}
 
-			logrus.Warnf("The partition %d is not healthy. health neighbors are %v", partitionId, keys)
+			unHealthNodes := make([]string, 0, len(healthyPartitionSet))
+			for key := range unHealthyPartitionSet {
+				unHealthNodes = append(unHealthNodes, key)
+			}
+
+			logrus.Warnf("unhealthy partition %d. healthy %v unhealthy %v", partitionId, healthNodes, unHealthNodes)
 
 			partitionVerified[partitionId] = false
 			return fmt.Errorf("timeout waiting for acknowledgements")
