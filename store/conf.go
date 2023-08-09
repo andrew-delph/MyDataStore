@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	totalReplicas  int           = 1
+	totalReplicas  int           = 2
 	writeResponse  int           = 1
 	readResponse   int           = 1
 	saveInterval   time.Duration = 30 * time.Second

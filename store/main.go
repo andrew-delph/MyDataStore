@@ -38,7 +38,7 @@ var myPartions []int
 
 func main() {
 	logrus.SetLevel(logrus.WarnLevel)
-	logrus.SetFormatter(&logrus.JSONFormatter{})
+	// logrus.SetFormatter(&logrus.JSONFormatter{})
 
 	InitStore()
 
@@ -82,7 +82,11 @@ func main() {
 	partitionTimer := time.NewTicker(1000 * time.Millisecond)
 	go func() {
 		for range partitionTimer.C {
-			myPartions = GetMemberPartions(events.consistent, hostname)
+			myPartions, err := GetMemberPartions(events.consistent, hostname)
+			if err != nil {
+				logrus.Warn(err)
+				continue
+			}
 
 			for _, partitionId := range myPartions {
 				partitionTree, err := PartitionMerkleTree(partitionId)
@@ -90,7 +94,7 @@ func main() {
 					logrus.Debug(err)
 					continue
 				}
-				events.SendPartitionHashMessage(partitionTree.Root.Hash, partitionId)
+				events.SendRequestPartitionInfoMessage(partitionTree.Root.Hash, partitionId)
 			}
 		}
 	}()

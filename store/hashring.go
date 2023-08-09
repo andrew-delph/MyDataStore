@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/buraksezer/consistent"
 	"github.com/cespare/xxhash"
-	"github.com/sirupsen/logrus"
 )
 
 var hashRingConf = consistent.Config{
@@ -46,12 +45,12 @@ func FindPartitionID(hashring *consistent.Consistent, key string) int {
 	return hashring.FindPartitionID(keyBytes)
 }
 
-func GetMemberPartions(hashring *consistent.Consistent, member string) []int {
+func GetMemberPartions(hashring *consistent.Consistent, member string) ([]int, error) {
 	var belongsTo []int
 	for partID := 0; partID < hashRingConf.PartitionCount; partID++ {
 		members, err := hashring.GetClosestNForPartition(partID, totalReplicas)
 		if err != nil {
-			logrus.Panic(err)
+			return nil, err
 		}
 		partitionMembers := ConvertHashRingMemberArray(members)
 		for _, partitionMember := range partitionMembers {
@@ -60,7 +59,7 @@ func GetMemberPartions(hashring *consistent.Consistent, member string) []int {
 			}
 		}
 	}
-	return belongsTo
+	return belongsTo, nil
 }
 
 func GetMembers(hashring *consistent.Consistent) []HashRingMember {

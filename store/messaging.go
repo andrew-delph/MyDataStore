@@ -1,9 +1,9 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 
 	"github.com/sirupsen/logrus"
 )
@@ -69,7 +69,10 @@ func (m *SetMessage) Decode(data []byte) error {
 }
 
 func (m *SetMessage) Handle(messageHolder *MessageHolder) {
-
+	randomNumber := rand.Float64()
+	if randomNumber < 0.5 {
+		return
+	}
 	logrus.Debugf("Handling SetMessage: key=%s value=%s ackId=%s sender=%s\n", m.Key, m.Value, m.AckId, messageHolder.SenderName)
 	partitionId := FindPartitionID(events.consistent, m.Key)
 	err := setValue(partitionId, m.Key, m.Value)
@@ -113,45 +116,73 @@ func (m *GetMessage) Handle(messageHolder *MessageHolder) {
 	events.SendAckMessage(value, m.AckId, messageHolder.SenderName, exists)
 }
 
-type PartitionHashMessage struct {
+type RequestPartitionInfo struct {
 	AckId       string
-	Hash        []byte
 	PartitionId int
 }
 
-func NewPartitionHashMessage(ackID string, hash []byte, partitionId int) *PartitionHashMessage {
-	return &PartitionHashMessage{
+func NewRequestPartitionInfo(ackID string, partitionId int) *RequestPartitionInfo {
+	return &RequestPartitionInfo{
 		AckId:       ackID,
-		Hash:        hash,
 		PartitionId: partitionId,
 	}
 }
 
-func (m PartitionHashMessage) Encode() ([]byte, error) {
+func (m RequestPartitionInfo) Encode() ([]byte, error) {
 	return json.Marshal(m)
 }
 
-func (m *PartitionHashMessage) Handle(messageHolder *MessageHolder) {
-	logrus.Debugf("Handling PartitionHashMessage. sender=%s partitionId=%d ackId=%s", messageHolder.SenderName, m.PartitionId, m.AckId)
+func (m *RequestPartitionInfo) Handle(messageHolder *MessageHolder) {
+	logrus.Debugf("Handling RequestPartitionInfo. sender=%s partitionId=%d ackId=%s", messageHolder.SenderName, m.PartitionId, m.AckId)
 
-	partitionTree, err := PartitionMerkleTree(m.PartitionId)
-	if err != nil {
-		logrus.Error(err)
+	events.SendResponsePartitionInfo(m.AckId, messageHolder.SenderName, m.PartitionId)
+}
+
+func (m RequestPartitionInfo) GetType() string {
+	return "RequestPartitionInfo"
+}
+
+func (m *RequestPartitionInfo) Decode(data []byte) error {
+	return json.Unmarshal(data, m)
+}
+
+type ResponsePartitionInfo struct {
+	AckId       string
+	Hash        []byte
+	PartitionId int
+	Healthy     bool
+}
+
+func NewResponsePartitionInfo(ackID string, hash []byte, healthy bool, partitionId int) *ResponsePartitionInfo {
+	return &ResponsePartitionInfo{
+		AckId:       ackID,
+		Hash:        hash,
+		PartitionId: partitionId,
+		Healthy:     healthy,
+	}
+}
+
+func (m ResponsePartitionInfo) Encode() ([]byte, error) {
+	return json.Marshal(m)
+}
+
+func (m *ResponsePartitionInfo) Handle(messageHolder *MessageHolder) {
+	logrus.Debugf("Handling ResponsePartitionInfo. sender=%s partitionId=%d ackId=%s", messageHolder.SenderName, m.PartitionId, m.AckId)
+	ackChannel, exists := getAckChannel(m.AckId)
+
+	if !exists {
+		logrus.Debugf("ackChannel does not exist: %s", m.AckId)
 		return
 	}
 
-	equalPartitions := bytes.Equal(m.Hash, partitionTree.Root.Hash)
-
-	logrus.Info("equalPartitions ", equalPartitions)
-
-	events.SendAckMessage("", m.AckId, messageHolder.SenderName, equalPartitions)
+	ackChannel <- messageHolder
 }
 
-func (m PartitionHashMessage) GetType() string {
-	return "PartitionHashMessage"
+func (m ResponsePartitionInfo) GetType() string {
+	return "ResponsePartitionInfo"
 }
 
-func (m *PartitionHashMessage) Decode(data []byte) error {
+func (m *ResponsePartitionInfo) Decode(data []byte) error {
 	return json.Unmarshal(data, m)
 }
 
@@ -241,11 +272,18 @@ func DecodeMessageHolder(data []byte) (*MessageHolder, Message, error) {
 			return holder, nil, fmt.Errorf("failed to Decode AckMessage: %v", err)
 		}
 		return holder, msg, nil
-	case "PartitionHashMessage":
-		msg := &PartitionHashMessage{}
+	case "RequestPartitionInfo":
+		msg := &RequestPartitionInfo{}
 		err := msg.Decode(holder.MessageBytes)
 		if err != nil {
-			return holder, nil, fmt.Errorf("failed to Decode PartitionHashMessage: %v", err)
+			return holder, nil, fmt.Errorf("failed to Decode RequestPartitionInfo: %v", err)
+		}
+		return holder, msg, nil
+	case "ResponsePartitionInfo":
+		msg := &ResponsePartitionInfo{}
+		err := msg.Decode(holder.MessageBytes)
+		if err != nil {
+			return holder, nil, fmt.Errorf("failed to Decode RequestPartitionInfo: %v", err)
 		}
 		return holder, msg, nil
 	}

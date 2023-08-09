@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"time"
 
@@ -14,6 +15,8 @@ type MyEventDelegate struct {
 	consistent *consistent.Consistent
 	nodes      map[string]*memberlist.Node
 }
+
+var partitionVerified = make(map[int]bool)
 
 func GetMyEventDelegate() *MyEventDelegate {
 	events := new(MyEventDelegate)
@@ -32,8 +35,12 @@ func (events *MyEventDelegate) NotifyJoin(node *memberlist.Node) {
 	AddNode(events.consistent, node.Name)
 
 	events.nodes[node.Name] = node
-
-	myPartions = GetMemberPartions(events.consistent, hostname)
+	var err error
+	myPartions, err = GetMemberPartions(events.consistent, hostname)
+	if err != nil {
+		logrus.Error(err)
+		return
+	}
 	logrus.Debugf("myPartions %v", myPartions)
 	LoadPartitions(myPartions)
 }
@@ -45,8 +52,12 @@ func (events *MyEventDelegate) NotifyLeave(node *memberlist.Node) {
 	RemoveNode(events.consistent, node.Name)
 
 	delete(events.nodes, node.Name)
-
-	myPartions = GetMemberPartions(events.consistent, hostname)
+	var err error
+	myPartions, err = GetMemberPartions(events.consistent, hostname)
+	if err != nil {
+		logrus.Error(err)
+		return
+	}
 	logrus.Debugf("myPartions %v", myPartions)
 	LoadPartitions(myPartions)
 }
@@ -171,14 +182,21 @@ func (events *MyEventDelegate) SendGetMessage(key string) (string, error) {
 
 }
 
-func (events *MyEventDelegate) SendPartitionHashMessage(hash []byte, partitionId int) error {
+func (events *MyEventDelegate) SendRequestPartitionInfoMessage(hash []byte, partitionId int) error {
+
+	partitionTree, err := PartitionMerkleTree(partitionId)
+	if err != nil {
+		logrus.Debug(err)
+		return err
+	}
 
 	ackId := uuid.New().String()
 
-	partitionMsg := NewPartitionHashMessage(ackId, hash, partitionId)
+	partitionMsg := NewRequestPartitionInfo(ackId, partitionId)
 
 	nodes, err := GetClosestNForPartition(events.consistent, partitionId, totalReplicas)
 	if err != nil {
+		logrus.Debug(err)
 		return err
 	}
 
@@ -212,16 +230,73 @@ func (events *MyEventDelegate) SendPartitionHashMessage(hash []byte, partitionId
 	for {
 		select {
 		case ackMessageHolder := <-ackChannel:
-			ackSet[ackMessageHolder.SenderName] = true
+
+			responsePartitionInfo := &ResponsePartitionInfo{}
+			err := responsePartitionInfo.Decode(ackMessageHolder.MessageBytes)
+			if err != nil {
+				logrus.Errorf("failed to Decode ResponsePartitionInfo: %v", err)
+				return fmt.Errorf("failed to Decode ResponsePartitionInfo: %v", err)
+			}
+
+			areEqual := bytes.Equal(partitionTree.Root.Hash, responsePartitionInfo.Hash)
+
+			if areEqual {
+				ackSet[ackMessageHolder.SenderName] = true
+			}
+
 			if len(ackSet) >= readResponse {
+				logrus.Warnf("The partition %d is healthy. health neighbors are %d", partitionId, len(ackSet))
+
+				partitionVerified[partitionId] = true
 				return nil
 			}
 		case <-timeout:
-			logrus.Warn("TIME OUT REACHED!!!", "len(ackSet)", len(ackSet))
+
+			keys := make([]string, 0, len(ackSet))
+			for key := range ackSet {
+				keys = append(keys, key)
+			}
+
+			logrus.Warnf("The partition %d is not healthy. health neighbors are %v", partitionId, keys)
+
+			partitionVerified[partitionId] = false
 			return fmt.Errorf("timeout waiting for acknowledgements")
 		}
 	}
 
+}
+
+func (events *MyEventDelegate) SendResponsePartitionInfo(ackId, senderName string, partitionId int) error {
+
+	partitionTree, err := PartitionMerkleTree(partitionId)
+	if err != nil {
+		logrus.Debug(err)
+		return err
+	}
+
+	value, exists := partitionVerified[partitionId]
+
+	if !exists {
+		value = false
+	}
+
+	ackMsg := NewResponsePartitionInfo(ackId, partitionTree.Root.Hash, value, partitionId)
+
+	node := events.nodes[senderName]
+
+	bytes, err := EncodeHolder(ackMsg)
+
+	if err != nil {
+		return fmt.Errorf("FAILED TO ENCODE: %v", err)
+	}
+
+	err = clusterNodes.SendReliable(node, bytes)
+
+	if err != nil {
+		return fmt.Errorf("FAILED TO SEND: %v", err)
+	}
+
+	return nil
 }
 
 func (events *MyEventDelegate) SendAckMessage(value, ackId, senderName string, success bool) error {

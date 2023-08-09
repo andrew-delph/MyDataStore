@@ -22,3 +22,11 @@ func randomString(n int) string {
 	}
 	return string(b)
 }
+
+func GetMapKeys(inputMap map[string]interface{}) []string {
+	keys := make([]string, 0, len(inputMap))
+	for key := range inputMap {
+		keys = append(keys, key)
+	}
+	return keys
+}
