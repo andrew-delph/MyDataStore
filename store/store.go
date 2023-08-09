@@ -112,7 +112,7 @@ func PartitionMerkleTree(partitionId int) (*merkletree.MerkleTree, error) {
 func InitStore() {
 	ticker := time.NewTicker(saveInterval)
 
-	logrus.Warnf("store saveInterval %v", saveInterval)
+	logrus.Debugf("store saveInterval %v", saveInterval)
 
 	// Periodically save the cache to a file
 	go func() {
