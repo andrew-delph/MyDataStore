@@ -1,15 +1,181 @@
 syntax = "proto3";
 
-package store_proto;
+package video_call;
 
-option go_package = "github.com/andrew-delph/my-key-store/store/proto";
+option go_package = "github.com/andrew-delph/cloud-video-call/common-messaging/proto";
 
-service KeyStoreInternal {
-  rpc Test (StandardResponse) returns (StandardResponse) {
+// The greeting service definition.
+service DataService {
+  // Sends a greeting
+  rpc CreateUser (CreateUserRequest) returns (CreateUserResponse) {
+  }
+
+  rpc CreateMatch (CreateMatchRequest) returns (CreateMatchResponse) {}
+
+  rpc EndCall (EndCallRequest) returns (StandardResponse) {}
+
+  rpc CreateFeedback (CreateFeedbackRequest) returns (Match) {}
+
+  rpc GetRelationshipScores (GetRelationshipScoresRequest) returns (GetRelationshipScoresResponse) {}
+
+  rpc CheckUserFilters(CheckUserFiltersRequest) returns (CheckUserFiltersResponse) {}
+
+  rpc UpdatePerferences(UpdatePerferencesRequest) returns (StandardResponse) {}
+
+  rpc GetUserPerferences(GetUserPerferencesRequest) returns (GetUserPerferencesResponse) {}
+
+  rpc PutUserPerferences(PutUserPerferencesRequest) returns (PutUserPerferencesResponse) {}
+
+  rpc GetMatchHistory(MatchHistoryRequest) returns (MatchHistoryResponse) {
+  }
+
+  rpc InsertUserVectors(InsertUserVectorsRequest) returns (StandardResponse) {
   }
 }
+
+message CreateUserRequest {
+  string user_id = 1;
+}
+
+message CreateUserResponse {
+  bool error = 1;
+  string message = 2;
+}
+
+
+message CreateMatchRequest {
+  string user_id1 = 1;
+  string user_id2 = 2;
+}
+
+message CreateMatchResponse {
+  bool error = 1;
+  string message = 2;
+  string user_id1 = 3;
+  string user_id2 = 4;
+  int32 match_id1 = 5;
+  int32 match_id2 = 6;
+}
+
+
+message EndCallRequest {
+  int32 match_id = 1;
+}
+
+
+message GetRelationshipScoresRequest {
+  string user_id = 1;
+  repeated string other_users = 2;
+}
+
+message GetRelationshipScoresResponse {
+  bool error = 1;
+  string message = 2;
+  map<string, Score> relationship_scores = 3;
+}
+
+message Score {
+  double prob = 1;
+  double score = 2;
+  double nscore = 3;
+}
+
+message FilterObject {
+  string user_id1 = 1;
+  string user_id2 = 2;
+  bool passed = 3;
+  string last_matched_time = 4;
+  bool friends = 5; 
+  bool negative = 6; 
+}
+
+message CheckUserFiltersRequest {
+  repeated FilterObject filters = 1;
+}
+
+message CheckUserFiltersResponse {
+  repeated FilterObject filters = 1;
+}
+
 
 message StandardResponse {
   bool error = 1;
   string message = 2;
+}
+
+
+message UpdatePerferencesRequest {
+  string user_id = 1;
+  map<string, string> attributes_constant = 2;
+  map<string, string> filters_constant = 3;
+  map<string, string> attributes_custom = 4;
+  map<string, string> filters_custom = 5;
+}
+
+message GetUserPerferencesRequest {
+  string user_id = 1;
+}
+
+message GetUserPerferencesResponse {
+  bool error = 1;
+  string message = 2;
+  string user_id = 3;
+  map<string, string> attributes_constant = 4;
+  map<string, string> filters_constant = 5;
+  map<string, string> attributes_custom = 6;
+  map<string, string> filters_custom = 7;
+  double priority = 8;
+}
+
+
+message PutUserPerferencesRequest {
+  string user_id = 1;
+  map<string, string> attributes_constant = 2;
+  map<string, string> filters_constant = 3;
+  map<string, string> attributes_custom = 4;
+  map<string, string> filters_custom = 5;
+}
+
+message PutUserPerferencesResponse {
+  bool error = 1;
+  string message = 2;
+}
+
+message CreateFeedbackRequest {
+  string user_id = 1;
+  int32 match_id = 2;
+  double score = 3;
+}
+
+message MatchHistoryRequest {
+  string user_id = 1;
+  int32 skip = 2;
+  int32 limit = 3;
+}
+
+message MatchHistoryResponse {
+  int32 total = 1;
+  repeated Match match_history = 2;
+}
+
+message Match {
+  string user_id1 = 1;
+  string user_id2 = 2;
+  string create_time = 3;
+  double user_id1_score = 4;
+  double user_id2_score = 5;
+  bool friends = 6;
+  bool negative = 7;
+  int32 match_id = 8;
+  string end_time = 9;
+}
+
+message InsertUserVectorsRequest {
+  repeated UserVector user_vectors = 1;
+}
+
+
+message UserVector {
+  string user_id = 1;
+  repeated double vector = 2;
 }

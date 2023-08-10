@@ -15,9 +15,10 @@ go_library(
         "store.go",
         "utils.go",
     ],
-    importpath = "github.com/andrew-delph/my-key-store/store",
+    importpath = "andrewdelph.com/store",
     visibility = ["//visibility:private"],
     deps = [
+        "//store/proto:go_default_library",
         "@com_github_buraksezer_consistent//:go_default_library",
         "@com_github_cbergoon_merkletree//:go_default_library",
         "@com_github_cespare_xxhash//:go_default_library",

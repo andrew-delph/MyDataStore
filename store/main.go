@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"net"
@@ -9,19 +10,21 @@ import (
 	"sync"
 	"time"
 
+	pb "github.com/andrew-delph/cloud-video-call/common-messaging/proto"
 	"github.com/hashicorp/memberlist"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
 
-// pb "andrewdelph.com/my-key-store/store/proto"
-var port = 7070
+// pb "github.com/andrew-delph/cloud-video-call/common-messaging/proto"
+var port = flag.Int("port", 80, "The server port")
 
-// type server struct {
-// 	pb.UnimplementedDataServiceServer
-// }
+type server struct {
+	pb.UnimplementedDataServiceServer
+}
 
 func grpcStart() {
+	logrus.SetFormatter(&logrus.JSONFormatter{})
 	defer func() {
 		if r := recover(); r != nil {
 			logrus.Errorf("Uncaught panic: %v", r)
@@ -29,24 +32,21 @@ func grpcStart() {
 		}
 	}()
 
-	logrus.Info("STARTING !!!1")
+	logrus.Info("STARTING !!!")
 
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	flag.Parse()
+
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		logrus.Fatalf("failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
+	pb.RegisterDataServiceServer(s, &server{})
+	logrus.Infof("server listening at %v", lis.Addr())
 
-	logrus.Info(s)
-	logrus.Info(lis)
-
-	// logrus.Info(pb)
-	// pb.RegisterAddServer(s, &server{})
-	// logrus.Infof("server listening at %v", lis.Addr())
-
-	// if err := s.Serve(lis); err != nil {
-	// 	logrus.Fatalf("failed to serve: %v", err)
-	// }
+	if err := s.Serve(lis); err != nil {
+		log.Fatalf("failed to serve: %v", err)
+	}
 }
 
 var (
@@ -164,7 +164,7 @@ func main() {
 		}
 	}
 
-	grpcStart()
+	// grpcStart()
 
 	logrus.Info("bye..............................")
 }

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
 
-rajaksdjkas
-exec bazel run -- @io_bazel_rules_go//go/tools/gopackagesdriver "${@}"
+
+exec bazel run --tool_tag=gopackagesdriver -- @io_bazel_rules_go//go/tools/gopackagesdriver "${@}"
+
