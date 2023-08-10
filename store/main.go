@@ -85,7 +85,6 @@ func main() {
 	partitionTimer := time.NewTicker(1000 * time.Millisecond)
 	go func() {
 		for range partitionTimer.C {
-			Client()
 			myPartions, err := GetMemberPartions(events.consistent, hostname)
 			if err != nil {
 				logrus.Warn(err)

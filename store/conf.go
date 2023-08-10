@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/memberlist"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -17,7 +18,6 @@ var (
 )
 
 func GetConf() (*memberlist.Config, *MyDelegate, *MyEventDelegate) {
-
 	delegate := GetMyDelegate()
 	events := GetMyEventDelegate()
 
@@ -27,7 +27,12 @@ func GetConf() (*memberlist.Config, *MyDelegate, *MyEventDelegate) {
 	conf.AdvertisePort = 8081
 	conf.Delegate = delegate
 	conf.Events = events
-	conf.Name = hostname
+
+	localIp, err := getLocalIP()
+	if err != nil {
+		logrus.Fatal(err)
+	}
+	conf.Name = localIp
 
 	return conf, delegate, events
 }

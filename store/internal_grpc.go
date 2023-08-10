@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"time"
 
 	pb "github.com/andrew-delph/my-key-store/proto"
 
@@ -16,10 +15,6 @@ var port = 7070
 
 type internalServer struct {
 	pb.InternalNodeServiceServer
-}
-
-type internalClient struct {
-	pb.InternalNodeServiceClient
 }
 
 func StartInterGrpcServer() {
@@ -49,19 +44,44 @@ func (s *internalServer) TestRequest(ctx context.Context, in *pb.StandardRespons
 	return &pb.StandardResponse{Message: "This is the server."}, nil
 }
 
-func Client() {
-	conn, err := grpc.Dial(fmt.Sprintf("localhost:%d", port), grpc.WithInsecure(), grpc.WithBlock())
+func (s *internalServer) SetRequest(ctx context.Context, m *pb.SetRequestMessage) (*pb.StandardResponse, error) {
+	logrus.Debugf("Handling SetRequest: key=%s value=%s ", m.Key, m.Value)
+	partitionId := FindPartitionID(events.consistent, m.Key)
+	err := setValue(partitionId, m.Key, m.Value)
 	if err != nil {
-		logrus.Fatalf("did not connect: %v", err)
+		logrus.Errorf("failed to set %s : %s error= %v", m.Key, m.Value, err)
+		return nil, fmt.Errorf("failed to set %s : %s error= %v", m.Key, m.Value, err)
+	} else {
+		return &pb.StandardResponse{Message: "Value set."}, nil
 	}
-	defer conn.Close()
+}
+
+func (s *internalServer) GetRequest(ctx context.Context, m *pb.GetRequestMessage) (*pb.GetResponseMessage, error) {
+	logrus.Warnf("Handling GetRequest: key=%s ", m.Key)
+	partitionId := FindPartitionID(events.consistent, m.Key)
+	value, exists, _ := getValue(partitionId, m.Key)
+
+	if !exists {
+		return nil, fmt.Errorf("Value not found.")
+	} else {
+		return &pb.GetResponseMessage{Value: value}, nil
+	}
+}
+
+func GetClient(addr string) (*grpc.ClientConn, pb.InternalNodeServiceClient, error) {
+	conn, err := grpc.Dial(fmt.Sprintf("%s:%d", addr, port), grpc.WithInsecure(), grpc.WithBlock())
+	if err != nil {
+		return nil, nil, err
+	}
 	internalClient := pb.NewInternalNodeServiceClient(conn)
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-	r, err := internalClient.TestRequest(ctx, &pb.StandardResponse{Message: "This is the client."})
-	if err != nil {
-		logrus.Fatalf("could not greet: %v", err)
-	}
-	logrus.Warnf("Greeting: %s", r.Message)
+	return conn, internalClient, nil
+
+	// ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	// defer cancel()
+	// r, err := internalClient.TestRequest(ctx, &pb.StandardResponse{Message: "This is the client."})
+	// if err != nil {
+	// 	logrus.Fatalf("could not greet: %v", err)
+	// }
+	// logrus.Warnf("Greeting: %s", r.Message)
 }

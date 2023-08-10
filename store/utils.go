@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"math/rand"
+	"net"
 
 	"golang.org/x/exp/constraints"
 )
@@ -29,4 +31,19 @@ func GetMapKeys(inputMap map[string]interface{}) []string {
 		keys = append(keys, key)
 	}
 	return keys
+}
+
+func getLocalIP() (string, error) {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return "", err
+	}
+	for _, addr := range addrs {
+		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String(), nil
+			}
+		}
+	}
+	return "", fmt.Errorf("Local IP not found")
 }

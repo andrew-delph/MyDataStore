@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"time"
 
@@ -9,6 +10,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/hashicorp/memberlist"
 	"github.com/sirupsen/logrus"
+
+	pb "github.com/andrew-delph/my-key-store/proto"
 )
 
 type MyEventDelegate struct {
@@ -29,7 +32,6 @@ func GetMyEventDelegate() *MyEventDelegate {
 }
 
 func (events *MyEventDelegate) NotifyJoin(node *memberlist.Node) {
-
 	logrus.Infof("join %s", node.Name)
 
 	AddNode(events.consistent, node.Name)
@@ -46,7 +48,6 @@ func (events *MyEventDelegate) NotifyJoin(node *memberlist.Node) {
 }
 
 func (events *MyEventDelegate) NotifyLeave(node *memberlist.Node) {
-
 	logrus.Infof("leave %s", node.Name)
 
 	RemoveNode(events.consistent, node.Name)
@@ -61,12 +62,12 @@ func (events *MyEventDelegate) NotifyLeave(node *memberlist.Node) {
 	logrus.Debugf("myPartions %v", myPartions)
 	LoadPartitions(myPartions)
 }
+
 func (events *MyEventDelegate) NotifyUpdate(node *memberlist.Node) {
 	// skip
 }
 
 func (events *MyEventDelegate) SendSetMessage(key, value string) error {
-
 	ackId := uuid.New().String()
 
 	setMsg := NewSetMessage(key, value, ackId)
@@ -89,7 +90,6 @@ func (events *MyEventDelegate) SendSetMessage(key, value string) error {
 		node := events.nodes[node.String()]
 
 		bytes, err := EncodeHolder(setMsg)
-
 		if err != nil {
 			return fmt.Errorf("FAILED TO ENCODE: %v", err)
 		}
@@ -117,14 +117,12 @@ func (events *MyEventDelegate) SendSetMessage(key, value string) error {
 			return fmt.Errorf("timeout waiting for acknowledgements")
 		}
 	}
-
 }
 
 func (events *MyEventDelegate) SendGetMessage(key string) (string, error) {
-
 	ackId := uuid.New().String()
 
-	getMsg := NewGetMessage(key, ackId)
+	getReqMsg := &pb.GetRequestMessage{Key: key}
 
 	nodes, err := GetClosestN(events.consistent, key, totalReplicas)
 	if err != nil {
@@ -139,51 +137,50 @@ func (events *MyEventDelegate) SendGetMessage(key string) (string, error) {
 
 	for _, node := range nodes {
 
-		node := events.nodes[node.String()]
+		conn, client, err := GetClient(node.String())
 
-		bytes, err := EncodeHolder(getMsg)
+		defer conn.Close()
 
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		r, err := client.GetRequest(ctx, getReqMsg)
 		if err != nil {
-			return "", fmt.Errorf("FAILED TO ENCODE: %v", err)
+			logrus.Fatalf("could not greet: %v", err)
 		}
-
-		err = clusterNodes.SendReliable(node, bytes)
-
-		if err != nil {
-			return "", fmt.Errorf("FAILED TO SEND: %v", err)
-		}
+		logrus.Warnf("Greeting: %s", r.Value)
+		return r.Value, nil
 	}
 
-	ackSet := make(map[string]int)
+	return "", fmt.Errorf("value not found.")
 
-	timeout := time.After(defaultTimeout)
+	// ackSet := make(map[string]int)
 
-	for {
-		select {
-		case ackMessageHolder := <-ackChannel:
+	// timeout := time.After(defaultTimeout)
 
-			ackMessage := &AckMessage{}
-			err := ackMessage.Decode(ackMessageHolder.MessageBytes)
-			if err != nil {
-				return "", fmt.Errorf("failed to Decode AckMessage: %v", err)
-			}
+	// for {
+	// 	select {
+	// 	case ackMessageHolder := <-ackChannel:
 
-			ackValue := ackMessage.Value
-			ackSet[ackValue]++
+	// 		ackMessage := &AckMessage{}
+	// 		err := ackMessage.Decode(ackMessageHolder.MessageBytes)
+	// 		if err != nil {
+	// 			return "", fmt.Errorf("failed to Decode AckMessage: %v", err)
+	// 		}
 
-			if ackSet[ackValue] == readResponse {
-				return ackValue, nil
-			}
-		case <-timeout:
-			logrus.Warn("TIME OUT REACHED!!!")
-			return "", fmt.Errorf("timeout waiting for acknowledgements")
-		}
-	}
+	// 		ackValue := ackMessage.Value
+	// 		ackSet[ackValue]++
 
+	// 		if ackSet[ackValue] == readResponse {
+	// 			return ackValue, nil
+	// 		}
+	// 	case <-timeout:
+	// 		logrus.Warn("TIME OUT REACHED!!!")
+	// 		return "", fmt.Errorf("timeout waiting for acknowledgements")
+	// 	}
+	// }
 }
 
 func (events *MyEventDelegate) SendRequestPartitionInfoMessage(hash []byte, partitionId int) error {
-
 	partitionTree, err := PartitionMerkleTree(partitionId)
 	if err != nil {
 		logrus.Debug(err)
@@ -211,7 +208,6 @@ func (events *MyEventDelegate) SendRequestPartitionInfoMessage(hash []byte, part
 		node := events.nodes[node.String()]
 
 		bytes, err := EncodeHolder(partitionMsg)
-
 		if err != nil {
 			return fmt.Errorf("FAILED TO ENCODE: %v", err)
 		}
@@ -277,11 +273,9 @@ func (events *MyEventDelegate) SendRequestPartitionInfoMessage(hash []byte, part
 			return fmt.Errorf("timeout waiting for acknowledgements")
 		}
 	}
-
 }
 
 func (events *MyEventDelegate) SendResponsePartitionInfo(ackId, senderName string, partitionId int) error {
-
 	partitionTree, err := PartitionMerkleTree(partitionId)
 	if err != nil {
 		logrus.Debug(err)
@@ -299,7 +293,6 @@ func (events *MyEventDelegate) SendResponsePartitionInfo(ackId, senderName strin
 	node := events.nodes[senderName]
 
 	bytes, err := EncodeHolder(ackMsg)
-
 	if err != nil {
 		return fmt.Errorf("FAILED TO ENCODE: %v", err)
 	}
@@ -314,13 +307,11 @@ func (events *MyEventDelegate) SendResponsePartitionInfo(ackId, senderName strin
 }
 
 func (events *MyEventDelegate) SendAckMessage(value, ackId, senderName string, success bool) error {
-
 	ackMsg := NewAckMessage(ackId, success, value)
 
 	node := events.nodes[senderName]
 
 	bytes, err := EncodeHolder(ackMsg)
-
 	if err != nil {
 		return fmt.Errorf("FAILED TO ENCODE: %v", err)
 	}

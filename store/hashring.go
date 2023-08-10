@@ -25,7 +25,6 @@ func (m HashRingMember) String() string {
 }
 
 func GetHashRing() *consistent.Consistent {
-
 	hashring := consistent.New(nil, hashRingConf)
 	return hashring
 }
@@ -37,7 +36,6 @@ func AddNode(hashring *consistent.Consistent, nodeName string) {
 
 func RemoveNode(hashring *consistent.Consistent, member string) {
 	hashring.Remove(member)
-
 }
 
 func FindPartitionID(hashring *consistent.Consistent, key string) int {
@@ -78,9 +76,7 @@ func GetClosestN(hashring *consistent.Consistent, key string, count int) ([]Hash
 }
 
 func GetClosestNForPartition(hashring *consistent.Consistent, partitionId, count int) ([]HashRingMember, error) {
-
 	members, err := hashring.GetClosestNForPartition(partitionId, count)
-
 	if err != nil {
 		return nil, err
 	}
