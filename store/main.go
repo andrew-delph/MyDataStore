@@ -1,6 +1,9 @@
 package main
 
 import (
+	"fmt"
+	"log"
+	"net"
 	"os"
 	"strings"
 	"sync"
@@ -8,7 +11,43 @@ import (
 
 	"github.com/hashicorp/memberlist"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc"
+	// pb "github.com/andrew-delph/my-key-store/store/proto"
 )
+
+var port = 7070
+
+// type server struct {
+// 	pb.UnimplementedDataServiceServer
+// }
+
+func grpcStart() {
+	defer func() {
+		if r := recover(); r != nil {
+			logrus.Errorf("Uncaught panic: %v", r)
+			// Perform any necessary cleanup or error handling here
+		}
+	}()
+
+	logrus.Info("STARTING !!!1")
+
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
+	}
+	s := grpc.NewServer()
+
+	logrus.Info(s)
+	logrus.Info(lis)
+
+	// logrus.Info(pb)
+	// pb.RegisterAddServer(s, &server{})
+	// logrus.Infof("server listening at %v", lis.Addr())
+
+	// if err := s.Serve(lis); err != nil {
+	// 	logrus.Fatalf("failed to serve: %v", err)
+	// }
+}
 
 var (
 	clusterNodes *memberlist.Memberlist
@@ -33,8 +72,10 @@ func deleteAckChannel(key string) {
 	ackMap.Delete(key)
 }
 
-var hostname string
-var myPartions []int
+var (
+	hostname   string
+	myPartions []int
+)
 
 func main() {
 	logrus.SetLevel(logrus.WarnLevel)
@@ -122,6 +163,8 @@ func main() {
 
 		}
 	}
+
+	grpcStart()
 
 	logrus.Info("bye..............................")
 }

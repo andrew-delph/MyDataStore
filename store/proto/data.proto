@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package my_key_store;
+
+option go_package = "github.com/andrew-delph/my-key-store/store/proto";
+
+service KeyStoreInternal {
+  rpc Test (StandardResponse) returns (StandardResponse) {
+  }
+}
+
+message StandardResponse {
+  bool error = 1;
+  string message = 2;
+}
