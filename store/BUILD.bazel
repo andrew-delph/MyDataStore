@@ -10,6 +10,7 @@ go_library(
         "delegate.go",
         "events.go",
         "hashring.go",
+        "internal_grpc.go",
         "main.go",
         "messaging.go",
         "store.go",

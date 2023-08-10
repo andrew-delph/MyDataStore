@@ -28,8 +28,8 @@
     "build.directoryFilters": [
       "-bazel-bin",
       "-bazel-out",
-      "-bazel-testlogs",
-      "-bazel-my-key-store"
+      "-bazel-testlogs"
+      // "-bazel-my-key-store"
     ],
     "formatting.gofumpt": true,
     "formatting.local": "github.com/andrew-delph",

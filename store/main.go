@@ -1,54 +1,14 @@
 package main
 
 import (
-	"flag"
-	"fmt"
-	"net"
 	"os"
 	"strings"
 	"sync"
 	"time"
 
-	"google.golang.org/grpc"
-
-	pb "github.com/andrew-delph/my-key-store/proto"
-
 	"github.com/hashicorp/memberlist"
 	"github.com/sirupsen/logrus"
 )
-
-var port = flag.Int("port", 80, "The server port")
-
-type server struct {
-	pb.InternalNodeServiceServer
-}
-
-func grpcStart() {
-	logrus.SetFormatter(&logrus.JSONFormatter{})
-	defer func() {
-		if r := recover(); r != nil {
-			logrus.Errorf("Uncaught panic: %v", r)
-			// Perform any necessary cleanup or error handling here
-		}
-	}()
-
-	logrus.Info("STARTING !!!")
-
-	flag.Parse()
-
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
-	if err != nil {
-		logrus.Fatalf("failed to listen: %v", err)
-	}
-	s := grpc.NewServer()
-	pb.RegisterInternalNodeServiceServer(s, &server{})
-
-	logrus.Infof("server listening at %v", lis.Addr())
-
-	if err := s.Serve(lis); err != nil {
-		logrus.Fatalf("failed to serve: %v", err)
-	}
-}
 
 var (
 	clusterNodes *memberlist.Memberlist
@@ -79,7 +39,7 @@ var (
 )
 
 func main() {
-	grpcStart()
+	go StartInterGrpcServer()
 	logrus.SetLevel(logrus.WarnLevel)
 	// logrus.SetFormatter(&logrus.JSONFormatter{})
 
@@ -125,6 +85,7 @@ func main() {
 	partitionTimer := time.NewTicker(1000 * time.Millisecond)
 	go func() {
 		for range partitionTimer.C {
+			Client()
 			myPartions, err := GetMemberPartions(events.consistent, hostname)
 			if err != nil {
 				logrus.Warn(err)
