@@ -39,18 +39,13 @@ func StartInterGrpcServer() {
 	}
 }
 
-func (s *internalServer) TestRequest(ctx context.Context, in *pb.StandardResponse) (*pb.StandardResponse, error) {
-	logrus.Warnf("Received: %v", in.Message)
-	return &pb.StandardResponse{Message: "This is the server."}, nil
-}
-
 func (s *internalServer) SetRequest(ctx context.Context, m *pb.SetRequestMessage) (*pb.StandardResponse, error) {
 	logrus.Debugf("Handling SetRequest: key=%s value=%s ", m.Key, m.Value)
 	partitionId := FindPartitionID(events.consistent, m.Key)
 	err := setValue(partitionId, m.Key, m.Value)
 	if err != nil {
 		logrus.Errorf("failed to set %s : %s error= %v", m.Key, m.Value, err)
-		return nil, fmt.Errorf("failed to set %s : %s error= %v", m.Key, m.Value, err)
+		return nil, err
 	} else {
 		return &pb.StandardResponse{Message: "Value set."}, nil
 	}
@@ -66,22 +61,4 @@ func (s *internalServer) GetRequest(ctx context.Context, m *pb.GetRequestMessage
 	} else {
 		return &pb.GetResponseMessage{Value: value}, nil
 	}
-}
-
-func GetClient(addr string) (*grpc.ClientConn, pb.InternalNodeServiceClient, error) {
-	conn, err := grpc.Dial(fmt.Sprintf("%s:%d", addr, port), grpc.WithInsecure(), grpc.WithBlock())
-	if err != nil {
-		return nil, nil, err
-	}
-	internalClient := pb.NewInternalNodeServiceClient(conn)
-
-	return conn, internalClient, nil
-
-	// ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	// defer cancel()
-	// r, err := internalClient.TestRequest(ctx, &pb.StandardResponse{Message: "This is the client."})
-	// if err != nil {
-	// 	logrus.Fatalf("could not greet: %v", err)
-	// }
-	// logrus.Warnf("Greeting: %s", r.Message)
 }

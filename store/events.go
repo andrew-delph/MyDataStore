@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"time"
 
@@ -10,8 +9,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/hashicorp/memberlist"
 	"github.com/sirupsen/logrus"
-
-	pb "github.com/andrew-delph/my-key-store/proto"
 )
 
 type MyEventDelegate struct {
@@ -117,67 +114,6 @@ func (events *MyEventDelegate) SendSetMessage(key, value string) error {
 			return fmt.Errorf("timeout waiting for acknowledgements")
 		}
 	}
-}
-
-func (events *MyEventDelegate) SendGetMessage(key string) (string, error) {
-	ackId := uuid.New().String()
-
-	getReqMsg := &pb.GetRequestMessage{Key: key}
-
-	nodes, err := GetClosestN(events.consistent, key, totalReplicas)
-	if err != nil {
-		return "", err
-	}
-
-	ackChannel := make(chan *MessageHolder, totalReplicas)
-	defer close(ackChannel)
-
-	setAckChannel(ackId, ackChannel)
-	defer deleteAckChannel(ackId)
-
-	for _, node := range nodes {
-
-		conn, client, err := GetClient(node.String())
-
-		defer conn.Close()
-
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		defer cancel()
-		r, err := client.GetRequest(ctx, getReqMsg)
-		if err != nil {
-			logrus.Fatalf("could not greet: %v", err)
-		}
-		logrus.Warnf("Greeting: %s", r.Value)
-		return r.Value, nil
-	}
-
-	return "", fmt.Errorf("value not found.")
-
-	// ackSet := make(map[string]int)
-
-	// timeout := time.After(defaultTimeout)
-
-	// for {
-	// 	select {
-	// 	case ackMessageHolder := <-ackChannel:
-
-	// 		ackMessage := &AckMessage{}
-	// 		err := ackMessage.Decode(ackMessageHolder.MessageBytes)
-	// 		if err != nil {
-	// 			return "", fmt.Errorf("failed to Decode AckMessage: %v", err)
-	// 		}
-
-	// 		ackValue := ackMessage.Value
-	// 		ackSet[ackValue]++
-
-	// 		if ackSet[ackValue] == readResponse {
-	// 			return ackValue, nil
-	// 		}
-	// 	case <-timeout:
-	// 		logrus.Warn("TIME OUT REACHED!!!")
-	// 		return "", fmt.Errorf("timeout waiting for acknowledgements")
-	// 	}
-	// }
 }
 
 func (events *MyEventDelegate) SendRequestPartitionInfoMessage(hash []byte, partitionId int) error {

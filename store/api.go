@@ -19,8 +19,7 @@ func setHandler(w http.ResponseWriter, r *http.Request) {
 	// Store the value associated with the key
 	// store[key] = value
 
-	err := events.SendSetMessage(key, value)
-
+	err := SendSetMessage(key, value)
 	if err != nil {
 		errorMessage := fmt.Sprintf("Could not set value: key = '%s', value = '%s'. Error = %v", key, value, err)
 		http.Error(w, errorMessage, http.StatusBadRequest)
@@ -34,8 +33,7 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 	// Get the key from the query parameters
 	key := r.URL.Query().Get("key")
 
-	value, err := events.SendGetMessage(key)
-
+	value, err := SendGetMessage(key)
 	if err != nil {
 		errorMessage := fmt.Sprintf("Could not set value: key = '%s', value = '%s'. Error = %v", key, value, err)
 		http.Error(w, errorMessage, http.StatusBadRequest)
