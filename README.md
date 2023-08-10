@@ -21,3 +21,7 @@ while true; do kubectl logs -f deployment/store; done
 # TEST
 
 ibazel run //store:go_default_test
+
+# EDITOR SETUP
+
+https://github.com/bazelbuild/rules_go/wiki/Editor-setup
