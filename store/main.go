@@ -3,17 +3,17 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"strings"
 	"sync"
 	"time"
 
-	pb "github.com/andrew-delph/cloud-video-call/common-messaging/proto"
+	// pb "github.com/andrew-delph/cloud-video-call/common-messaging/proto"
+	"google.golang.org/grpc"
+
 	"github.com/hashicorp/memberlist"
 	"github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
 )
 
 // pb "github.com/andrew-delph/cloud-video-call/common-messaging/proto"
@@ -41,12 +41,12 @@ func grpcStart() {
 		logrus.Fatalf("failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
-	pb.RegisterDataServiceServer(s, &server{})
-	logrus.Infof("server listening at %v", lis.Addr())
+	// pb.RegisterDataServiceServer(s, &server{})
+	// logrus.Infof("server listening at %v", lis.Addr())
 
-	if err := s.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
-	}
+	// if err := s.Serve(lis); err != nil {
+	// 	log.Fatalf("failed to serve: %v", err)
+	// }
 }
 
 var (

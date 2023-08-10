@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package video_call;
 
-option go_package = "github.com/andrew-delph/cloud-video-call/common-messaging/proto";
+option go_package = "andrew-delph/my-key-store/proto";
 
 // The greeting service definition.
 service DataService {
