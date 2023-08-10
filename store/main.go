@@ -9,8 +9,9 @@ import (
 	"sync"
 	"time"
 
-	// pb "github.com/andrew-delph/cloud-video-call/common-messaging/proto"
 	"google.golang.org/grpc"
+
+	pb "github.com/andrew-delph/my-key-store/proto"
 
 	"github.com/hashicorp/memberlist"
 	"github.com/sirupsen/logrus"
@@ -36,12 +37,12 @@ func grpcStart() {
 
 	flag.Parse()
 
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
+	_, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
 	if err != nil {
 		logrus.Fatalf("failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
-	// pb.RegisterDataServiceServer(s, &server{})
+	pb.RegisterDataServiceServer(s, &server{})
 	// logrus.Infof("server listening at %v", lis.Addr())
 
 	// if err := s.Serve(lis); err != nil {
