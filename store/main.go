@@ -17,11 +17,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// pb "github.com/andrew-delph/cloud-video-call/common-messaging/proto"
 var port = flag.Int("port", 80, "The server port")
 
 type server struct {
-	pb.UnimplementedDataServiceServer
+	pb.InternalNodeServiceServer
 }
 
 func grpcStart() {
@@ -42,7 +41,7 @@ func grpcStart() {
 		logrus.Fatalf("failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
-	pb.RegisterDataServiceServer(s, &server{})
+	pb.RegisterInternalNodeServiceServer(s, &server{})
 
 	logrus.Infof("server listening at %v", lis.Addr())
 

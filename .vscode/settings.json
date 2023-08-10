@@ -29,10 +29,10 @@
       "-bazel-bin",
       "-bazel-out",
       "-bazel-testlogs",
-      "-bazel-mypkg"
+      "-bazel-my-key-store"
     ],
     "formatting.gofumpt": true,
-    "formatting.local": "github.com",
+    "formatting.local": "github.com/andrew-delph",
     "ui.completion.usePlaceholders": true,
     "ui.semanticTokens": true,
     "ui.codelenses": {
@@ -49,5 +49,8 @@
   "go.lintOnSave": "off",
   "[go]": {
     "editor.defaultFormatter": "golang.go"
+  },
+  "[proto3]": {
+    "editor.defaultFormatter": "zxh404.vscode-proto3"
   }
 }
