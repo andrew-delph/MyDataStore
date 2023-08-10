@@ -12,9 +12,9 @@ import (
 	"github.com/hashicorp/memberlist"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
-	// pb "github.com/andrew-delph/my-key-store/store/proto"
 )
 
+// pb "andrewdelph.com/my-key-store/store/proto"
 var port = 7070
 
 // type server struct {

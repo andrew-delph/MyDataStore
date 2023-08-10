@@ -1,4 +1,4 @@
 load("@bazel_gazelle//:def.bzl", "gazelle")
 
-# gazelle:prefix andrewdelph.com/my-key-store
+# gazelle:prefix github.com/andrew-delph/my-key-store
 gazelle(name = "gazelle")

@@ -1,54 +1,51 @@
 {
-  "cSpell.words": ["predeploy", "pubspec"],
-  "search.useIgnoreFiles": true,
   "editor.formatOnSave": true,
-  "editor.defaultFormatter": "esbenp.prettier-vscode",
-  "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": true
-  },
-  "files.watcherExclude": {
-    "**/.git/objects/**": true,
-    "**/.git/subtree-cache/**": true,
-    "**/node_modules/*/**": true
-  },
+
   "[starlark]": {
     "editor.defaultFormatter": "BazelBuild.vscode-bazel"
   },
   "[bazel]": {
     "editor.defaultFormatter": "StackBuild.bazel-stack-vscode"
   },
-  "go.goroot": "${workspaceFolder}/bazel-${workspaceFolderBasename}/external/go_sdk",
-  "go.toolsEnvVars": {
-    "GOPACKAGESDRIVER": "${workspaceFolder}/tools/gopackagesdriver.sh"
-  },
-  "go.enableCodeLens": {
-    "runtest": false
-  },
-  "gopls": {
-    "build.directoryFilters": [
-      "-bazel-bin",
-      "-bazel-out",
-      "-bazel-testlogs",
-      "-bazel-mypkg"
-    ],
-    "formatting.gofumpt": true,
-    "formatting.local": "github.com/andrew-delph/my-key-store",
-    "ui.completion.usePlaceholders": true,
-    "ui.semanticTokens": true,
-    "ui.codelenses": {
-      "gc_details": false,
-      "regenerate_cgo": false,
-      "generate": false,
-      "test": false,
-      "tidy": false,
-      "upgrade_dependency": false,
-      "vendor": false
-    }
-  },
-  "go.useLanguageServer": true,
-  "go.buildOnSave": "off",
-  "go.lintOnSave": "off",
+
   "[go]": {
     "editor.defaultFormatter": "golang.go"
-  }
+  },
+  "[go.mod]": {
+    "editor.defaultFormatter": "golang.go"
+  },
+  "[proto3]": {
+    "editor.defaultFormatter": "zxh404.vscode-proto3"
+  },
+
+
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "go.goroot": "${workspaceFolder}/bazel-${workspaceFolderBasename}/external/go_sdk",
+  "go.toolsEnvVars": {
+    "GOPACKAGESDRIVER_BAZEL_QUERY": "kind(go_binary, //...)",
+    "GOPACKAGESDRIVER": "${workspaceFolder}/tools/gopackagesdriver.sh"
+  },
+  // "go.enableCodeLens": {
+  //   "references": false,
+  //   "runtest": false
+  // },
+  // "gopls": {
+  //   "formatting.gofumpt": true,
+  //   "formatting.local": "github.com/bazelbuild/rules_go",
+  //   "ui.completion.usePlaceholders": true,
+  //   "ui.semanticTokens": true,
+  //   "ui.codelenses": {
+  //     "gc_details": false,
+  //     "regenerate_cgo": false,
+  //     "generate": false,
+  //     "test": false,
+  //     "tidy": false,
+  //     "upgrade_dependency": false,
+  //     "vendor": false
+  //   },
+  // },
+  "go.useLanguageServer": true,
+  "go.lintOnSave": "off",
+  "go.vetOnSave": "off",
 }

@@ -1,6 +1,6 @@
 module andrewdelph.com/my-key-store/store
 
-go 1.20
+go 1.18
 
 require (
 	github.com/hashicorp/memberlist v0.5.0

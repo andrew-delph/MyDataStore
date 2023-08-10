@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package my_key_store;
+package store_proto;
 
 option go_package = "github.com/andrew-delph/my-key-store/store/proto";
 
