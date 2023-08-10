@@ -37,17 +37,18 @@ func grpcStart() {
 
 	flag.Parse()
 
-	_, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
 	if err != nil {
 		logrus.Fatalf("failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
 	pb.RegisterDataServiceServer(s, &server{})
-	// logrus.Infof("server listening at %v", lis.Addr())
 
-	// if err := s.Serve(lis); err != nil {
-	// 	log.Fatalf("failed to serve: %v", err)
-	// }
+	logrus.Infof("server listening at %v", lis.Addr())
+
+	if err := s.Serve(lis); err != nil {
+		logrus.Fatalf("failed to serve: %v", err)
+	}
 }
 
 var (
@@ -79,6 +80,7 @@ var (
 )
 
 func main() {
+	grpcStart()
 	logrus.SetLevel(logrus.WarnLevel)
 	// logrus.SetFormatter(&logrus.JSONFormatter{})
 
