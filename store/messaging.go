@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"math/rand"
 
 	"github.com/sirupsen/logrus"
 )
@@ -20,6 +19,7 @@ func (m *MyMessage) Bytes() []byte {
 	}
 	return data
 }
+
 func ParseMyMessage(data []byte) (*MyMessage, bool) {
 	msg := new(MyMessage)
 	if err := json.Unmarshal(data, &msg); err != nil {
@@ -40,80 +40,6 @@ type MessageHolder struct {
 	SenderName   string
 	MessageBytes []byte
 	Message      Message
-}
-
-type SetMessage struct {
-	Key   string
-	Value string
-	AckId string
-}
-
-func NewSetMessage(key string, value string, ackID string) *SetMessage {
-	return &SetMessage{
-		Key:   key,
-		Value: value,
-		AckId: ackID,
-	}
-}
-
-func (m *SetMessage) Encode() ([]byte, error) {
-	return json.Marshal(m)
-}
-
-func (m SetMessage) GetType() string {
-	return "SetMessage"
-}
-
-func (m *SetMessage) Decode(data []byte) error {
-	return json.Unmarshal(data, m)
-}
-
-func (m *SetMessage) Handle(messageHolder *MessageHolder) {
-	randomNumber := rand.Float64()
-	if randomNumber < 0.1 {
-		return
-	}
-	logrus.Debugf("Handling SetMessage: key=%s value=%s ackId=%s sender=%s\n", m.Key, m.Value, m.AckId, messageHolder.SenderName)
-	partitionId := FindPartitionID(events.consistent, m.Key)
-	err := setValue(partitionId, m.Key, m.Value)
-	if err != nil {
-		logrus.Errorf("failed to set %s : %s error= %v", m.Key, m.Value, err)
-		// TODO send success false.
-	} else {
-		events.SendAckMessage("", m.AckId, messageHolder.SenderName, true)
-	}
-
-}
-
-type GetMessage struct {
-	Key   string
-	AckId string
-}
-
-func NewGetMessage(key string, ackID string) *GetMessage {
-	return &GetMessage{
-		Key:   key,
-		AckId: ackID,
-	}
-}
-
-func (m *GetMessage) Encode() ([]byte, error) {
-	return json.Marshal(m)
-}
-
-func (m GetMessage) GetType() string {
-	return "GetMessage"
-}
-
-func (m *GetMessage) Decode(data []byte) error {
-	return json.Unmarshal(data, m)
-}
-
-func (m *GetMessage) Handle(messageHolder *MessageHolder) {
-	logrus.Debugf("Handling GetMessage: key=%s ackId=%s sender=%s\n", m.Key, m.AckId, messageHolder.SenderName)
-	partitionId := FindPartitionID(events.consistent, m.Key)
-	value, exists, _ := getValue(partitionId, m.Key)
-	events.SendAckMessage(value, m.AckId, messageHolder.SenderName, exists)
 }
 
 type RequestPartitionInfo struct {
@@ -252,20 +178,6 @@ func DecodeMessageHolder(data []byte) (*MessageHolder, Message, error) {
 	}
 
 	switch holder.MessageType {
-	case "SetMessage":
-		msg := &SetMessage{}
-		err := msg.Decode(holder.MessageBytes)
-		if err != nil {
-			return holder, nil, fmt.Errorf("failed to Decode SetMessage: %v", err)
-		}
-		return holder, msg, nil
-	case "GetMessage":
-		msg := &GetMessage{}
-		err := msg.Decode(holder.MessageBytes)
-		if err != nil {
-			return holder, nil, fmt.Errorf("failed to Decode GetMessage: %v", err)
-		}
-		return holder, msg, nil
 	case "AckMessage":
 		msg := &AckMessage{}
 		err := msg.Decode(holder.MessageBytes)

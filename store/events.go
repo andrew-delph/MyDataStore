@@ -64,58 +64,6 @@ func (events *MyEventDelegate) NotifyUpdate(node *memberlist.Node) {
 	// skip
 }
 
-func (events *MyEventDelegate) SendSetMessage(key, value string) error {
-	ackId := uuid.New().String()
-
-	setMsg := NewSetMessage(key, value, ackId)
-
-	nodes, err := GetClosestN(events.consistent, key, totalReplicas)
-	if err != nil {
-		return err
-	}
-
-	ackChannel := make(chan *MessageHolder, totalReplicas)
-	defer close(ackChannel)
-
-	setAckChannel(ackId, ackChannel)
-	defer deleteAckChannel(ackId)
-
-	for _, node := range nodes {
-
-		logrus.Debugf("node1 search %s => %s", key, node.String())
-
-		node := events.nodes[node.String()]
-
-		bytes, err := EncodeHolder(setMsg)
-		if err != nil {
-			return fmt.Errorf("FAILED TO ENCODE: %v", err)
-		}
-
-		err = clusterNodes.SendReliable(node, bytes)
-
-		if err != nil {
-			return fmt.Errorf("FAILED TO SEND: %v", err)
-		}
-	}
-
-	ackSet := make(map[string]bool)
-
-	timeout := time.After(defaultTimeout)
-
-	for {
-		select {
-		case ackMessageHolder := <-ackChannel:
-			ackSet[ackMessageHolder.SenderName] = true
-			if len(ackSet) >= writeResponse {
-				return nil
-			}
-		case <-timeout:
-			logrus.Debug("SET TIME OUT REACHED!!! len(ackSet) = ", len(ackSet))
-			return fmt.Errorf("timeout waiting for acknowledgements")
-		}
-	}
-}
-
 func (events *MyEventDelegate) SendRequestPartitionInfoMessage(hash []byte, partitionId int) error {
 	partitionTree, err := PartitionMerkleTree(partitionId)
 	if err != nil {
