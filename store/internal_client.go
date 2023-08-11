@@ -24,39 +24,38 @@ func SendSetMessage(key, value string) error {
 		return err
 	}
 
-	for i, node := range nodes {
+	responseCh := make(chan *pb.StandardResponse, totalReplicas)
+	errorCh := make(chan error, totalReplicas)
 
-		conn, client, err := GetClient(node.String())
+	for _, node := range nodes {
+		go func(currNode HashRingMember) {
+			conn, client, err := GetClient(currNode.String())
+			defer conn.Close()
 
-		defer conn.Close()
-
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		defer cancel()
-		r, err := client.SetRequest(ctx, setReqMsg)
-		if err != nil {
-			return err
-		}
-		logrus.Warnf("SetRequest %d worked. msg ='%s'", i, r.Message)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+			r, err := client.SetRequest(ctx, setReqMsg)
+			if err != nil {
+				logrus.Errorf("Failed SetRequest for node %s", currNode.String())
+				errorCh <- err
+			} else {
+				responseCh <- r
+				logrus.Warnf("SetRequest %s worked. msg ='%s'", currNode.String(), r.Message)
+			}
+		}(node)
 	}
+
+	responseCount := 0
+	for responseCount < writeResponse {
+		select {
+		case <-responseCh:
+			responseCount++
+		case err := <-errorCh:
+			_ = err
+		}
+	}
+
 	return nil
-	// return fmt.Errorf("value not found.")
-
-	// ackSet := make(map[string]bool)
-
-	// timeout := time.After(defaultTimeout)
-
-	// for {
-	// 	select {
-	// 	case ackMessageHolder := <-ackChannel:
-	// 		ackSet[ackMessageHolder.SenderName] = true
-	// 		if len(ackSet) >= writeResponse {
-	// 			return nil
-	// 		}
-	// 	case <-timeout:
-	// 		logrus.Debug("SET TIME OUT REACHED!!! len(ackSet) = ", len(ackSet))
-	// 		return fmt.Errorf("timeout waiting for acknowledgements")
-	// 	}
-	// }
 }
 
 func SendGetMessage(key string) (string, error) {
@@ -68,54 +67,43 @@ func SendGetMessage(key string) (string, error) {
 	}
 
 	getSet := make(map[string]int)
+	responseCh := make(chan string, len(nodes))
+	errorCh := make(chan error, len(nodes))
 
 	for i, node := range nodes {
+		go func(i int, node HashRingMember) {
+			conn, client, err := GetClient(node.String())
+			if err != nil {
+				errorCh <- err
+				return
+			}
+			defer conn.Close()
 
-		conn, client, err := GetClient(node.String())
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+			r, err := client.GetRequest(ctx, getReqMsg)
+			if err != nil {
+				errorCh <- err
+			} else {
+				logrus.Warnf("GetRequest %s value='%s'", node.String(), r.Value)
+				responseCh <- r.Value
+			}
+		}(i, node)
+	}
 
-		defer conn.Close()
-
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		defer cancel()
-		r, err := client.GetRequest(ctx, getReqMsg)
-		if err != nil {
-			continue
-		}
-		logrus.Warnf("GetRequest %d value='%s'", i, r.Value)
-		getSet[r.Value]++
-
-		if getSet[r.Value] >= readResponse {
-			return r.Value, nil
+	for responseCount := 0; responseCount < len(nodes); responseCount++ {
+		select {
+		case value := <-responseCh:
+			getSet[value]++
+			if getSet[value] >= readResponse {
+				return value, nil
+			}
+		case <-errorCh:
+			// Handle error if necessary
 		}
 	}
 
 	return "", fmt.Errorf("value not found.")
-
-	// ackSet := make(map[string]int)
-
-	// timeout := time.After(defaultTimeout)
-
-	// for {
-	// 	select {
-	// 	case ackMessageHolder := <-ackChannel:
-
-	// 		ackMessage := &AckMessage{}
-	// 		err := ackMessage.Decode(ackMessageHolder.MessageBytes)
-	// 		if err != nil {
-	// 			return "", fmt.Errorf("failed to Decode AckMessage: %v", err)
-	// 		}
-
-	// 		ackValue := ackMessage.Value
-	// 		ackSet[ackValue]++
-
-	// 		if ackSet[ackValue] == readResponse {
-	// 			return ackValue, nil
-	// 		}
-	// 	case <-timeout:
-	// 		logrus.Warn("TIME OUT REACHED!!!")
-	// 		return "", fmt.Errorf("timeout waiting for acknowledgements")
-	// 	}
-	// }
 }
 
 func GetClient(addr string) (*grpc.ClientConn, pb.InternalNodeServiceClient, error) {
@@ -126,12 +114,4 @@ func GetClient(addr string) (*grpc.ClientConn, pb.InternalNodeServiceClient, err
 	internalClient := pb.NewInternalNodeServiceClient(conn)
 
 	return conn, internalClient, nil
-
-	// ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	// defer cancel()
-	// r, err := internalClient.TestRequest(ctx, &pb.StandardResponse{Message: "This is the client."})
-	// if err != nil {
-	// 	logrus.Fatalf("could not greet: %v", err)
-	// }
-	// logrus.Warnf("Greeting: %s", r.Message)
 }
