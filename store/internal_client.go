@@ -40,7 +40,7 @@ func SendSetMessage(key, value string) error {
 				errorCh <- err
 			} else {
 				responseCh <- r
-				logrus.Warnf("SetRequest %s worked. msg ='%s'", currNode.String(), r.Message)
+				logrus.Debugf("SetRequest %s worked. msg ='%s'", currNode.String(), r.Message)
 			}
 		}(node)
 	}
@@ -89,13 +89,15 @@ func SendGetMessage(key string) (string, error) {
 			if err != nil {
 				errorCh <- err
 			} else {
-				logrus.Warnf("GetRequest %s value='%s'", node.String(), r.Value)
+				logrus.Debugf("GetRequest %s value='%s'", node.String(), r.Value)
 				responseCh <- r.Value
 			}
 		}(i, node)
 	}
 
 	timeout := time.After(defaultTimeout)
+
+	maxRecieved := 0
 
 	for responseCount := 0; responseCount < len(nodes); responseCount++ {
 		select {
@@ -104,14 +106,15 @@ func SendGetMessage(key string) (string, error) {
 			if getSet[value] >= readResponse {
 				return value, nil
 			}
+			maxRecieved = max(maxRecieved, getSet[value])
 		case <-errorCh:
-			// Handle error if necessary
+			// handle error if needed.
 		case <-timeout:
 			return "", fmt.Errorf("timed out waiting for responses")
 		}
 	}
 
-	return "", fmt.Errorf("value not found.")
+	return "", fmt.Errorf("value not found. expected = %d maxRecieved= %d", readResponse, maxRecieved)
 }
 
 func GetClient(addr string) (*grpc.ClientConn, pb.InternalNodeServiceClient, error) {

@@ -52,13 +52,15 @@ func (s *internalServer) SetRequest(ctx context.Context, m *pb.SetRequestMessage
 }
 
 func (s *internalServer) GetRequest(ctx context.Context, m *pb.GetRequestMessage) (*pb.GetResponseMessage, error) {
-	logrus.Warnf("Handling GetRequest: key=%s ", m.Key)
+	logrus.Debugf("Handling GetRequest: key=%s ", m.Key)
 	partitionId := FindPartitionID(events.consistent, m.Key)
-	value, exists, _ := getValue(partitionId, m.Key)
+	value, exists, err := getValue(partitionId, m.Key)
 
-	if !exists {
-		return nil, fmt.Errorf("Value not found.")
-	} else {
+	if exists {
 		return &pb.GetResponseMessage{Value: value}, nil
+	} else if err != nil {
+		return nil, err
+	} else {
+		return nil, fmt.Errorf("Value not found for %s", m.Key)
 	}
 }

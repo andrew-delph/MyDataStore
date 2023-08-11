@@ -68,7 +68,8 @@ export default function () {
 
   check(getRes, {
     "Get: status was 200": (r) =>
-      r.status === 200 || console.error(`Get Error: Status was ${r.status}`),
+      r.status === 200 ||
+      console.error(`Get Error: Status was ${r.status} body = ${r.body}`),
     "Get: body contains testValue": (r) =>
       r.body.indexOf(value) !== -1 ||
       console.error(
