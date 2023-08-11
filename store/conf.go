@@ -11,7 +11,7 @@ import (
 
 var (
 	totalReplicas  int           = 3
-	writeResponse  int           = 1
+	writeResponse  int           = 2
 	readResponse   int           = 3
 	saveInterval   time.Duration = 30 * time.Second
 	defaultTimeout time.Duration = 2 * time.Second

@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
-
 	pb "github.com/andrew-delph/my-key-store/proto"
 
 	"github.com/sirupsen/logrus"
@@ -26,7 +24,7 @@ func SendSetMessage(key, value string) error {
 		return err
 	}
 
-	for _, node := range nodes {
+	for i, node := range nodes {
 
 		conn, client, err := GetClient(node.String())
 
@@ -36,13 +34,12 @@ func SendSetMessage(key, value string) error {
 		defer cancel()
 		r, err := client.SetRequest(ctx, setReqMsg)
 		if err != nil {
-			logrus.Fatalf("could not greet: %v", err)
+			return err
 		}
-		logrus.Warnf("Greeting: %s", r.Message)
-		return nil
+		logrus.Warnf("SetRequest %d worked. msg ='%s'", i, r.Message)
 	}
-
-	return fmt.Errorf("value not found.")
+	return nil
+	// return fmt.Errorf("value not found.")
 
 	// ackSet := make(map[string]bool)
 
@@ -63,8 +60,6 @@ func SendSetMessage(key, value string) error {
 }
 
 func SendGetMessage(key string) (string, error) {
-	ackId := uuid.New().String()
-
 	getReqMsg := &pb.GetRequestMessage{Key: key}
 
 	nodes, err := GetClosestN(events.consistent, key, totalReplicas)
@@ -72,13 +67,9 @@ func SendGetMessage(key string) (string, error) {
 		return "", err
 	}
 
-	ackChannel := make(chan *MessageHolder, totalReplicas)
-	defer close(ackChannel)
+	getSet := make(map[string]int)
 
-	setAckChannel(ackId, ackChannel)
-	defer deleteAckChannel(ackId)
-
-	for _, node := range nodes {
+	for i, node := range nodes {
 
 		conn, client, err := GetClient(node.String())
 
@@ -88,10 +79,14 @@ func SendGetMessage(key string) (string, error) {
 		defer cancel()
 		r, err := client.GetRequest(ctx, getReqMsg)
 		if err != nil {
-			logrus.Fatalf("could not greet: %v", err)
+			continue
 		}
-		logrus.Warnf("Greeting: %s", r.Value)
-		return r.Value, nil
+		logrus.Warnf("GetRequest %d value='%s'", i, r.Value)
+		getSet[r.Value]++
+
+		if getSet[r.Value] >= readResponse {
+			return r.Value, nil
+		}
 	}
 
 	return "", fmt.Errorf("value not found.")
