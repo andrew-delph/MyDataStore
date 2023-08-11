@@ -39,6 +39,11 @@ func StartInterGrpcServer() {
 	}
 }
 
+func (s *internalServer) TestRequest(ctx context.Context, in *pb.StandardResponse) (*pb.StandardResponse, error) {
+	logrus.Warnf("Received: %v", in.Message)
+	return &pb.StandardResponse{Message: "This is the server."}, nil
+}
+
 func (s *internalServer) SetRequest(ctx context.Context, m *pb.SetRequestMessage) (*pb.StandardResponse, error) {
 	logrus.Debugf("Handling SetRequest: key=%s value=%s ", m.Key, m.Value)
 	partitionId := FindPartitionID(events.consistent, m.Key)

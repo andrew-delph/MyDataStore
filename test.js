@@ -6,7 +6,7 @@ import { randomString } from "https://jslib.k6.io/k6-utils/1.2.0/index.js";
 import { textSummary } from "https://jslib.k6.io/k6-summary/0.0.2/index.js";
 
 export let options = {
-  iterations: 100,
+  iterations: 20000,
   vus: 5,
   // scenarios: {
   //   // disrupt: {
@@ -61,7 +61,7 @@ export default function () {
       r.status === 200 || console.error(`Set Error: Status was ${r.status}`),
   });
   // return;
-  // sleep(20);
+  // sleep(10);
 
   // Get a value from the map
   let getRes = http.get(`http://${address}/get?key=${key}`);

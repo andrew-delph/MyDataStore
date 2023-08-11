@@ -11,11 +11,6 @@ import (
 	"google.golang.org/grpc"
 )
 
-func (s *internalServer) TestRequest(ctx context.Context, in *pb.StandardResponse) (*pb.StandardResponse, error) {
-	logrus.Warnf("Received: %v", in.Message)
-	return &pb.StandardResponse{Message: "This is the server."}, nil
-}
-
 func SendSetMessage(key, value string) error {
 	setReqMsg := &pb.SetRequestMessage{Key: key, Value: value}
 
