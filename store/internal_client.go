@@ -45,13 +45,17 @@ func SendSetMessage(key, value string) error {
 		}(node)
 	}
 
+	timeout := time.After(defaultTimeout)
 	responseCount := 0
+
 	for responseCount < writeResponse {
 		select {
 		case <-responseCh:
 			responseCount++
 		case err := <-errorCh:
-			_ = err
+			_ = err // Handle error if necessary
+		case <-timeout:
+			return fmt.Errorf("timed out waiting for responses")
 		}
 	}
 
@@ -91,6 +95,8 @@ func SendGetMessage(key string) (string, error) {
 		}(i, node)
 	}
 
+	timeout := time.After(defaultTimeout)
+
 	for responseCount := 0; responseCount < len(nodes); responseCount++ {
 		select {
 		case value := <-responseCh:
@@ -100,6 +106,8 @@ func SendGetMessage(key string) (string, error) {
 			}
 		case <-errorCh:
 			// Handle error if necessary
+		case <-timeout:
+			return "", fmt.Errorf("timed out waiting for responses")
 		}
 	}
 
