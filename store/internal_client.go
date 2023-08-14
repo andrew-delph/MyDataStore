@@ -27,8 +27,6 @@ func SendSetMessage(key, value string) error {
 			conn, client, err := GetClient(currNode.String())
 			defer conn.Close()
 
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-			defer cancel()
 			r, err := client.SetRequest(ctx, setReqMsg)
 			if err != nil {
 				logrus.Errorf("Failed SetRequest for node %s", currNode.String())
@@ -48,7 +46,7 @@ func SendSetMessage(key, value string) error {
 		case <-responseCh:
 			responseCount++
 		case err := <-errorCh:
-			_ = err // Handle error if necessary
+			logrus.Errorf("SEt errorCh: %v", err)
 		case <-timeout:
 			return fmt.Errorf("timed out waiting for responses")
 		}

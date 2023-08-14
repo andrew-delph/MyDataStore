@@ -53,7 +53,7 @@ func main() {
 
 	SetupRaft()
 
-	time.Sleep(5 * time.Second)
+	// time.Sleep(5 * time.Second)
 
 	data, err2 := os.ReadFile("/etc/hostname")
 	if err2 != nil {
@@ -87,6 +87,7 @@ func main() {
 	}
 
 	go startHttpServer()
+
 
 	// verify partitions every x seconds
 
