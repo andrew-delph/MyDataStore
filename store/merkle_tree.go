@@ -4,13 +4,18 @@ import (
 	"bytes"
 	"crypto/md5"
 	"errors"
+	"fmt"
 	"sort"
+	"time"
 
 	"github.com/cbergoon/merkletree"
+	"github.com/patrickmn/go-cache"
 	"github.com/sirupsen/logrus"
 
 	pb "github.com/andrew-delph/my-key-store/proto"
 )
+
+var merkletreeStore *cache.Cache = cache.New(0*time.Minute, 1*time.Minute)
 
 type MerkleContent struct {
 	key   string
@@ -48,11 +53,16 @@ func (content MerkleBucket) Equals(other merkletree.Content) (bool, error) {
 }
 
 func PartitionMerkleTree(partitionEpoch uint64, partitionId int) (*merkletree.MerkleTree, error) {
-	logrus.Warn("PartitionMerkleTree runnign!!!!")
 	partition, err := getPartition(partitionId)
 	if err != nil {
 		logrus.Debug(err)
 		return nil, err
+	}
+
+	if treeValue, found := partition.Get(fmt.Sprintf("%d", partitionEpoch)); found {
+		if value, ok := treeValue.(*merkletree.MerkleTree); ok {
+			return value, nil
+		}
 	}
 
 	items := partition.Items()
@@ -90,5 +100,12 @@ func PartitionMerkleTree(partitionEpoch uint64, partitionId int) (*merkletree.Me
 		contentList = append(contentList, merkletree.Content(bucket))
 	}
 
-	return merkletree.NewTree(contentList)
+	tree, err := merkletree.NewTree(contentList)
+	if err != nil {
+		logrus.Debug(err)
+		return nil, err
+	}
+	merkletreeStore.Add(fmt.Sprintf("%d", partitionEpoch), tree, 0)
+
+	return tree, nil
 }
