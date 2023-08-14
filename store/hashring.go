@@ -6,7 +6,7 @@ import (
 )
 
 var hashRingConf = consistent.Config{
-	PartitionCount:    10,
+	PartitionCount:    100,
 	ReplicationFactor: 40,
 	Load:              1.2,
 	Hasher:            hasher{},

@@ -6,7 +6,7 @@ import { randomString } from "https://jslib.k6.io/k6-utils/1.2.0/index.js";
 import { textSummary } from "https://jslib.k6.io/k6-summary/0.0.2/index.js";
 
 export let options = {
-  iterations: 20000,
+  iterations: 5000,
   vus: 5,
   // scenarios: {
   //   // disrupt: {
@@ -37,14 +37,20 @@ export function handleSummary(data) {
     stdout: textSummary(output, { indent: " ", enableColors: true }),
   };
 }
-export default function () {
-  // Get the id from the server
-  let baseRes = http.get(`http://${address}`);
+
+export function panic() {
+  let baseRes = http.get(`http://${address}/panic`);
 
   check(baseRes, {
     "Base: status was 200": (r) =>
       r.status === 200 || console.error(`Base Error: Status was ${r.status}`),
   });
+
+  return;
+}
+export default function () {
+  // panic();
+  // return;
 
   // the key value to insert
   let key = randomString(15);

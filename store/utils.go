@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/binary"
 	"fmt"
 	"math/rand"
 	"net"
@@ -53,4 +54,10 @@ func getLocalIP() (string, error) {
 		}
 	}
 	return "", fmt.Errorf("Local IP not found")
+}
+
+func Uint32ToBytes(val uint32) []byte {
+	bytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(bytes, val)
+	return bytes
 }
