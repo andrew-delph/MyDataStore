@@ -129,7 +129,7 @@ func main() {
 
 			err := logEntry.Error()
 			if err == nil {
-				logrus.Warnf("update fsm! count = %d", count)
+				logrus.Debugf("update fsm! count = %d", count)
 				// if count%50 == 0 {
 				// 	logrus.Warnf("killing leader. count = %d", count)
 				// 	return

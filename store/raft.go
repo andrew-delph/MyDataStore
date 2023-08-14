@@ -130,7 +130,7 @@ func AddVoter(otherAddr string) {
 	if err := addVoterFuture.Error(); err != nil {
 		logrus.Debugf("AddVoter state: %s error: %v", raftNode.State(), err)
 	} else {
-		logrus.Warnf("ADD SERVER SUCCESS %s", otherAddr)
+		logrus.Debugf("ADD SERVER SUCCESS %s", otherAddr)
 	}
 }
 
@@ -140,6 +140,6 @@ func RemoveServer(otherAddr string) {
 	if err := removeServerFuture.Error(); err != nil {
 		logrus.Debugf("RemoveServer state: %s error: %v", raftNode.State(), err)
 	} else {
-		logrus.Warnf("REMOVE SERVER SUCCESS %s", otherAddr)
+		logrus.Debugf("REMOVE SERVER SUCCESS %s", otherAddr)
 	}
 }
