@@ -56,8 +56,20 @@ func getLocalIP() (string, error) {
 	return "", fmt.Errorf("Local IP not found")
 }
 
-func Uint32ToBytes(val uint32) []byte {
-	bytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(bytes, val)
+func Uint64ToBytes(value uint64) []byte {
+	bytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(bytes, value)
 	return bytes
+}
+
+func RandomUint64() uint64 {
+	// Generate a random 8-byte buffer
+	randomBytes := make([]byte, 8)
+	_, err := rand.Read(randomBytes)
+	if err != nil {
+		panic(err) // Handle the error appropriately in your code
+	}
+
+	// Convert the random bytes to a uint64 value
+	return binary.BigEndian.Uint64(randomBytes)
 }

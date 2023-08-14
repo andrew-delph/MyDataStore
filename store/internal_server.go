@@ -58,8 +58,7 @@ func (s *internalServer) SetRequest(ctx context.Context, m *pb.Value) (*pb.Stand
 
 func (s *internalServer) GetRequest(ctx context.Context, m *pb.GetRequestMessage) (*pb.Value, error) {
 	logrus.Debugf("Handling GetRequest: key=%s ", m.Key)
-	partitionId := FindPartitionID(events.consistent, m.Key)
-	value, exists, err := getValue(partitionId, m.Key)
+	value, exists, err := getValue(m.Key)
 
 	if exists {
 		return value, nil

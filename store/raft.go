@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/raft"
@@ -17,12 +19,12 @@ import (
 var raftNode *raft.Raft
 
 type StateMachine struct {
-	Count uint32
+	Epoch uint64
 }
 
 func (sm *StateMachine) Apply(logEntry *raft.Log) interface{} {
 	// Apply the log entry and update the state machine's value
-	sm.Count = binary.BigEndian.Uint32(logEntry.Data)
+	sm.Epoch = binary.BigEndian.Uint64(logEntry.Data)
 	return nil
 }
 
@@ -118,6 +120,14 @@ func SetupRaft() {
 	if err := bootstrapFuture.Error(); err != nil {
 		logrus.Fatal(err)
 	}
+}
+
+func getTransport(bindAddr string) (*raft.NetworkTransport, error) {
+	addr, err := net.ResolveTCPAddr("tcp", bindAddr)
+	if err != nil {
+		return nil, err
+	}
+	return raft.NewTCPTransport(bindAddr, addr, 3, 10*time.Second, os.Stderr)
 }
 
 func AddVoter(otherAddr string) {

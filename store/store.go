@@ -27,12 +27,23 @@ func setValue(value *pb.Value) error {
 	if partition == nil && err != nil {
 		return err
 	}
+
+	existingValue, exists, err := getValue(key)
+	if exists && existingValue.Epoch < value.Epoch {
+		return fmt.Errorf("cannot set value with a lower Epoch. set = %d existing = %d", value.Epoch, existingValue.Epoch)
+	}
+
+	if exists && existingValue.UnixTimestamp < value.UnixTimestamp {
+		return fmt.Errorf("cannot set value with a lower UnixTimestamp. set = %d existing = %d", value.UnixTimestamp, existingValue.UnixTimestamp)
+	}
 	partition.Set(key, value, 0)
 	return nil
 }
 
 // Function to get a value from the global cache
-func getValue(partitionId int, key string) (*pb.Value, bool, error) {
+func getValue(key string) (*pb.Value, bool, error) {
+	partitionId := FindPartitionID(events.consistent, key)
+
 	partition, err := getPartition(partitionId)
 	if partition == nil && err != nil {
 		return nil, false, err
