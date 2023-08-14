@@ -91,9 +91,11 @@ func main() {
 
 	tick := time.NewTicker(60 * time.Second)
 
-	epochTick := time.NewTicker(20 * time.Second)
+	epochTick := time.NewTicker(2 * time.Second)
 
 	// var count uint32
+
+	logrus.Warn("starting run.")
 
 	run := true
 	for run {
@@ -115,20 +117,22 @@ func main() {
 
 		case <-epochTick.C:
 
-			if raftNode.State() == raft.Leader {
-				epoch++
+			if raftNode.State() != raft.Leader {
+				continue
 			}
+			epoch++
+
 			logEntry := raftNode.Apply(Uint64ToBytes(epoch), 0*time.Second)
 
 			err := logEntry.Error()
 			if err == nil {
-				logrus.Debugf("update fsm! epoch = %d", epoch)
+				logrus.Warnf("update fsm! epoch = %d", epoch)
 				// if count%50 == 0 {
 				// 	logrus.Warnf("killing leader. count = %d", count)
 				// 	return
 				// }
 			} else {
-				logrus.Debug("update fsm Err= ", err)
+				logrus.Warnf("update fsm Err= %v", err)
 				// if rand.Float64() < 0.05 {
 				// 	logrus.Debugf("killing FOLLOWER. count = %d", count)
 				// 	return
@@ -160,6 +164,9 @@ func main() {
 			}
 
 			message.Handle(messageHolder)
+
+		case epochObservation := <-epochObserver:
+			logrus.Warnf("epochObservation %d %s", epochObservation, raftNode.State())
 
 		}
 	}

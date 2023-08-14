@@ -22,9 +22,12 @@ type StateMachine struct {
 	Epoch uint64
 }
 
+var epochObserver = make(chan uint64, 1)
+
 func (sm *StateMachine) Apply(logEntry *raft.Log) interface{} {
-	// Apply the log entry and update the state machine's value
-	sm.Epoch = binary.BigEndian.Uint64(logEntry.Data)
+	epoch := binary.BigEndian.Uint64(logEntry.Data)
+	sm.Epoch = epoch
+	epochObserver <- epoch
 	return nil
 }
 
@@ -153,3 +156,14 @@ func RemoveServer(otherAddr string) {
 		logrus.Debugf("REMOVE SERVER SUCCESS %s", otherAddr)
 	}
 }
+
+type StateMachineObserver struct{}
+
+func (o *StateMachineObserver) ApplyLog(logEntry *raft.Log) interface{} {
+	// This method is called when a log entry is applied to the state machine
+	// You can fire an event here or perform any necessary actions
+	fmt.Println("Log applied to the state machine:", logEntry.Data)
+	return nil
+}
+
+func (o *StateMachineObserver) Snapshot() {}
