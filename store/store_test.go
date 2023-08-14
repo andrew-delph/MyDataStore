@@ -14,22 +14,19 @@ import (
 )
 
 func TestStore(t *testing.T) {
-
 	setValue(1, "key1", "value1")
 
 	value, _, _ := getValue(1, "key1")
 
 	assert.Equal(t, value, "value1", "Both should be SetMessage")
-
 }
 
 func TestStoreMerkleTree(t *testing.T) {
-
 	setValue(1, "key1", "value1")
 	setValue(1, "key2", "value2")
 	setValue(1, "key3", "value3")
 
-	tree1, err := PartitionMerkleTree(1)
+	tree1, err := PartitionMerkleTree(1, 1)
 	if err != nil {
 		t.Error(err)
 	}
@@ -39,7 +36,7 @@ func TestStoreMerkleTree(t *testing.T) {
 		t.Error(err)
 	}
 
-	tree2, err := PartitionMerkleTree(1)
+	tree2, err := PartitionMerkleTree(1, 1)
 	if err != nil {
 		t.Error(err)
 	}
@@ -71,7 +68,7 @@ func TestStoreMerkleTree(t *testing.T) {
 
 	logrus.Info("len2 ", len(nodes2))
 
-	for i, _ := range nodes1 {
+	for i := range nodes1 {
 		logrus.Info("compare ", bytes.Compare(nodes1[i].Hash, nodes2[i].Hash))
 		// logrus.Info(node.C)
 		// logrus.Info("hash ", node.Hash)
@@ -86,7 +83,6 @@ func TestStoreMerkleTree(t *testing.T) {
 	// }
 
 	// assert.EqualValues(t, tree1.Root.Hash, tree2.Root.Hash, "Tree hashes don't match")
-
 }
 
 func BFS(root *merkletree.Node) []*merkletree.Node {
@@ -149,7 +145,7 @@ func TestMerkleTree(t *testing.T) {
 		list1 = append(list1, TestContent{x: "Hello"})
 	}
 
-	//Create a new Merkle Tree from the list of Content
+	// Create a new Merkle Tree from the list of Content
 	tree1, err := merkletree.NewTree(list1)
 	if err != nil {
 		log.Fatal(err)
@@ -167,7 +163,7 @@ func TestMerkleTree(t *testing.T) {
 
 	list2 = append(list2, TestContent{x: "Hello"})
 
-	//Create a new Merkle Tree from the list of Content
+	// Create a new Merkle Tree from the list of Content
 	tree2, err := merkletree.NewTree(list2)
 	if err != nil {
 		log.Fatal(err)
@@ -197,5 +193,4 @@ func TestMerkleTree(t *testing.T) {
 	// tree1.VerifyContent(verifyList)
 
 	// assert.EqualValues(t, tree1.Root.Hash, tree2.Root.Hash, "Tree hashes don't match")
-
 }

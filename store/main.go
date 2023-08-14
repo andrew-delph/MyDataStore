@@ -91,7 +91,7 @@ func main() {
 
 	tick := time.NewTicker(60 * time.Second)
 
-	epochTick := time.NewTicker(2 * time.Second)
+	epochTick := time.NewTicker(5 * time.Second)
 
 	// var count uint32
 
@@ -101,19 +101,7 @@ func main() {
 	for run {
 		select {
 		case <-partitionTimer.C:
-			myPartions, err := GetMemberPartions(events.consistent, hostname)
-			if err != nil {
-				logrus.Warn(err)
-				continue
-			}
-			for _, partitionId := range myPartions {
-				partitionTree, err := PartitionMerkleTree(partitionId)
-				if err != nil {
-					logrus.Debug(err)
-					continue
-				}
-				events.SendRequestPartitionInfoMessage(partitionTree.Root.Hash, partitionId)
-			}
+			continue
 
 		case <-epochTick.C:
 
@@ -154,7 +142,7 @@ func main() {
 				logrus.Warnf("State = %s , num_peers = %s, term = %s, Epoch = %d", raftNode.State(), raftNode.Stats()["num_peers"], raftNode.Stats()["term"], fsm.Epoch)
 			}
 
-			logrus.Warnf("Count = %d", fsm.Epoch)
+			logrus.Warnf("Epoch = %d", fsm.Epoch)
 
 		case data := <-delegate.msgCh:
 
@@ -167,7 +155,21 @@ func main() {
 
 		case epochObservation := <-epochObserver:
 			logrus.Warnf("epochObservation %d %s", epochObservation, raftNode.State())
-
+			myPartions, err := GetMemberPartions(events.consistent, conf.Name)
+			if err != nil {
+				logrus.Warn(err)
+				continue
+			}
+			for _, partitionId := range myPartions {
+				partitionTree, err := PartitionMerkleTree(epochObservation, partitionId)
+				if err != nil {
+					logrus.Error(err)
+					continue
+				} else {
+					logrus.Warnf("CREATED TREE SUCCESS epoch = %d hash =  %x", epochObservation, partitionTree.Root.Hash)
+				}
+				// events.SendRequestPartitionInfoMessage(partitionTree.Root.Hash, partitionId)
+			}
 		}
 	}
 

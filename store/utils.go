@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
 	"math/rand"
@@ -72,4 +73,19 @@ func RandomUint64() uint64 {
 
 	// Convert the random bytes to a uint64 value
 	return binary.BigEndian.Uint64(randomBytes)
+}
+
+func CalculateHash(input string) int {
+	hasher := sha256.New()
+	hasher.Write([]byte(input))
+	hash := hasher.Sum(nil)
+
+	// Convert the first 4 bytes of the hash to an int
+	hashInt := int(binaryToUint32(hash[:4]))
+
+	return hashInt
+}
+
+func binaryToUint32(b []byte) uint32 {
+	return uint32(b[0])<<24 | uint32(b[1])<<16 | uint32(b[2])<<8 | uint32(b[3])
 }

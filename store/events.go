@@ -35,7 +35,7 @@ func (events *MyEventDelegate) NotifyJoin(node *memberlist.Node) {
 
 	events.nodes[node.Name] = node
 	var err error
-	myPartions, err = GetMemberPartions(events.consistent, hostname)
+	myPartions, err = GetMemberPartions(events.consistent, conf.Name)
 	if err != nil {
 		logrus.Error(err)
 		return
@@ -52,7 +52,7 @@ func (events *MyEventDelegate) NotifyLeave(node *memberlist.Node) {
 
 	delete(events.nodes, node.Name)
 	var err error
-	myPartions, err = GetMemberPartions(events.consistent, hostname)
+	myPartions, err = GetMemberPartions(events.consistent, conf.Name)
 	if err != nil {
 		logrus.Error(err)
 		return
@@ -68,7 +68,7 @@ func (events *MyEventDelegate) NotifyUpdate(node *memberlist.Node) {
 }
 
 func (events *MyEventDelegate) SendRequestPartitionInfoMessage(hash []byte, partitionId int) error {
-	partitionTree, err := PartitionMerkleTree(partitionId)
+	partitionTree, err := PartitionMerkleTree(1, partitionId)
 	if err != nil {
 		logrus.Debug(err)
 		return err
@@ -163,7 +163,7 @@ func (events *MyEventDelegate) SendRequestPartitionInfoMessage(hash []byte, part
 }
 
 func (events *MyEventDelegate) SendResponsePartitionInfo(ackId, senderName string, partitionId int) error {
-	partitionTree, err := PartitionMerkleTree(partitionId)
+	partitionTree, err := PartitionMerkleTree(1, partitionId)
 	if err != nil {
 		logrus.Debug(err)
 		return err
