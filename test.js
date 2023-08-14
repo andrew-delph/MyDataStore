@@ -6,29 +6,29 @@ import { randomString } from "https://jslib.k6.io/k6-utils/1.2.0/index.js";
 import { textSummary } from "https://jslib.k6.io/k6-summary/0.0.2/index.js";
 
 export let options = {
-  // iterations: 5000,
-  // vus: 300,
-  scenarios: {
-    // disrupt: {
-    //   executor: "shared-iterations",
-    //   iterations: 1,
-    //   vus: 1,
-    //   exec: "disrupt",
-    //   startTime: "5s",
-    // },
-    // load: {
-    //   executor: "constant-vus",
-    //   vus: 5,
-    //   duration: "30s",
-    //   exec: "default",
-    // },
-    ramp: {
-      executor: "ramping-vus",
-      startVUs: 0,
-      stages: [{ duration: "2m", target: 100 }],
-      gracefulRampDown: "10s",
-    },
-  },
+  iterations: 1000,
+  vus: 5,
+  // scenarios: {
+  // disrupt: {
+  //   executor: "shared-iterations",
+  //   iterations: 1,
+  //   vus: 1,
+  //   exec: "disrupt",
+  //   startTime: "5s",
+  // },
+  // load: {
+  //   executor: "constant-vus",
+  //   vus: 5,
+  //   duration: "30s",
+  //   exec: "default",
+  // },
+  // ramp: {
+  //   executor: "ramping-vus",
+  //   startVUs: 0,
+  //   stages: [{ duration: "2m", target: 100 }],
+  //   gracefulRampDown: "10s",
+  // },
+  // },
 };
 
 let address = "192.168.49.2:30033";
@@ -72,7 +72,7 @@ export default function () {
     "Set: status was 200": (r) =>
       r.status === 200 || console.error(`Set Error: Status was ${r.status}`),
   });
-  sleep(3);
+  // sleep(3);
 
   // Get a value from the map
   let getRes = http.get(`http://${address}/get?key=${key}`);

@@ -44,10 +44,10 @@ func (s *internalServer) TestRequest(ctx context.Context, in *pb.StandardRespons
 	return &pb.StandardResponse{Message: "This is the server."}, nil
 }
 
-func (s *internalServer) SetRequest(ctx context.Context, m *pb.SetRequestMessage) (*pb.StandardResponse, error) {
+func (s *internalServer) SetRequest(ctx context.Context, m *pb.Value) (*pb.StandardResponse, error) {
 	logrus.Debugf("Handling SetRequest: key=%s value=%s ", m.Key, m.Value)
-	partitionId := FindPartitionID(events.consistent, m.Key)
-	err := setValue(partitionId, m.Key, m.Value)
+
+	err := setValue(m)
 	if err != nil {
 		logrus.Errorf("failed to set %s : %s error= %v", m.Key, m.Value, err)
 		return nil, err
@@ -56,13 +56,13 @@ func (s *internalServer) SetRequest(ctx context.Context, m *pb.SetRequestMessage
 	}
 }
 
-func (s *internalServer) GetRequest(ctx context.Context, m *pb.GetRequestMessage) (*pb.GetResponseMessage, error) {
+func (s *internalServer) GetRequest(ctx context.Context, m *pb.GetRequestMessage) (*pb.Value, error) {
 	logrus.Debugf("Handling GetRequest: key=%s ", m.Key)
 	partitionId := FindPartitionID(events.consistent, m.Key)
 	value, exists, err := getValue(partitionId, m.Key)
 
 	if exists {
-		return &pb.GetResponseMessage{Value: value}, nil
+		return value, nil
 	} else if err != nil {
 		return nil, err
 	} else {

@@ -28,22 +28,22 @@
     "build.directoryFilters": [
       "-bazel-bin",
       "-bazel-out",
-      "-bazel-testlogs"
-      // "-bazel-my-key-store"
+      "-bazel-testlogs",
+      "-bazel-my-key-store"
     ],
     "formatting.gofumpt": true,
     "formatting.local": "github.com/andrew-delph",
     "ui.completion.usePlaceholders": true,
-    "ui.semanticTokens": true,
-    "ui.codelenses": {
-      "gc_details": false,
-      "regenerate_cgo": false,
-      "generate": false,
-      "test": false,
-      "tidy": false,
-      "upgrade_dependency": false,
-      "vendor": false
-    }
+    "ui.semanticTokens": true
+    // "ui.codelenses": {
+    //   "gc_details": false,
+    //   "regenerate_cgo": false,
+    //   "generate": false,
+    //   "test": false,
+    //   "tidy": false,
+    //   "upgrade_dependency": false,
+    //   "vendor": false
+    // }
   },
   "go.useLanguageServer": true,
   "go.lintOnSave": "off",

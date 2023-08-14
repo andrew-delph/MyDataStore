@@ -12,7 +12,8 @@ import (
 )
 
 func SendSetMessage(key, value string) error {
-	setReqMsg := &pb.SetRequestMessage{Key: key, Value: value}
+	unixTimestamp := time.Now().Unix()
+	setReqMsg := &pb.Value{Key: key, Value: value, Epoch: 1, UnixTimestamp: unixTimestamp}
 
 	nodes, err := GetClosestN(events.consistent, key, totalReplicas)
 	if err != nil {

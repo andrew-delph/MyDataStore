@@ -11,6 +11,8 @@ import (
 	"github.com/cbergoon/merkletree"
 	"github.com/patrickmn/go-cache"
 	"github.com/sirupsen/logrus"
+
+	pb "github.com/andrew-delph/my-key-store/proto"
 )
 
 // Define a global cache variable
@@ -18,7 +20,9 @@ import (
 var partitionStore *cache.Cache = cache.New(0*time.Minute, 1*time.Minute)
 
 // Function to set a value in the global cache
-func setValue(partitionId int, key string, value string) error {
+func setValue(value *pb.Value) error {
+	key := value.Key
+	partitionId := FindPartitionID(events.consistent, key)
 	partition, err := getPartition(partitionId)
 	if partition == nil && err != nil {
 		return err
@@ -28,17 +32,17 @@ func setValue(partitionId int, key string, value string) error {
 }
 
 // Function to get a value from the global cache
-func getValue(partitionId int, key string) (string, bool, error) {
+func getValue(partitionId int, key string) (*pb.Value, bool, error) {
 	partition, err := getPartition(partitionId)
 	if partition == nil && err != nil {
-		return "", false, err
+		return nil, false, err
 	}
 	if value, found := partition.Get(key); found {
-		if strValue, ok := value.(string); ok {
-			return strValue, true, nil
+		if value, ok := value.(*pb.Value); ok {
+			return value, true, nil
 		}
 	}
-	return "", false, nil
+	return nil, false, nil
 }
 
 func getPartition(partitionId int) (*cache.Cache, error) {
@@ -123,7 +127,6 @@ func InitStore() {
 }
 
 func LoadPartitions(partitions []int) {
-
 	for _, partitionId := range partitions {
 		partitionFileName := fmt.Sprintf("/store/%s_%s.json", hostname, strconv.Itoa(partitionId))
 		partition, err := getPartition(partitionId)
@@ -137,7 +140,6 @@ func LoadPartitions(partitions []int) {
 			logrus.Debugf("failed to load from file: %s : %v", partitionFileName, err)
 		}
 	}
-
 }
 
 func saveStore() {
