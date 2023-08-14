@@ -25,7 +25,15 @@ func SendSetMessage(key, value string) error {
 	for _, node := range nodes {
 		go func(currNode HashRingMember) {
 			conn, client, err := GetClient(currNode.String())
+			if err != nil {
+				logrus.Errorf("GetClient for node %s", currNode.String())
+				errorCh <- err
+			}
 			defer conn.Close()
+
+			// Create a new context for the goroutine
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
 
 			r, err := client.SetRequest(ctx, setReqMsg)
 			if err != nil {
@@ -46,7 +54,8 @@ func SendSetMessage(key, value string) error {
 		case <-responseCh:
 			responseCount++
 		case err := <-errorCh:
-			logrus.Errorf("SEt errorCh: %v", err)
+			logrus.Errorf("errorCh: %v", err)
+			_ = err // Handle error if necessary
 		case <-timeout:
 			return fmt.Errorf("timed out waiting for responses")
 		}
