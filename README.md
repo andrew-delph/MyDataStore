@@ -20,7 +20,7 @@ while true; do kubectl logs -f deployment/store; done
 
 # TEST
 
-ibazel run //store:go_default_test
+ibazel test --test_output=errors //store:go_default_test
 
 # EDITOR SETUP
 

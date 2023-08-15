@@ -27,12 +27,12 @@ export let options = {
       // How long the test lasts
       duration: "2m",
       // How many iterations per timeUnit
-      rate: 30,
+      rate: 50,
       // Start `rate` iterations per second
       timeUnit: "1s",
       // Pre-allocate VUs
       preAllocatedVUs: 50,
-      maxVUs: 1000,
+      maxVUs: 5000,
     },
   },
 };
