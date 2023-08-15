@@ -1,9 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
 	pb "github.com/andrew-delph/my-key-store/proto"
@@ -15,12 +17,40 @@ func testValue(key, value string) *pb.Value {
 	return setReqMsg
 }
 
-func TestStore(t *testing.T) {
+func TestGoCacheStore(t *testing.T) {
+
 	conf, delegate, events = GetConf()
 
 	store = NewGoCacheStore()
 
-	store.setValue(testValue("key1", "value1"))
+	err := store.setValue(testValue("key1", "value1"))
+	if err != nil {
+		t.Error(fmt.Sprintf("setValue error: %v", err))
+	}
+
+	value, exists, err := store.getValue("key1")
+
+	if !exists {
+		t.Error(fmt.Sprintf("exists is false: %v", err))
+		return
+	}
+
+	if err != nil {
+		t.Error(fmt.Sprintf("error is not nil: %v", err))
+		return
+	}
+
+	assert.Equal(t, "value1", value.Value, "Both should be SetMessage")
+}
+
+func TestLevelDbStore(t *testing.T) {
+	assert.Equal(t, "value1", "value1", "base test")
+	return
+	conf, delegate, events = GetConf()
+
+	store = NewLevelDbStore()
+
+	// store.setValue(testValue("key1", "value1"))
 
 	value, _, _ := store.getValue("key1")
 

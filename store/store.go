@@ -7,6 +7,7 @@ import (
 
 	"github.com/patrickmn/go-cache"
 	"github.com/sirupsen/logrus"
+	"github.com/syndtr/goleveldb/leveldb"
 
 	pb "github.com/andrew-delph/my-key-store/proto"
 )
@@ -15,14 +16,60 @@ type Store interface {
 	InitStore()
 	setValue(value *pb.Value) error
 	getValue(key string) (*pb.Value, bool, error)
-	getPartition(partitionId int) (*cache.Cache, error)
+	getPartition(partitionId int) (Partition, error)
 	LoadPartitions(partitions []int)
-
-	saveStore()
+}
+type Partition interface {
+	getValue(key string) (*pb.Value, bool, error)
+	setValue(value *pb.Value) error
+	Items() map[string]*pb.Value
 }
 
 type GoCacheStore struct {
 	partitionStore *cache.Cache
+}
+
+type GoCachePartition struct {
+	store *cache.Cache
+}
+
+func NewGoCachePartition() Partition {
+	return GoCachePartition{store: cache.New(0*time.Minute, 1*time.Minute)}
+}
+
+func (partition GoCachePartition) getValue(key string) (*pb.Value, bool, error) {
+
+	valueObj, exists := partition.store.Get(key)
+	if exists {
+		value, ok := valueObj.(*pb.Value)
+		if ok {
+			return value, true, nil
+		}
+	}
+	return nil, false, nil
+}
+
+func (partition GoCachePartition) setValue(value *pb.Value) error {
+	partition.store.Set(value.Key, value, 0)
+	return nil
+}
+
+func (partition GoCachePartition) Items() map[string]*pb.Value {
+
+	// Create a new map of type map[string]*pb.Value
+	itemsMap := make(map[string]*pb.Value)
+
+	// Iterate over the original map and perform the conversion
+	for key, item := range partition.store.Items() {
+
+		value, ok := item.Object.(*pb.Value)
+
+		if !ok {
+			continue
+		}
+		itemsMap[key] = value
+	}
+	return itemsMap
 }
 
 func NewGoCacheStore() GoCacheStore {
@@ -50,7 +97,7 @@ func (store GoCacheStore) setValue(value *pb.Value) error {
 	if exists && existingValue.UnixTimestamp < value.UnixTimestamp {
 		return fmt.Errorf("cannot set value with a lower UnixTimestamp. set = %d existing = %d", value.UnixTimestamp, existingValue.UnixTimestamp)
 	}
-	partition.Set(key, value, 0)
+	partition.setValue(value)
 	return nil
 }
 
@@ -65,27 +112,27 @@ func (store GoCacheStore) getValue(key string) (*pb.Value, bool, error) {
 	if partition == nil {
 		return nil, false, fmt.Errorf("partition is nil")
 	}
-	if value, found := partition.Get(key); found {
-		if value, ok := value.(*pb.Value); ok {
-			return value, true, nil
-		}
+	value, found, err := partition.getValue(key)
+	if found {
+		return value, true, nil
 	}
-	return nil, false, nil
+	return nil, false, err
 }
 
-func (store GoCacheStore) getPartition(partitionId int) (*cache.Cache, error) {
+func (store GoCacheStore) getPartition(partitionId int) (Partition, error) {
 	partitionKey := strconv.Itoa(partitionId)
-	err := store.partitionStore.Add(partitionKey, cache.New(0*time.Minute, 1*time.Minute), 0)
+	err := store.partitionStore.Add(partitionKey, NewGoCachePartition(), 0)
 	if err != nil {
 		logrus.Debug(err)
 	}
 	if value, found := store.partitionStore.Get(partitionKey); found {
-		partition, ok := value.(*cache.Cache)
+		partition, ok := value.(Partition)
 
 		if ok {
 			return partition, nil
 		}
 	}
+
 	return nil, fmt.Errorf("partion not found: %d", partitionId)
 }
 
@@ -111,7 +158,13 @@ func (store GoCacheStore) LoadPartitions(partitions []int) {
 			continue
 		}
 
-		err = partition.LoadFile(partitionFileName)
+		goCachePartition, ok := (partition).(GoCachePartition)
+
+		if !ok {
+			continue
+		}
+
+		err = goCachePartition.store.LoadFile(partitionFileName)
 		if err != nil {
 			logrus.Debugf("failed to load from file: %s : %v", partitionFileName, err)
 		}
@@ -128,6 +181,102 @@ func (store GoCacheStore) saveStore() {
 		err := partition.SaveFile(partitionFileName)
 		if err != nil {
 			logrus.Error(err)
+		}
+	}
+}
+
+type LevelDbStore struct {
+	partitionStore *cache.Cache
+}
+
+func NewLevelDbStore() LevelDbStore {
+	return LevelDbStore{}
+}
+
+// Define a global cache variable
+
+// Function to set a value in the global cache
+func (store LevelDbStore) setValue(value *pb.Value) error {
+	// key := value.Key
+	// partitionId := FindPartitionID(events.consistent, key)
+	// partition, err := store.getPartition(partitionId)
+	// if partition == nil && err != nil {
+	// 	return err
+	// }
+
+	// existingValue, exists, err := store.getValue(key)
+	// if exists && existingValue.Epoch < value.Epoch {
+	// 	return fmt.Errorf("cannot set value with a lower Epoch. set = %d existing = %d", value.Epoch, existingValue.Epoch)
+	// }
+
+	// if exists && existingValue.UnixTimestamp < value.UnixTimestamp {
+	// 	return fmt.Errorf("cannot set value with a lower UnixTimestamp. set = %d existing = %d", value.UnixTimestamp, existingValue.UnixTimestamp)
+	// }
+	// partition.Set(key, value, 0)
+	return nil
+}
+
+// Function to get a value from the global cache
+func (store LevelDbStore) getValue(key string) (*pb.Value, bool, error) {
+	// return testValue("key1", "value1"), true, nil
+	// partitionId := FindPartitionID(events.consistent, key)
+
+	// partition, err := store.getPartition(partitionId)
+	// if err != nil {
+	// 	return nil, false, err
+	// }
+	// if partition == nil {
+	// 	return nil, false, fmt.Errorf("partition is nil")
+	// }
+	// if value, found := partition.Get(key); found {
+	// 	if value, ok := value.(*pb.Value); ok {
+	// 		return value, true, nil
+	// 	}
+	// }
+	return nil, false, nil
+}
+
+func (store LevelDbStore) getPartition(partitionId int) (Partition, error) {
+	partitionKey := fmt.Sprintf("%s_%d", hostname, partitionId)
+
+	if value, found := store.partitionStore.Get(partitionKey); found {
+		partition, ok := value.(Partition)
+
+		if ok {
+			return partition, nil
+		}
+	}
+
+	db, err := leveldb.OpenFile(partitionKey, nil)
+	if err != nil {
+		logrus.Debug(err)
+	} else {
+		err = store.partitionStore.Add(partitionKey, db, 0)
+		if err != nil {
+			logrus.Debug(err)
+		}
+	}
+
+	if value, found := store.partitionStore.Get(partitionKey); found {
+		partition, ok := value.(Partition)
+
+		if ok {
+			return partition, nil
+		}
+	}
+	return nil, fmt.Errorf("partion not found: %d", partitionId)
+}
+
+func (store LevelDbStore) InitStore() {
+	logrus.Debugf("InitStore for LevelDbStore")
+}
+
+func (store LevelDbStore) LoadPartitions(partitions []int) {
+	for _, partitionId := range partitions {
+		_, err := store.getPartition(partitionId)
+		if err != nil {
+			logrus.Debugf("failed getPartition: %v , %v", partitionId, err)
+			continue
 		}
 	}
 }

@@ -103,8 +103,7 @@ func (s *internalServer) SyncPartition(req *pb.SyncPartitionRequest, stream pb.I
 	sort.Strings(keys)
 
 	for _, key := range keys {
-		valueObj := items[key]
-		value := valueObj.Object.(*pb.Value)
+		value := items[key]
 		if value.Epoch > req.Epoch {
 			continue
 		}

@@ -87,7 +87,6 @@ func TestHashRing2(t *testing.T) {
 		percentage := float64(count) / float64(totalKeys) * 100
 		logrus.Infof("Node: %s, Keys: %d, Percentage: %.2f%%", node, count, percentage)
 	}
-	logrus.Info(("HERE"))
 
 	logrus.Info(GetMembers(c1))
 
