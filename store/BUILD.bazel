@@ -43,11 +43,12 @@ go_test(
     name = "go_default_test",
     srcs = [
         "hashring_test.go",
+        "merkle_tree_test.go",
         "store_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
-        "//store/proto:go_default_library",
+        # "//store/proto:go_default_library",
         "@com_github_cbergoon_merkletree//:go_default_library",
         "@com_github_serialx_hashring//:go_default_library",
         "@com_github_sirupsen_logrus//:go_default_library",
