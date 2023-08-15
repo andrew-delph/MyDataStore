@@ -21,6 +21,7 @@ type Store interface {
 	getPartition(partitionId int) (Partition, error)
 	LoadPartitions(partitions []int)
 	Close()
+	Clear()
 }
 type Partition interface {
 	getValue(key string) (*pb.Value, bool, error)
@@ -160,6 +161,9 @@ func NewGoCacheStore() GoCacheStore {
 // Define a global cache variable
 
 func (store GoCacheStore) Close() {
+}
+
+func (store GoCacheStore) Clear() {
 }
 
 // Function to set a value in the global cache
@@ -363,12 +367,46 @@ func (store LevelDbStore) LoadPartitions(partitions []int) {
 }
 
 func (store LevelDbStore) Close() {
-	for _, partitionObj := range store.partitionStore.Items() {
+	items := store.partitionStore.Items()
+	logrus.Warnf("Level Db Close for partitions num %d", len(items))
+	for partitionId, partitionObj := range items {
 		partition, ok := partitionObj.Object.(LevelDbPartition)
+		logrus.Warnf("Level Db Close for partition %s", partitionId)
 		if ok {
 			partition.db.Close()
 		} else {
 			logrus.Error("FAILED TO CLOSE PARTITION")
 		}
 	}
+}
+
+func (store LevelDbStore) Clear() {
+	items := store.partitionStore.Items()
+
+	logrus.Warnf("Level Db Clear for partitions num %d", len(items))
+
+	for partitionId, partitionObj := range items {
+		partition, ok := partitionObj.Object.(LevelDbPartition)
+		if ok {
+			logrus.Warnf("Level Db Clear for partition %s", partitionId)
+			writeOpts := &opt.WriteOptions{Sync: true} // Optional: Sync data to disk
+
+			// Iterate through all keys and delete them
+			iter := partition.db.NewIterator(nil, nil)
+			for iter.Next() {
+				err := partition.db.Delete(iter.Key(), writeOpts)
+				if err != nil {
+					logrus.Error("Error deleting key:", err)
+				}
+			}
+			iter.Release()
+			err := iter.Error()
+			if err != nil {
+				logrus.Error("Iterator error:", err)
+			}
+		} else {
+			logrus.Error("FAILED TO Clear PARTITION")
+		}
+	}
+
 }

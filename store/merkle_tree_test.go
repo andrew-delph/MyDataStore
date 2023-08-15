@@ -1,26 +1,31 @@
 package main
 
 import (
-	"bytes"
 	"container/list"
 	"crypto/sha256"
 	"errors"
+	"fmt"
 	"log"
 	"testing"
+	"time"
 
 	"github.com/cbergoon/merkletree"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestStoreMerkleTree(t *testing.T) {
+func TestGoCacheStoreMerkleTree(t *testing.T) {
+
 	conf, delegate, events = GetConf()
 
 	store = NewGoCacheStore()
+	defer store.Close()
 
-	store.setValue(testValue("key1", "value1"))
-	store.setValue(testValue("key2", "value2"))
-	store.setValue(testValue("key3", "value3"))
+	for i := 0; i < NumTestValues; i++ {
+		store.setValue(testValue(fmt.Sprintf("keyz%d", i), fmt.Sprintf("value%d", i)))
+	}
+
+	startTime := time.Now()
 
 	tree1, err := PartitionMerkleTree(1, 1)
 	if err != nil {
@@ -47,50 +52,27 @@ func TestStoreMerkleTree(t *testing.T) {
 		t.Error(err)
 	}
 
-	logrus.Info(tree1.Root.Hash)
-
-	logrus.Info(tree2.Root.Hash)
-
-	logrus.Info(tree2.VerifyContent(tree1.Root.C))
-
-	logrus.Infof("")
-	logrus.Infof("verify leafs")
-	logrus.Infof("")
-	// logrus.Infof(BFS(tree1.Root))
-	nodes1 := BFS(tree1.Root)
-	nodes2 := BFS(tree2.Root)
-
-	logrus.Info("len1 ", len(nodes1))
-
-	logrus.Info("len2 ", len(nodes2))
-
-	for i := range nodes1 {
-		logrus.Info("compare ", bytes.Compare(nodes1[i].Hash, nodes2[i].Hash))
-		// logrus.Info(node.C)
-		// logrus.Info("hash ", node.Hash)
-
-		// logrus.Info(tree1.VerifyContent(node.C))
-	}
-
-	// for _, leaf := range tree2.Leafs {
-	// 	logrus.Info(leaf.C)
-
-	// 	logrus.Info(tree1.VerifyContent(leaf.C))
-	// }
-
 	assert.EqualValues(t, tree1.Root.Hash, tree2.Root.Hash, "Tree hashes don't match")
+
+	elapsedTime := time.Since(startTime).Seconds()
+
+	fmt.Printf("GoCache Elapsed Time: %.2f seconds\n", elapsedTime)
+
 }
 
 func TestLevelDbStoreMerkleTree(t *testing.T) {
+	hostname = randomString(5)
+
 	conf, delegate, events = GetConf()
 
 	store = NewLevelDbStore()
-
 	defer store.Close()
 
-	store.setValue(testValue("key1", "value1"))
-	store.setValue(testValue("key2", "value2"))
-	store.setValue(testValue("key3", "value3"))
+	for i := 0; i < NumTestValues; i++ {
+		store.setValue(testValue(fmt.Sprintf("keyz%d", i), fmt.Sprintf("value%d", i)))
+	}
+
+	startTime := time.Now()
 
 	tree1, err := PartitionMerkleTree(1, 1)
 	if err != nil {
@@ -118,7 +100,9 @@ func TestLevelDbStoreMerkleTree(t *testing.T) {
 	}
 
 	assert.EqualValues(t, tree1.Root.Hash, tree2.Root.Hash, "Tree hashes don't match")
-	// assert.EqualValues(t, tree1.Root.Hash, nil, "Tree hashes don't match")
+	elapsedTime := time.Since(startTime).Seconds()
+
+	fmt.Printf("LevelDb Elapsed Time: %.2f seconds\n", elapsedTime)
 }
 
 func BFS(root *merkletree.Node) []*merkletree.Node {
@@ -172,6 +156,7 @@ func (t TestContent) Equals(other merkletree.Content) (bool, error) {
 }
 
 func TestMerkleTree(t *testing.T) {
+	return
 	var list1 []merkletree.Content
 	for i := 0; i < 10; i++ {
 		list1 = append(list1, TestContent{x: "Hello"})

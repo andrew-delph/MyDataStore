@@ -41,6 +41,11 @@ func TestHashRing1(t *testing.T) {
 }
 
 func TestHashRing2(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Error("Recovered from panic:", r)
+		}
+	}()
 	// using hashring.go
 
 	c1 := GetHashRing()
@@ -100,6 +105,11 @@ func TestHashRing2(t *testing.T) {
 }
 
 func TestPartitions(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Error("Recovered from panic:", r)
+		}
+	}()
 	c := GetHashRing()
 
 	for i := 0; i < 8; i++ {
