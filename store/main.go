@@ -49,7 +49,7 @@ func main() {
 	logrus.SetLevel(logrus.WarnLevel)
 	// logrus.SetFormatter(&logrus.JSONFormatter{})
 
-	store = NewGoCacheStore()
+	store = NewLevelDbStore()
 	defer store.Close()
 
 	store.InitStore()
