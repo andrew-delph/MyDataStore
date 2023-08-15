@@ -122,6 +122,13 @@ def go_repositories():
         version = "v1.13.0",
     )
     go_repository(
+        name = "com_github_fsnotify_fsnotify",
+        importpath = "github.com/fsnotify/fsnotify",
+        sum = "h1:IXs+QLmnXW2CcXuY+8Mzv/fWEsPGWxqefPtCP5CnV9I=",
+        version = "v1.4.7",
+    )
+
+    go_repository(
         name = "com_github_go_kit_kit",
         importpath = "github.com/go-kit/kit",
         sum = "h1:wDJmvq38kDhkVxi50ni9ykkdUr1PKgqKOoi01fa0Mdk=",
@@ -158,6 +165,12 @@ def go_repositories():
         importpath = "github.com/golang/protobuf",
         sum = "h1:KhyjKVUg7Usr/dYsdSqoFveMYd5ko72D+zANwlG1mmg=",
         version = "v1.5.3",
+    )
+    go_repository(
+        name = "com_github_golang_snappy",
+        importpath = "github.com/golang/snappy",
+        sum = "h1:woRePGFeVFfLKN/pOkfl+p/TAqKOfFu+7KPlMVpok/w=",
+        version = "v0.0.0-20180518054509-2e65f85255db",
     )
 
     go_repository(
@@ -266,6 +279,13 @@ def go_repositories():
         version = "v0.0.0-20230125174641-2a8082862702",
     )
     go_repository(
+        name = "com_github_hpcloud_tail",
+        importpath = "github.com/hpcloud/tail",
+        sum = "h1:nfCOvKYfkgYP8hkirhJocXT2+zOD8yUNjXaWfTlyFKI=",
+        version = "v1.0.0",
+    )
+
+    go_repository(
         name = "com_github_json_iterator_go",
         importpath = "github.com/json-iterator/go",
         sum = "h1:9yzud/Ht36ygwatGx56VwCZtlI/2AD15T1X2sjSuGns=",
@@ -359,6 +379,19 @@ def go_repositories():
         version = "v1.2.2",
     )
     go_repository(
+        name = "com_github_onsi_ginkgo",
+        importpath = "github.com/onsi/ginkgo",
+        sum = "h1:WSHQ+IS43OoUrWtD1/bbclrwK8TTH5hzp+umCiuxHgs=",
+        version = "v1.7.0",
+    )
+    go_repository(
+        name = "com_github_onsi_gomega",
+        importpath = "github.com/onsi/gomega",
+        sum = "h1:RE1xgDvH7imwFD45h+u2SgIfERHlS2yNG4DObb5BSKU=",
+        version = "v1.4.3",
+    )
+
+    go_repository(
         name = "com_github_pascaldekloe_goe",
         importpath = "github.com/pascaldekloe/goe",
         sum = "h1:cBOtyMzM9HTpWjXfbbunk26uA6nG3a8n06Wieeh0MwY=",
@@ -446,6 +479,13 @@ def go_repositories():
         version = "v1.8.4",
     )
     go_repository(
+        name = "com_github_syndtr_goleveldb",
+        importpath = "github.com/syndtr/goleveldb",
+        sum = "h1:fBdIW9lB4Iz0n9khmH8w27SJ3QEJ7+IgjPEwGSZiFdE=",
+        version = "v1.0.0",
+    )
+
+    go_repository(
         name = "com_github_tv42_httpunix",
         importpath = "github.com/tv42/httpunix",
         sum = "h1:G3dpKMzFDjgEh2q1Z7zUUtKa8ViPtH+ocF0bE0g00O8=",
@@ -471,6 +511,19 @@ def go_repositories():
         sum = "h1:YR8cESwS4TdDjEe65xsg0ogRM/Nc3DYOhEAlW+xobZo=",
         version = "v1.0.0-20190902080502-41f04d3bba15",
     )
+    go_repository(
+        name = "in_gopkg_fsnotify_v1",
+        importpath = "gopkg.in/fsnotify.v1",
+        sum = "h1:xOHLXZwVvI9hhs+cLKq5+I5onOuwQLhQwiu63xxlHs4=",
+        version = "v1.4.7",
+    )
+    go_repository(
+        name = "in_gopkg_tomb_v1",
+        importpath = "gopkg.in/tomb.v1",
+        sum = "h1:uRGJdciOHaEIrze2W8Q3AKkepLTh2hOroT7a+7czfdQ=",
+        version = "v1.0.0-20141024135613-dd632973f1e7",
+    )
+
     go_repository(
         name = "in_gopkg_yaml_v2",
         importpath = "gopkg.in/yaml.v2",

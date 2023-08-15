@@ -41,7 +41,7 @@ func (events *MyEventDelegate) NotifyJoin(node *memberlist.Node) {
 		return
 	}
 	logrus.Debugf("myPartions %v", myPartions)
-	LoadPartitions(myPartions)
+	store.LoadPartitions(myPartions)
 	AddVoter(node.Name)
 }
 
@@ -58,7 +58,7 @@ func (events *MyEventDelegate) NotifyLeave(node *memberlist.Node) {
 		return
 	}
 	logrus.Debugf("myPartions %v", myPartions)
-	LoadPartitions(myPartions)
+	store.LoadPartitions(myPartions)
 
 	RemoveServer(node.Name)
 }

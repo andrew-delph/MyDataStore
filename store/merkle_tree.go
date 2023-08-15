@@ -53,7 +53,7 @@ func (content MerkleBucket) Equals(other merkletree.Content) (bool, error) {
 }
 
 func PartitionMerkleTree(partitionEpoch uint64, partitionId int) (*merkletree.MerkleTree, error) {
-	partition, err := getPartition(partitionId)
+	partition, err := store.getPartition(partitionId)
 	if err != nil {
 		logrus.Debug(err)
 		return nil, err

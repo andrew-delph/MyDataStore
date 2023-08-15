@@ -11,20 +11,38 @@ import (
 	pb "github.com/andrew-delph/my-key-store/proto"
 )
 
+type Store interface {
+	InitStore()
+	setValue(value *pb.Value) error
+	getValue(key string) (*pb.Value, bool, error)
+	getPartition(partitionId int) (*cache.Cache, error)
+	LoadPartitions(partitions []int)
+
+	saveStore()
+}
+
+type GoCacheStore struct {
+	partitionStore *cache.Cache
+}
+
+func NewGoCacheStore() GoCacheStore {
+	return GoCacheStore{
+		partitionStore: cache.New(0*time.Minute, 1*time.Minute),
+	}
+}
+
 // Define a global cache variable
 
-var partitionStore *cache.Cache = cache.New(0*time.Minute, 1*time.Minute)
-
 // Function to set a value in the global cache
-func setValue(value *pb.Value) error {
+func (store GoCacheStore) setValue(value *pb.Value) error {
 	key := value.Key
 	partitionId := FindPartitionID(events.consistent, key)
-	partition, err := getPartition(partitionId)
+	partition, err := store.getPartition(partitionId)
 	if partition == nil && err != nil {
 		return err
 	}
 
-	existingValue, exists, err := getValue(key)
+	existingValue, exists, err := store.getValue(key)
 	if exists && existingValue.Epoch < value.Epoch {
 		return fmt.Errorf("cannot set value with a lower Epoch. set = %d existing = %d", value.Epoch, existingValue.Epoch)
 	}
@@ -37,10 +55,10 @@ func setValue(value *pb.Value) error {
 }
 
 // Function to get a value from the global cache
-func getValue(key string) (*pb.Value, bool, error) {
+func (store GoCacheStore) getValue(key string) (*pb.Value, bool, error) {
 	partitionId := FindPartitionID(events.consistent, key)
 
-	partition, err := getPartition(partitionId)
+	partition, err := store.getPartition(partitionId)
 	if err != nil {
 		return nil, false, err
 	}
@@ -55,13 +73,13 @@ func getValue(key string) (*pb.Value, bool, error) {
 	return nil, false, nil
 }
 
-func getPartition(partitionId int) (*cache.Cache, error) {
+func (store GoCacheStore) getPartition(partitionId int) (*cache.Cache, error) {
 	partitionKey := strconv.Itoa(partitionId)
-	err := partitionStore.Add(partitionKey, cache.New(0*time.Minute, 1*time.Minute), 0)
+	err := store.partitionStore.Add(partitionKey, cache.New(0*time.Minute, 1*time.Minute), 0)
 	if err != nil {
 		logrus.Debug(err)
 	}
-	if value, found := partitionStore.Get(partitionKey); found {
+	if value, found := store.partitionStore.Get(partitionKey); found {
 		partition, ok := value.(*cache.Cache)
 
 		if ok {
@@ -71,7 +89,7 @@ func getPartition(partitionId int) (*cache.Cache, error) {
 	return nil, fmt.Errorf("partion not found: %d", partitionId)
 }
 
-func InitStore() {
+func (store GoCacheStore) InitStore() {
 	ticker := time.NewTicker(saveInterval)
 
 	logrus.Debugf("store saveInterval %v", saveInterval)
@@ -79,15 +97,15 @@ func InitStore() {
 	// Periodically save the cache to a file
 	go func() {
 		for range ticker.C {
-			saveStore()
+			store.saveStore()
 		}
 	}()
 }
 
-func LoadPartitions(partitions []int) {
+func (store GoCacheStore) LoadPartitions(partitions []int) {
 	for _, partitionId := range partitions {
 		partitionFileName := fmt.Sprintf("/store/%s_%s.json", hostname, strconv.Itoa(partitionId))
-		partition, err := getPartition(partitionId)
+		partition, err := store.getPartition(partitionId)
 		if err != nil {
 			logrus.Debugf("failed getPartition: %v , %v", partitionId, err)
 			continue
@@ -100,10 +118,10 @@ func LoadPartitions(partitions []int) {
 	}
 }
 
-func saveStore() {
+func (store GoCacheStore) saveStore() {
 	logrus.Debugf("Saving store: %s", hostname)
 
-	for partitionId, value := range partitionStore.Items() {
+	for partitionId, value := range store.partitionStore.Items() {
 		partition := value.Object.(*cache.Cache)
 		partitionFileName := fmt.Sprintf("/store/%s_%s.json", hostname, partitionId)
 		logrus.Debugf("saving partition to file %s", partitionFileName)

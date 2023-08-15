@@ -158,9 +158,9 @@ func SyncPartition(hash []byte, epoch uint64, partitionId int) {
 					break
 				}
 
-				err = setValue(value)
+				err = store.setValue(value)
 				if err != nil {
-					logrus.Warnf("CLIENT SyncPartition stream error setValue: %v", err)
+					logrus.Warnf("CLIENT SyncPartition stream error store.setValue: %v", err)
 					continue
 				}
 			}

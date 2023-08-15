@@ -25,9 +25,11 @@ func testValue(key, value string) *pb.Value {
 func TestStore(t *testing.T) {
 	conf, delegate, events = GetConf()
 
-	setValue(testValue("key1", "value1"))
+	store = NewGoCacheStore()
 
-	value, _, _ := getValue("key1")
+	store.setValue(testValue("key1", "value1"))
+
+	value, _, _ := store.getValue("key1")
 
 	assert.Equal(t, value.Value, "value1", "Both should be SetMessage")
 }
@@ -35,9 +37,11 @@ func TestStore(t *testing.T) {
 func TestStoreMerkleTree(t *testing.T) {
 	conf, delegate, events = GetConf()
 
-	setValue(testValue("key1", "value1"))
-	setValue(testValue("key2", "value2"))
-	setValue(testValue("key3", "value3"))
+	store = NewGoCacheStore()
+
+	store.setValue(testValue("key1", "value1"))
+	store.setValue(testValue("key2", "value2"))
+	store.setValue(testValue("key3", "value3"))
 
 	tree1, err := PartitionMerkleTree(1, 1)
 	if err != nil {
