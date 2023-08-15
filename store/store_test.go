@@ -7,24 +7,37 @@ import (
 	"errors"
 	"log"
 	"testing"
+	"time"
 
 	"github.com/cbergoon/merkletree"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+
+	pb "github.com/andrew-delph/my-key-store/proto"
 )
 
+func testValue(key, value string) *pb.Value {
+	unixTimestamp := time.Now().Unix()
+	setReqMsg := &pb.Value{Key: key, Value: value, Epoch: int64(2), UnixTimestamp: unixTimestamp}
+	return setReqMsg
+}
+
 func TestStore(t *testing.T) {
-	setValue(1, "key1", "value1")
+	conf, delegate, events = GetConf()
 
-	value, _, _ := getValue(1, "key1")
+	setValue(testValue("key1", "value1"))
 
-	assert.Equal(t, value, "value1", "Both should be SetMessage")
+	value, _, _ := getValue("key1")
+
+	assert.Equal(t, value.Value, "value1", "Both should be SetMessage")
 }
 
 func TestStoreMerkleTree(t *testing.T) {
-	setValue(1, "key1", "value1")
-	setValue(1, "key2", "value2")
-	setValue(1, "key3", "value3")
+	conf, delegate, events = GetConf()
+
+	setValue(testValue("key1", "value1"))
+	setValue(testValue("key2", "value2"))
+	setValue(testValue("key3", "value3"))
 
 	tree1, err := PartitionMerkleTree(1, 1)
 	if err != nil {
@@ -82,7 +95,7 @@ func TestStoreMerkleTree(t *testing.T) {
 	// 	logrus.Info(tree1.VerifyContent(leaf.C))
 	// }
 
-	// assert.EqualValues(t, tree1.Root.Hash, tree2.Root.Hash, "Tree hashes don't match")
+	assert.EqualValues(t, tree1.Root.Hash, tree2.Root.Hash, "Tree hashes don't match")
 }
 
 func BFS(root *merkletree.Node) []*merkletree.Node {

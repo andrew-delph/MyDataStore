@@ -15,6 +15,8 @@ service InternalNodeService {
 
     rpc GetRequest (GetRequestMessage) returns (Value) {
     }
+
+    rpc SyncPartition(SyncPartitionRequest) returns (stream Value);
   
 }
 
@@ -36,4 +38,10 @@ message Value{
   string value = 2;
   int64 unix_timestamp = 3;
   int64 epoch  =4;
+}
+
+message SyncPartitionRequest{
+  int64 epoch = 1;
+  int32 partition = 2;
+  bytes hash = 3;
 }

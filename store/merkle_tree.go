@@ -59,7 +59,7 @@ func PartitionMerkleTree(partitionEpoch uint64, partitionId int) (*merkletree.Me
 		return nil, err
 	}
 
-	if treeValue, found := partition.Get(fmt.Sprintf("%d", partitionEpoch)); found {
+	if treeValue, found := partition.Get(fmt.Sprintf("%d-%d", partitionEpoch, epoch)); found {
 		if value, ok := treeValue.(*merkletree.MerkleTree); ok {
 			return value, nil
 		}
@@ -105,7 +105,7 @@ func PartitionMerkleTree(partitionEpoch uint64, partitionId int) (*merkletree.Me
 		logrus.Debug(err)
 		return nil, err
 	}
-	merkletreeStore.Add(fmt.Sprintf("%d", partitionEpoch), tree, 0)
+	merkletreeStore.Add(fmt.Sprintf("%d-%d", partitionEpoch, epoch), tree, 0)
 
 	return tree, nil
 }

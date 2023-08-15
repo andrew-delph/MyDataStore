@@ -114,21 +114,11 @@ func main() {
 
 			err := logEntry.Error()
 			if err == nil {
-				logrus.Warnf("update fsm! epoch = %d", epoch)
-				// if count%50 == 0 {
-				// 	logrus.Warnf("killing leader. count = %d", count)
-				// 	return
-				// }
+				// logrus.Debugf("update fsm! epoch = %d", epoch)
 			} else {
-				logrus.Warnf("update fsm Err= %v", err)
-				// if rand.Float64() < 0.05 {
-				// 	logrus.Debugf("killing FOLLOWER. count = %d", count)
-				// 	return
-				// }
+				logrus.Debugf("update fsm Err= %v", err)
 			}
 
-			logrus.Debug("err: ", err)
-			logrus.Debug("fsm: ", fsm)
 		case <-tick.C:
 
 			// if err != nil {
@@ -154,20 +144,20 @@ func main() {
 			message.Handle(messageHolder)
 
 		case epochObservation := <-epochObserver:
-			logrus.Warnf("epochObservation %d %s", epochObservation, raftNode.State())
+			logrus.Debugf("epochObservation %d %s", epochObservation, raftNode.State())
 			myPartions, err := GetMemberPartions(events.consistent, conf.Name)
 			if err != nil {
 				logrus.Warn(err)
 				continue
 			}
 			for _, partitionId := range myPartions {
-				partitionTree, err := PartitionMerkleTree(epochObservation, partitionId)
+				partitionTree, err := PartitionMerkleTree(epochObservation-1, partitionId)
 				if err != nil {
 					logrus.Error(err)
 					continue
-				} else {
-					logrus.Warnf("CREATED TREE SUCCESS epoch = %d hash =  %x", epochObservation, partitionTree.Root.Hash)
 				}
+				SyncPartition(partitionTree.Root.Hash, epochObservation-1, partitionId)
+				// logrus.Warnf("SyncPartition CLIENT COMPLETED epoch = %d hash =  %x", epochObservation, partitionTree.Root.Hash)
 				// events.SendRequestPartitionInfoMessage(partitionTree.Root.Hash, partitionId)
 			}
 		}

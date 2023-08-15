@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net"
+	"sort"
 
 	pb "github.com/andrew-delph/my-key-store/proto"
 
@@ -67,4 +69,51 @@ func (s *internalServer) GetRequest(ctx context.Context, m *pb.GetRequestMessage
 	} else {
 		return nil, fmt.Errorf("Value not found for %s", m.Key)
 	}
+}
+
+func (s *internalServer) SyncPartition(req *pb.SyncPartitionRequest, stream pb.InternalNodeService_SyncPartitionServer) error {
+	partitionTree, err := PartitionMerkleTree(uint64(req.Epoch), int(req.Partition))
+	if err != nil {
+		logrus.Error(err)
+		return err
+	}
+	areEqual := bytes.Equal(partitionTree.Root.Hash, req.Hash)
+
+	if areEqual {
+		logrus.Warn("SERVER HASHES ARE EQUAL")
+		return nil
+	} else {
+		logrus.Warn("SERVER HASHES ARE NOT EQUAL!!!!!!")
+	}
+
+	partition, err := getPartition(int(req.Partition))
+	if err != nil {
+		logrus.Error(err)
+		return err
+	}
+
+	items := partition.Items()
+	// if len(items) == 0 {
+	// 	return nil, fmt.Errorf("partition.Items() is %d", 0)
+	// }
+
+	// Extract keys and sort them
+	var keys []string
+	for key := range items {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		valueObj := items[key]
+		value := valueObj.Object.(*pb.Value)
+		if value.Epoch < req.Epoch {
+			continue
+		}
+		if err := stream.Send(value); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"time"
 
 	pb "github.com/andrew-delph/my-key-store/proto"
@@ -45,6 +46,7 @@ func SendSetMessage(key, value string) error {
 				logrus.Debugf("SetRequest %s worked. msg ='%s'", currNode.String(), r.Message)
 			}
 		}(node)
+		break
 	}
 
 	timeout := time.After(defaultTimeout)
@@ -118,6 +120,58 @@ func SendGetMessage(key string) (string, error) {
 	}
 
 	return "", fmt.Errorf("value not found. expected = %d maxRecieved= %d", readResponse, maxRecieved)
+}
+
+func SyncPartition(hash []byte, epoch uint64, partitionId int) {
+	syncPartReqMsg := &pb.SyncPartitionRequest{Epoch: int64(epoch), Partition: int32(partitionId)}
+
+	nodes, err := GetClosestNForPartition(events.consistent, partitionId, totalReplicas)
+	if err != nil {
+		logrus.Error(err)
+		return
+	}
+
+	for i, node := range nodes {
+		go func(i int, node HashRingMember) {
+			conn, client, err := GetClient(node.String())
+			if err != nil {
+				return
+			}
+			defer conn.Close()
+
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+			stream, err := client.SyncPartition(ctx, syncPartReqMsg)
+			if err != nil {
+				logrus.Warnf("CLIENT SyncPartition Failed to open stream: %v", err)
+				return
+			}
+
+			for {
+				value, err := stream.Recv()
+
+				if err == io.EOF {
+					logrus.Debug("Stream completed.")
+					break
+				}
+				if err != nil {
+					logrus.Errorf("CLIENT SyncPartition stream receive error: %v", err)
+					break
+				}
+
+				myValue, _, err := getValue(value.Key)
+				if value.Value != myValue.Value {
+					logrus.Warnf("setting value that wasnt set for %s!!!!", value.Key)
+				}
+				err = setValue(value)
+				if err != nil {
+					logrus.Warnf("CLIENT SyncPartition stream error setValue: %v", err)
+					continue
+				}
+			}
+			logrus.Debugf("CLIENT COMPLETED SYNC")
+		}(i, node)
+	}
 }
 
 func GetClient(addr string) (*grpc.ClientConn, pb.InternalNodeServiceClient, error) {

@@ -154,6 +154,7 @@ def go_repositories():
     )
     go_repository(
         name = "com_github_golang_protobuf",
+        build_file_proto_mode = "disable_global",
         importpath = "github.com/golang/protobuf",
         sum = "h1:KhyjKVUg7Usr/dYsdSqoFveMYd5ko72D+zANwlG1mmg=",
         version = "v1.5.3",
@@ -504,6 +505,7 @@ def go_repositories():
     )
     go_repository(
         name = "org_golang_google_grpc",
+        build_file_proto_mode = "disable",
         importpath = "google.golang.org/grpc",
         sum = "h1:JIZpGUpbGAukP4rGiKJ/AnpK9BqMYV6Rdx94XWZckHY=",
         version = "v1.51.0-dev",

@@ -10,9 +10,9 @@ import (
 )
 
 var (
-	totalReplicas    int           = 1
+	totalReplicas    int           = 4
 	writeResponse    int           = 1
-	readResponse     int           = 1
+	readResponse     int           = 2
 	saveInterval     time.Duration = 30 * time.Second
 	defaultTimeout   time.Duration = 2 * time.Second
 	partitionBuckets int           = 10
