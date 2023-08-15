@@ -50,6 +50,7 @@ func main() {
 	// logrus.SetFormatter(&logrus.JSONFormatter{})
 
 	store = NewGoCacheStore()
+	defer store.Close()
 
 	store.InitStore()
 

@@ -81,6 +81,46 @@ func TestStoreMerkleTree(t *testing.T) {
 	assert.EqualValues(t, tree1.Root.Hash, tree2.Root.Hash, "Tree hashes don't match")
 }
 
+func TestLevelDbStoreMerkleTree(t *testing.T) {
+	conf, delegate, events = GetConf()
+
+	store = NewLevelDbStore()
+
+	defer store.Close()
+
+	store.setValue(testValue("key1", "value1"))
+	store.setValue(testValue("key2", "value2"))
+	store.setValue(testValue("key3", "value3"))
+
+	tree1, err := PartitionMerkleTree(1, 1)
+	if err != nil {
+		t.Error(err)
+	}
+
+	_, err = tree1.VerifyTree()
+	if err != nil {
+		t.Error(err)
+	}
+
+	tree2, err := PartitionMerkleTree(1, 1)
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = tree1.RebuildTree()
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = tree2.RebuildTree()
+	if err != nil {
+		t.Error(err)
+	}
+
+	assert.EqualValues(t, tree1.Root.Hash, tree2.Root.Hash, "Tree hashes don't match")
+	// assert.EqualValues(t, tree1.Root.Hash, nil, "Tree hashes don't match")
+}
+
 func BFS(root *merkletree.Node) []*merkletree.Node {
 	if root == nil {
 		return nil

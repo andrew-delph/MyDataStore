@@ -8,6 +8,7 @@ import (
 	"github.com/patrickmn/go-cache"
 	"github.com/sirupsen/logrus"
 	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/opt"
 	"google.golang.org/protobuf/proto"
 
 	pb "github.com/andrew-delph/my-key-store/proto"
@@ -19,6 +20,7 @@ type Store interface {
 	getValue(key string) (*pb.Value, bool, error)
 	getPartition(partitionId int) (Partition, error)
 	LoadPartitions(partitions []int)
+	Close()
 }
 type Partition interface {
 	getValue(key string) (*pb.Value, bool, error)
@@ -113,22 +115,32 @@ func (partition LevelDbPartition) setValue(value *pb.Value) error {
 }
 
 func (partition LevelDbPartition) Items() map[string]*pb.Value {
-	// Create a new map of type map[string]*pb.Value
-	// itemsMap := make(map[string]*pb.Value)
+	// logrus.Fatal("LevelDbPartition.Items() no implemented.")
+	// return nil
+	itemsMap := make(map[string]*pb.Value)
+	readOpts := &opt.ReadOptions{}
 
-	// // Iterate over the original map and perform the conversion
-	// for key, item := range partition.store.Items() {
+	// Create an Iterator to iterate through all items
+	iter := partition.db.NewIterator(nil, readOpts)
+	defer iter.Release()
 
-	// 	value, ok := item.Object.(*pb.Value)
+	// Iterate through the items
+	for iter.Next() {
+		key := string(iter.Key())
 
-	// 	if !ok {
-	// 		continue
-	// 	}
-	// 	itemsMap[key] = value
-	// }
-	// return itemsMap
-	logrus.Fatal("LevelDbPartition.Items() no implemented.")
-	return nil
+		value, exist, err := partition.getValue(key)
+		if err != nil {
+			logrus.Error(err)
+			continue
+		}
+
+		if !exist {
+			continue
+		}
+
+		itemsMap[key] = value
+	}
+	return itemsMap
 }
 
 func NewLevelDbPartition(partitionKey string) (Partition, error) {
@@ -146,6 +158,9 @@ func NewGoCacheStore() GoCacheStore {
 }
 
 // Define a global cache variable
+
+func (store GoCacheStore) Close() {
+}
 
 // Function to set a value in the global cache
 func (store GoCacheStore) setValue(value *pb.Value) error {
@@ -343,6 +358,17 @@ func (store LevelDbStore) LoadPartitions(partitions []int) {
 		if err != nil {
 			logrus.Debugf("failed getPartition: %v , %v", partitionId, err)
 			continue
+		}
+	}
+}
+
+func (store LevelDbStore) Close() {
+	for _, partitionObj := range store.partitionStore.Items() {
+		partition, ok := partitionObj.Object.(LevelDbPartition)
+		if ok {
+			partition.db.Close()
+		} else {
+			logrus.Error("FAILED TO CLOSE PARTITION")
 		}
 	}
 }

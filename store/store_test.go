@@ -48,6 +48,8 @@ func TestLevelDbStore(t *testing.T) {
 
 	store = NewLevelDbStore()
 
+	defer store.Close()
+
 	err := store.setValue(testValue("key1", "value1"))
 	if err != nil {
 		t.Error(fmt.Sprintf("setValue error: %v", err))
