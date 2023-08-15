@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"strings"
 	"sync"
@@ -10,7 +9,6 @@ import (
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
 	"github.com/sirupsen/logrus"
-	"github.com/syndtr/goleveldb/leveldb"
 )
 
 var (
@@ -179,27 +177,3 @@ var (
 	raftDir      = "./raft-data"
 	raftBindAddr = "127.0.0.1:7000" // 0.0.0.0:7000
 )
-
-func main2() {
-	db, err := leveldb.OpenFile("test", nil)
-	defer db.Close()
-	if err != nil {
-		fmt.Println("Error creating/opening database:", err)
-	}
-
-	key := []byte("foo")
-	value := []byte("barzzz")
-	err = db.Put(key, value, nil)
-	if err != nil {
-		fmt.Println("Error adding data to database:", err)
-	}
-
-	key = []byte("foo")
-	data, err := db.Get(key, nil)
-	if err != nil {
-		fmt.Println("Error retrieving data from database:", err)
-	} else {
-		fmt.Println(string(data))
-	}
-
-}
