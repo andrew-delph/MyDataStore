@@ -49,6 +49,14 @@ func main() {
 	logrus.SetLevel(logrus.WarnLevel)
 	// logrus.SetFormatter(&logrus.JSONFormatter{})
 
+	data, err2 := os.ReadFile("/etc/hostname")
+	if err2 != nil {
+		logrus.Errorf("Error reading /etc/hostname: %v", err2)
+		return
+	}
+
+	hostname = strings.TrimSpace(string(data))
+
 	store = NewLevelDbStore()
 	defer store.Close()
 
@@ -57,14 +65,6 @@ func main() {
 	SetupRaft()
 
 	time.Sleep(10 * time.Second)
-
-	data, err2 := os.ReadFile("/etc/hostname")
-	if err2 != nil {
-		logrus.Errorf("Error reading /etc/hostname: %v", err2)
-		return
-	}
-
-	hostname = strings.TrimSpace(string(data))
 
 	logrus.Infof("starting! %s", hostname)
 
