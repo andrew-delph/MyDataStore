@@ -87,7 +87,7 @@ func PartitionMerkleTree(partitionEpoch uint64, partitionId int) (*merkletree.Me
 	for _, key := range keys {
 		valueObj := items[key]
 		value := valueObj.Object.(*pb.Value)
-		if value.Epoch < int64(partitionEpoch) {
+		if value.Epoch > int64(partitionEpoch) {
 			continue
 		}
 		bucketHash := CalculateHash(key)

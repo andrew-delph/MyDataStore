@@ -46,7 +46,6 @@ func SendSetMessage(key, value string) error {
 				logrus.Debugf("SetRequest %s worked. msg ='%s'", currNode.String(), r.Message)
 			}
 		}(node)
-		break
 	}
 
 	timeout := time.After(defaultTimeout)
@@ -159,10 +158,6 @@ func SyncPartition(hash []byte, epoch uint64, partitionId int) {
 					break
 				}
 
-				myValue, _, err := getValue(value.Key)
-				if value.Value != myValue.Value {
-					logrus.Warnf("setting value that wasnt set for %s!!!!", value.Key)
-				}
 				err = setValue(value)
 				if err != nil {
 					logrus.Warnf("CLIENT SyncPartition stream error setValue: %v", err)

@@ -138,22 +138,28 @@ func AddVoter(otherAddr string) {
 
 	config2 := raft.DefaultConfig()
 	config2.LocalID = raft.ServerID(otherAddr)
+	if raftNode.State() != raft.Leader {
+		return
+	}
 
 	addVoterFuture := raftNode.AddVoter(config2.LocalID, raft.ServerAddress(otherAddr), 0, 0)
 	if err := addVoterFuture.Error(); err != nil {
-		logrus.Debugf("AddVoter state: %s error: %v", raftNode.State(), err)
+		logrus.Errorf("AddVoter state: %s error: %v", raftNode.State(), err)
 	} else {
-		logrus.Debugf("ADD SERVER SUCCESS %s", otherAddr)
+		logrus.Warnf("ADD SERVER SUCCESS %s", otherAddr)
 	}
 }
 
 func RemoveServer(otherAddr string) {
 	removeServerFuture := raftNode.RemoveServer(raft.ServerID(otherAddr), 0, 0)
+	if raftNode.State() != raft.Leader {
+		return
+	}
 
 	if err := removeServerFuture.Error(); err != nil {
-		logrus.Debugf("RemoveServer state: %s error: %v", raftNode.State(), err)
+		logrus.Errorf("RemoveServer state: %s error: %v", raftNode.State(), err)
 	} else {
-		logrus.Debugf("REMOVE SERVER SUCCESS %s", otherAddr)
+		logrus.Warnf("REMOVE SERVER SUCCESS %s", otherAddr)
 	}
 }
 

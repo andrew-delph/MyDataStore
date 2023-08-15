@@ -11,11 +11,12 @@ import (
 
 var (
 	totalReplicas    int           = 4
-	writeResponse    int           = 1
+	writeResponse    int           = 2
 	readResponse     int           = 2
 	saveInterval     time.Duration = 30 * time.Second
 	defaultTimeout   time.Duration = 2 * time.Second
 	partitionBuckets int           = 10
+	partitionCount   int           = 20
 )
 
 func GetConf() (*memberlist.Config, *MyDelegate, *MyEventDelegate) {

@@ -41,8 +41,11 @@ func getValue(key string) (*pb.Value, bool, error) {
 	partitionId := FindPartitionID(events.consistent, key)
 
 	partition, err := getPartition(partitionId)
-	if partition == nil && err != nil {
+	if err != nil {
 		return nil, false, err
+	}
+	if partition == nil {
+		return nil, false, fmt.Errorf("partition is nil")
 	}
 	if value, found := partition.Get(key); found {
 		if value, ok := value.(*pb.Value); ok {

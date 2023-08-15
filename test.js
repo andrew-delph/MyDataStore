@@ -6,29 +6,30 @@ import { randomString } from "https://jslib.k6.io/k6-utils/1.2.0/index.js";
 import { textSummary } from "https://jslib.k6.io/k6-summary/0.0.2/index.js";
 
 export let options = {
-  // iterations: 5000,
-  // vus: 20,
-  // scenarios: {
-  // disrupt: {
-  //   executor: "shared-iterations",
-  //   iterations: 1,
-  //   vus: 1,
-  //   exec: "disrupt",
-  //   startTime: "5s",
-  // },
-  // load: {
-  //   executor: "constant-vus",
-  //   vus: 5,
-  //   duration: "30s",
-  //   exec: "default",
-  // },
-  // ramp: {
-  //   executor: "ramping-vus",
-  //   startVUs: 0,
-  //   stages: [{ duration: "2m", target: 100 }],
-  //   gracefulRampDown: "10s",
-  // },
-  // },
+  // iterations: 20,
+  // vus: 5,
+  scenarios: {
+    // disrupt: {
+    //   executor: "shared-iterations",
+    //   iterations: 1,
+    //   vus: 1,
+    //   exec: "disrupt",
+    //   startTime: "5s",
+    // },
+    // load: {
+    //   executor: "constant-vus",
+    //   vus: 5,
+    //   duration: "30s",
+    //   exec: "default",
+    // },
+    ramp: {
+      executor: "ramping-vus",
+      startVUs: 10,
+      stages: [{ duration: "2m", target: 100 }],
+      stages: [{ duration: "2m", target: 100 }],
+      gracefulRampDown: "10s",
+    },
+  },
 };
 
 let address = "192.168.49.2:30033";

@@ -50,7 +50,7 @@ func main() {
 
 	SetupRaft()
 
-	time.Sleep(5 * time.Second)
+	time.Sleep(10 * time.Second)
 
 	data, err2 := os.ReadFile("/etc/hostname")
 	if err2 != nil {
@@ -89,7 +89,7 @@ func main() {
 
 	partitionTimer := time.NewTicker(60 * time.Second)
 
-	tick := time.NewTicker(60 * time.Second)
+	tick := time.NewTicker(10 * time.Second)
 
 	epochTick := time.NewTicker(5 * time.Second)
 
@@ -127,12 +127,12 @@ func main() {
 			// 	log.Printf("Value updated: %s", newValue)
 			// 	log.Printf("Log Index: %d, Term: %d", logEntry.Index, logEntry.Term)
 			// }
-			epoch = fsm.Epoch
-			if raftNode.State() == raft.Leader {
-				logrus.Warnf("State = %s , num_peers = %s, term = %s, Epoch = %d", raftNode.State(), raftNode.Stats()["num_peers"], raftNode.Stats()["term"], fsm.Epoch)
-			}
+			// epoch = fsm.Epoch
+			// if raftNode.State() == raft.Leader {
+			logrus.Warnf("State = %s, Leader = %s, num_peers = %s, Epoch = %d", raftNode.State(), raftNode.Leader(), raftNode.Stats()["num_peers"], fsm.Epoch)
+			// }
 
-			logrus.Warnf("Epoch = %d", fsm.Epoch)
+			// logrus.Warnf("Epoch = %d", fsm.Epoch)
 
 		case data := <-delegate.msgCh:
 
@@ -144,19 +144,20 @@ func main() {
 			message.Handle(messageHolder)
 
 		case epochObservation := <-epochObserver:
-			logrus.Debugf("epochObservation %d %s", epochObservation, raftNode.State())
+			epoch = epochObservation
+			logrus.Warnf("epochObservation %d %s", epoch, raftNode.State())
 			myPartions, err := GetMemberPartions(events.consistent, conf.Name)
 			if err != nil {
 				logrus.Warn(err)
 				continue
 			}
 			for _, partitionId := range myPartions {
-				partitionTree, err := PartitionMerkleTree(epochObservation-1, partitionId)
+				partitionTree, err := PartitionMerkleTree(epoch-1, partitionId)
 				if err != nil {
 					logrus.Error(err)
 					continue
 				}
-				SyncPartition(partitionTree.Root.Hash, epochObservation-1, partitionId)
+				SyncPartition(partitionTree.Root.Hash, epoch-1, partitionId)
 				// logrus.Warnf("SyncPartition CLIENT COMPLETED epoch = %d hash =  %x", epochObservation, partitionTree.Root.Hash)
 				// events.SendRequestPartitionInfoMessage(partitionTree.Root.Hash, partitionId)
 			}

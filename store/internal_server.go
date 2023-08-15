@@ -80,10 +80,8 @@ func (s *internalServer) SyncPartition(req *pb.SyncPartitionRequest, stream pb.I
 	areEqual := bytes.Equal(partitionTree.Root.Hash, req.Hash)
 
 	if areEqual {
-		logrus.Warn("SERVER HASHES ARE EQUAL")
+		logrus.Warn("SERVER HASHES ARE EQUAL.")
 		return nil
-	} else {
-		logrus.Warn("SERVER HASHES ARE NOT EQUAL!!!!!!")
 	}
 
 	partition, err := getPartition(int(req.Partition))
@@ -107,10 +105,11 @@ func (s *internalServer) SyncPartition(req *pb.SyncPartitionRequest, stream pb.I
 	for _, key := range keys {
 		valueObj := items[key]
 		value := valueObj.Object.(*pb.Value)
-		if value.Epoch < req.Epoch {
+		if value.Epoch > req.Epoch {
 			continue
 		}
 		if err := stream.Send(value); err != nil {
+			logrus.Errorf("Sever send value. %v", err)
 			return err
 		}
 	}
