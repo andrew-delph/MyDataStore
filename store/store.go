@@ -8,6 +8,7 @@ import (
 	"github.com/patrickmn/go-cache"
 	"github.com/sirupsen/logrus"
 	"github.com/syndtr/goleveldb/leveldb"
+	"google.golang.org/protobuf/proto"
 
 	pb "github.com/andrew-delph/my-key-store/proto"
 )
@@ -33,12 +34,15 @@ type GoCachePartition struct {
 	store *cache.Cache
 }
 
+type LevelDbPartition struct {
+	db *leveldb.DB
+}
+
 func NewGoCachePartition() Partition {
 	return GoCachePartition{store: cache.New(0*time.Minute, 1*time.Minute)}
 }
 
 func (partition GoCachePartition) getValue(key string) (*pb.Value, bool, error) {
-
 	valueObj, exists := partition.store.Get(key)
 	if exists {
 		value, ok := valueObj.(*pb.Value)
@@ -55,7 +59,6 @@ func (partition GoCachePartition) setValue(value *pb.Value) error {
 }
 
 func (partition GoCachePartition) Items() map[string]*pb.Value {
-
 	// Create a new map of type map[string]*pb.Value
 	itemsMap := make(map[string]*pb.Value)
 
@@ -70,6 +73,70 @@ func (partition GoCachePartition) Items() map[string]*pb.Value {
 		itemsMap[key] = value
 	}
 	return itemsMap
+}
+
+func (partition LevelDbPartition) getValue(key string) (*pb.Value, bool, error) {
+	keyBytes := []byte(key)
+	valueBytes, err := partition.db.Get(keyBytes, nil)
+	if err != nil {
+		return nil, false, err
+	}
+
+	if valueBytes == nil {
+		return nil, false, nil
+	}
+
+	value := &pb.Value{}
+
+	err = proto.Unmarshal(valueBytes, value)
+	if err != nil {
+		logrus.Error("Error: ", err)
+		return nil, false, err
+	}
+
+	return value, true, nil
+}
+
+func (partition LevelDbPartition) setValue(value *pb.Value) error {
+	key := []byte(value.Key)
+	data, err := proto.Marshal(value)
+	if err != nil {
+		logrus.Error("Error: ", err)
+		return err
+	}
+	err = partition.db.Put(key, data, nil)
+	if err != nil {
+		logrus.Error("Error: ", err)
+		return err
+	}
+	return nil
+}
+
+func (partition LevelDbPartition) Items() map[string]*pb.Value {
+	// Create a new map of type map[string]*pb.Value
+	// itemsMap := make(map[string]*pb.Value)
+
+	// // Iterate over the original map and perform the conversion
+	// for key, item := range partition.store.Items() {
+
+	// 	value, ok := item.Object.(*pb.Value)
+
+	// 	if !ok {
+	// 		continue
+	// 	}
+	// 	itemsMap[key] = value
+	// }
+	// return itemsMap
+	logrus.Fatal("LevelDbPartition.Items() no implemented.")
+	return nil
+}
+
+func NewLevelDbPartition(partitionKey string) (Partition, error) {
+	db, err := leveldb.OpenFile(partitionKey, nil)
+	if err != nil {
+		return nil, err
+	}
+	return LevelDbPartition{db: db}, nil
 }
 
 func NewGoCacheStore() GoCacheStore {
@@ -190,50 +257,48 @@ type LevelDbStore struct {
 }
 
 func NewLevelDbStore() LevelDbStore {
-	return LevelDbStore{}
+	return LevelDbStore{partitionStore: cache.New(0*time.Minute, 1*time.Minute)}
 }
 
 // Define a global cache variable
 
 // Function to set a value in the global cache
 func (store LevelDbStore) setValue(value *pb.Value) error {
-	// key := value.Key
-	// partitionId := FindPartitionID(events.consistent, key)
-	// partition, err := store.getPartition(partitionId)
-	// if partition == nil && err != nil {
-	// 	return err
-	// }
+	key := value.Key
+	partitionId := FindPartitionID(events.consistent, key)
+	partition, err := store.getPartition(partitionId)
+	if partition == nil && err != nil {
+		return err
+	}
 
-	// existingValue, exists, err := store.getValue(key)
-	// if exists && existingValue.Epoch < value.Epoch {
-	// 	return fmt.Errorf("cannot set value with a lower Epoch. set = %d existing = %d", value.Epoch, existingValue.Epoch)
-	// }
+	existingValue, exists, err := store.getValue(key)
+	if exists && existingValue.Epoch < value.Epoch {
+		return fmt.Errorf("cannot set value with a lower Epoch. set = %d existing = %d", value.Epoch, existingValue.Epoch)
+	}
 
-	// if exists && existingValue.UnixTimestamp < value.UnixTimestamp {
-	// 	return fmt.Errorf("cannot set value with a lower UnixTimestamp. set = %d existing = %d", value.UnixTimestamp, existingValue.UnixTimestamp)
-	// }
-	// partition.Set(key, value, 0)
-	return nil
+	if exists && existingValue.UnixTimestamp < value.UnixTimestamp {
+		return fmt.Errorf("cannot set value with a lower UnixTimestamp. set = %d existing = %d", value.UnixTimestamp, existingValue.UnixTimestamp)
+	}
+
+	return partition.setValue(value)
 }
 
 // Function to get a value from the global cache
 func (store LevelDbStore) getValue(key string) (*pb.Value, bool, error) {
-	// return testValue("key1", "value1"), true, nil
-	// partitionId := FindPartitionID(events.consistent, key)
+	partitionId := FindPartitionID(events.consistent, key)
 
-	// partition, err := store.getPartition(partitionId)
-	// if err != nil {
-	// 	return nil, false, err
-	// }
-	// if partition == nil {
-	// 	return nil, false, fmt.Errorf("partition is nil")
-	// }
-	// if value, found := partition.Get(key); found {
-	// 	if value, ok := value.(*pb.Value); ok {
-	// 		return value, true, nil
-	// 	}
-	// }
-	return nil, false, nil
+	partition, err := store.getPartition(partitionId)
+	if err != nil {
+		return nil, false, err
+	}
+	if partition == nil {
+		return nil, false, fmt.Errorf("partition is nil")
+	}
+	value, found, err := partition.getValue(key)
+	if found {
+		return value, true, nil
+	}
+	return nil, false, err
 }
 
 func (store LevelDbStore) getPartition(partitionId int) (Partition, error) {
@@ -247,7 +312,8 @@ func (store LevelDbStore) getPartition(partitionId int) (Partition, error) {
 		}
 	}
 
-	db, err := leveldb.OpenFile(partitionKey, nil)
+	db, err := NewLevelDbPartition(partitionKey)
+
 	if err != nil {
 		logrus.Debug(err)
 	} else {
