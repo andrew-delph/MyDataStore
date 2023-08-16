@@ -138,9 +138,9 @@ func SyncPartition(hash []byte, epoch uint64, partitionId int) {
 			}
 			defer conn.Close()
 
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-			defer cancel()
-			stream, err := client.SyncPartition(ctx, syncPartReqMsg)
+			// ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			// defer cancel()
+			stream, err := client.SyncPartition(context.Background(), syncPartReqMsg)
 			if err != nil {
 				logrus.Warnf("CLIENT SyncPartition Failed to open stream: %v", err)
 				return
