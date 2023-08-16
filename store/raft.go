@@ -41,7 +41,10 @@ func (sm *StateMachine) Restore(serialized io.ReadCloser) error {
 	return nil
 }
 
-var fsm *StateMachine
+var (
+	fsm      *StateMachine
+	raftConf *raft.Config
+)
 
 func SetupRaft() {
 	hostname, exists := os.LookupEnv("HOSTNAME")
@@ -60,10 +63,10 @@ func SetupRaft() {
 
 	raftBindAddr = fmt.Sprintf("%s:7000", localIp)
 
-	raftDir = fmt.Sprintf("./raft_%s", hostname)
+	raftDir = fmt.Sprintf("/store/raft/raft_%s", hostname)
 
 	// Clean up the previous state
-	os.RemoveAll(raftDir)
+	// os.RemoveAll(raftDir)
 
 	// Create the 'raft-data' directory if it doesn't exist
 	if err := os.MkdirAll(raftDir, 0o700); err != nil {
@@ -77,7 +80,7 @@ func SetupRaft() {
 	}
 
 	// Create a configuration for raftNode1
-	raftConf := raft.DefaultConfig()
+	raftConf = raft.DefaultConfig()
 	raftConf.LocalID = raft.ServerID(fmt.Sprintf("%s:7000", localIp))
 
 	raftLogger := hclog.New(&hclog.LoggerOptions{
@@ -121,7 +124,7 @@ func SetupRaft() {
 		},
 	})
 	if err := bootstrapFuture.Error(); err != nil {
-		logrus.Fatal(err)
+		logrus.Error(err)
 	}
 }
 
@@ -144,7 +147,7 @@ func AddVoter(otherAddr string) {
 
 	addVoterFuture := raftNode.AddVoter(config2.LocalID, raft.ServerAddress(otherAddr), 0, 0)
 	if err := addVoterFuture.Error(); err != nil {
-		logrus.Errorf("AddVoter state: %s error: %v", raftNode.State(), err)
+		logrus.Errorf("AddVoter state: %s error: %v for %s", raftNode.State(), err, otherAddr)
 	} else {
 		logrus.Warnf("ADD SERVER SUCCESS %s", otherAddr)
 	}

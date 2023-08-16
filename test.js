@@ -37,32 +37,34 @@ export let options = {
   },
 };
 
+options = {};
+
 let address = "192.168.49.2:30033";
 address = "localhost:80";
 
-// export function handleSummary(data) {
-//   let output = data;
+export function handleSummary(data) {
+  let output = data;
 
-//   delete output.metrics;
+  delete output.metrics;
 
-//   return {
-//     stdout: textSummary(output, { indent: " ", enableColors: true }),
-//   };
-// }
+  return {
+    stdout: textSummary(output, { indent: " ", enableColors: true }),
+  };
+}
 
 export function panic() {
   let baseRes = http.get(`http://${address}/panic`);
 
   check(baseRes, {
-    "Base: status was 200": (r) =>
+    "Panic: status was 200": (r) =>
       r.status === 200 || console.error(`Base Error: Status was ${r.status}`),
   });
 
   return;
 }
 export default function () {
-  // panic();
-  // return;
+  panic();
+  return;
 
   // the key value to insert
   let key = randomString(15);

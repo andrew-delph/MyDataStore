@@ -17,7 +17,7 @@ var (
 	defaultTimeout   time.Duration = 2 * time.Second
 	partitionBuckets int           = 10
 	partitionCount   int           = 20
-	epochTime        time.Duration = 60 * time.Second
+	epochTime        time.Duration = 7 * time.Second
 )
 
 func GetConf() (*memberlist.Config, *MyDelegate, *MyEventDelegate) {

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/sirupsen/logrus"
 )
@@ -46,7 +47,12 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func panicHandler(w http.ResponseWriter, r *http.Request) {
-	logrus.Panic("Recieved panic request")
+	logrus.Warn("RECIEVED PANIC!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+	fmt.Fprintf(w, "Recieved panic.")
+	go func() {
+		time.Sleep(5 * time.Second)
+		logrus.Fatal("EXCUTING PANIC!!!!!!!!!!!!!!!!!!!!!!")
+	}()
 }
 
 func startHttpServer() {

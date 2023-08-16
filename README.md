@@ -24,7 +24,6 @@ ibazel test --test_output=errors //store:go_default_test
 
 ibazel run --test_output=errors //store:go_default_test --test_arg=-run=TestStore
 
-
 # EDITOR SETUP
 
 https://github.com/bazelbuild/rules_go/wiki/Editor-setup

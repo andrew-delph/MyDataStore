@@ -64,7 +64,7 @@ func (events *MyEventDelegate) NotifyLeave(node *memberlist.Node) {
 }
 
 func (events *MyEventDelegate) NotifyUpdate(node *memberlist.Node) {
-	// skip
+	logrus.Warnf("NotifyUpdate %s", node.Name)
 }
 
 func (events *MyEventDelegate) SendRequestPartitionInfoMessage(hash []byte, partitionId int) error {

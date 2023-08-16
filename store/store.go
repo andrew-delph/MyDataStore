@@ -384,7 +384,7 @@ func (store LevelDbStore) getValue(key string) (*pb.Value, bool, error) {
 }
 
 func (store LevelDbStore) getPartition(partitionId int) (Partition, error) {
-	partitionKey := fmt.Sprintf("%s_%d", hostname, partitionId)
+	partitionKey := fmt.Sprintf("/store/data/%s_%d", hostname, partitionId)
 
 	if value, found := store.partitionStore.Get(partitionKey); found {
 		partition, ok := value.(Partition)
