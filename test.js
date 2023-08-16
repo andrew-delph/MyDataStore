@@ -25,9 +25,9 @@ export let options = {
     arrival: {
       executor: "constant-arrival-rate",
       // How long the test lasts
-      duration: "2m",
+      duration: "20m",
       // How many iterations per timeUnit
-      rate: 50,
+      rate: 100,
       // Start `rate` iterations per second
       timeUnit: "1s",
       // Pre-allocate VUs
@@ -40,15 +40,15 @@ export let options = {
 let address = "192.168.49.2:30033";
 address = "localhost:80";
 
-export function handleSummary(data) {
-  let output = data;
+// export function handleSummary(data) {
+//   let output = data;
 
-  delete output.metrics;
+//   delete output.metrics;
 
-  return {
-    stdout: textSummary(output, { indent: " ", enableColors: true }),
-  };
-}
+//   return {
+//     stdout: textSummary(output, { indent: " ", enableColors: true }),
+//   };
+// }
 
 export function panic() {
   let baseRes = http.get(`http://${address}/panic`);
@@ -78,6 +78,7 @@ export default function () {
     "Set: status was 200": (r) =>
       r.status === 200 || console.error(`Set Error: Status was ${r.status}`),
   });
+
   sleep(10);
 
   // Get a value from the map

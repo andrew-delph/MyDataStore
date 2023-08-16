@@ -215,3 +215,26 @@ func TestMerkleTree(t *testing.T) {
 
 	// assert.EqualValues(t, tree1.Root.Hash, tree2.Root.Hash, "Tree hashes don't match")
 }
+
+func TestCustomHash(t *testing.T) {
+	customHash := &CustomHash{}
+
+	for i := 0; i < 100; i++ {
+		customHash.Add([]byte(randomString(5)))
+	}
+
+	customHash.Add([]byte("world"))
+	hash1 := customHash.Hash()
+	fmt.Printf("Hash after adding 'world': %d\n", hash1)
+
+	customHash.Add([]byte("hello"))
+	hash2 := customHash.Hash()
+	fmt.Printf("Hash after adding 'hello': %d\n", hash2)
+
+	customHash.Remove([]byte("hello"))
+	hash3 := customHash.Hash()
+	fmt.Printf("Hash after removing 'hello': %d\n", hash3)
+
+	assert.Equal(t, hash1, hash3, "The hash values should be equal")
+
+}

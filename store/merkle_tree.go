@@ -13,6 +13,37 @@ import (
 	// pb "github.com/andrew-delph/my-key-store/proto"
 )
 
+var hashMod = 999999
+
+type CustomHash struct {
+	value int
+}
+
+func (h *CustomHash) Add(b []byte) {
+	sum := 0
+	for _, value := range b {
+		sum += int(value)
+	}
+	h.value += sum
+	h.value = h.value % hashMod
+}
+
+func (h *CustomHash) Remove(b []byte) {
+	sum := 0
+	for _, value := range b {
+		sum += int(value)
+	}
+	h.value -= sum
+	for h.value < 0 {
+		h.value += hashMod
+	}
+	h.value = h.value % hashMod
+}
+
+func (h *CustomHash) Hash() int {
+	return h.value
+}
+
 var merkletreeStore *cache.Cache = cache.New(0*time.Minute, 1*time.Minute)
 
 type MerkleContent struct {

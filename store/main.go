@@ -91,11 +91,9 @@ func main() {
 
 	// verify partitions every x seconds
 
-	partitionTimer := time.NewTicker(60 * time.Second)
-
 	tick := time.NewTicker(10 * time.Second)
 
-	epochTick := time.NewTicker(5 * time.Second)
+	epochTick := time.NewTicker(epochTime)
 
 	// var count uint32
 
@@ -104,8 +102,6 @@ func main() {
 	run := true
 	for run {
 		select {
-		case <-partitionTimer.C:
-			continue
 
 		case <-epochTick.C:
 
