@@ -22,7 +22,7 @@ func TestGoCacheStoreMerkleTree(t *testing.T) {
 	defer store.Close()
 
 	for i := 0; i < NumTestValues; i++ {
-		store.setValue(testValue(fmt.Sprintf("keyz%d", i), fmt.Sprintf("value%d", i)))
+		store.setValue(testValue(fmt.Sprintf("keyz%d", i), fmt.Sprintf("value%d", i),1))
 	}
 
 	startTime := time.Now()
@@ -69,7 +69,7 @@ func TestLevelDbStoreMerkleTree(t *testing.T) {
 	defer store.Close()
 
 	for i := 0; i < NumTestValues; i++ {
-		store.setValue(testValue(fmt.Sprintf("keyz%d", i), fmt.Sprintf("value%d", i)))
+		store.setValue(testValue(fmt.Sprintf("keyz%d", i), fmt.Sprintf("value%d", i),1))
 	}
 
 	startTime := time.Now()

@@ -90,7 +90,7 @@ func (s *internalServer) SyncPartition(req *pb.SyncPartitionRequest, stream pb.I
 		return err
 	}
 
-	items := partition.Items()
+	items := partition.Items(int(req.Partition), 0, int(req.Epoch))
 	// if len(items) == 0 {
 	// 	return nil, fmt.Errorf("partition.Items() is %d", 0)
 	// }

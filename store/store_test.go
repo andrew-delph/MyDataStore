@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
@@ -13,20 +14,19 @@ import (
 	pb "github.com/andrew-delph/my-key-store/proto"
 )
 
-func testValue(key, value string) *pb.Value {
+func testValue(key, value string, epoch int) *pb.Value {
 	unixTimestamp := int64(0)
-	setReqMsg := &pb.Value{Key: key, Value: value, Epoch: int64(2), UnixTimestamp: unixTimestamp}
+	setReqMsg := &pb.Value{Key: key, Value: value, Epoch: int64(epoch), UnixTimestamp: unixTimestamp}
 	return setReqMsg
 }
 
 func TestGoCacheStore(t *testing.T) {
-
 	conf, delegate, events = GetConf()
 
 	store = NewGoCacheStore()
 	defer store.Close()
 
-	err := store.setValue(testValue("key1", "value1"))
+	err := store.setValue(testValue("key1", "value1", 1))
 	if err != nil {
 		t.Error(fmt.Sprintf("setValue error: %v", err))
 	}
@@ -47,13 +47,12 @@ func TestGoCacheStore(t *testing.T) {
 }
 
 func TestLevelDbStore(t *testing.T) {
-
 	conf, delegate, events = GetConf()
 
 	store = NewLevelDbStore()
 	defer store.Close()
 
-	err := store.setValue(testValue("keyz", "value1"))
+	err := store.setValue(testValue("keyz", "value1", 1))
 	if err != nil {
 		t.Error(fmt.Sprintf("setValue error: %v", err))
 	}
@@ -84,7 +83,7 @@ func TestGoCacheStoreSpeed(t *testing.T) {
 	startTime := time.Now()
 
 	for i := 0; i < NumTestValues; i++ {
-		store.setValue(testValue(fmt.Sprintf("keyz%d", i), fmt.Sprintf("value%d", i)))
+		store.setValue(testValue(fmt.Sprintf("keyz%d", i), fmt.Sprintf("value%d", i), 1))
 	}
 
 	elapsedTime := time.Since(startTime).Seconds()
@@ -102,10 +101,11 @@ func TestLevelDbStoreSpeed(t *testing.T) {
 	startTime := time.Now()
 
 	for i := 0; i < NumTestValues; i++ {
-		store.setValue(testValue(fmt.Sprintf("keyz%d", i), fmt.Sprintf("value%d", i)))
+		store.setValue(testValue(fmt.Sprintf("keyz%d", i), fmt.Sprintf("value%d", i), 1))
 	}
 
 	elapsedTime := time.Since(startTime).Seconds()
+
 	fmt.Printf("TestLevelDbStoreSpeed Elapsed Time: %.2f seconds\n", elapsedTime)
 }
 
@@ -113,6 +113,7 @@ func createTestKey(key string, bucket, epoch int) string {
 	epochStr := epochString(epoch)
 	return fmt.Sprintf("%04d_%s_%s", bucket, epochStr, key)
 }
+
 func reverseString(s string) string {
 	runes := []rune(s)
 	for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
@@ -122,9 +123,7 @@ func reverseString(s string) string {
 }
 
 func epochString(epoch int) string {
-	epochStr := reverseString(fmt.Sprintf("%d", epoch))
-
-	epochStr = fmt.Sprintf("%d", epoch)
+	epochStr := fmt.Sprintf("%d", epoch)
 
 	keyStr := fmt.Sprintf("%s%s", strings.Repeat("0", 4-len(epochStr)), epochStr)
 
@@ -135,7 +134,7 @@ func epochRange(start, end int) (string, string) {
 	return epochString(start), epochString(end)
 }
 
-func TestLevelDbIndex(t *testing.T) {
+func TestExampleLevelDbIndex(t *testing.T) {
 	db, err := leveldb.OpenFile(randomString(10), nil)
 	defer db.Close()
 	if err != nil {
@@ -214,5 +213,63 @@ func TestLevelDbIndex(t *testing.T) {
 	if err := iter.Error(); err != nil {
 		fmt.Println("Iterator error:", err)
 	}
+}
 
+func TestLevelDbIndex(t *testing.T) {
+	hostname = randomString(5)
+
+	conf, delegate, events = GetConf()
+
+	store = NewLevelDbStore()
+	defer store.Close()
+
+	testInsertNum := 300
+
+	for i := 0; i < testInsertNum; i++ {
+		store.setValue(testValue(fmt.Sprintf("keyzds%d", i), fmt.Sprintf("value%d", i), 2))
+	}
+
+	for i := 0; i < 33; i++ {
+		store.setValue(testValue(fmt.Sprintf("keyzx%d", i), fmt.Sprintf("value%d", i), 11))
+	}
+
+	partitions := make([]int, partitionCount)
+
+	for i := 0; i < partitionCount; i++ {
+		partitions[i] = i
+	}
+
+	startTime := time.Now()
+
+	allItemsMap := make(map[string]*pb.Value)
+
+	for bucket := 0; bucket < partitionBuckets; bucket++ {
+		// for bucket := 0; bucket < 1; bucket++ {
+		items := store.Items(partitions, bucket, 0, 3)
+		logrus.Infof("bucket = %d Number of items: %d", bucket, len(items))
+
+		for itemKey, itemValue := range items {
+			allItemsMap[itemKey] = itemValue
+		}
+	}
+
+	assert.Equal(t, testInsertNum, len(allItemsMap), "allItemsMap does not have correct amount")
+
+	allItemsMap = make(map[string]*pb.Value)
+
+	for bucket := 0; bucket < partitionBuckets; bucket++ {
+		// for bucket := 0; bucket < 1; bucket++ {
+		items := store.Items(partitions, bucket, 5, 20)
+		logrus.Infof("bucket = %d Number of items: %d", bucket, len(items))
+
+		for itemKey, itemValue := range items {
+			allItemsMap[itemKey] = itemValue
+		}
+	}
+
+	assert.Equal(t, 33, len(allItemsMap), "allItemsMap does not have correct amount")
+
+	elapsedTime := time.Since(startTime).Seconds()
+
+	logrus.Infof("TestLevelDbIndex Elapsed Time: %.2f seconds\n", elapsedTime)
 }

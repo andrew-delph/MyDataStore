@@ -89,7 +89,7 @@ func PartitionMerkleTree(partitionEpoch uint64, partitionId int) (*merkletree.Me
 		return nil, err
 	}
 
-	items := partition.Items()
+	items := partition.Items(partitionId, 0, int(partitionEpoch))
 	// if len(items) == 0 {
 	// 	return nil, fmt.Errorf("partition.Items() is %d", 0)
 	// }

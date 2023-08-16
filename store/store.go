@@ -3,12 +3,14 @@ package main
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/patrickmn/go-cache"
 	"github.com/sirupsen/logrus"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/opt"
+	"github.com/syndtr/goleveldb/leveldb/util"
 	"google.golang.org/protobuf/proto"
 
 	pb "github.com/andrew-delph/my-key-store/proto"
@@ -20,13 +22,14 @@ type Store interface {
 	getValue(key string) (*pb.Value, bool, error)
 	getPartition(partitionId int) (Partition, error)
 	LoadPartitions(partitions []int)
+	Items(partions []int, bucket, lowerEpoch, upperEpoch int) map[string]*pb.Value
 	Close()
 	Clear()
 }
 type Partition interface {
 	getValue(key string) (*pb.Value, bool, error)
 	setValue(value *pb.Value) error
-	Items() map[string]*pb.Value
+	Items(bucket, lowerEpoch, upperEpoch int) map[string]*pb.Value
 }
 
 type GoCacheStore struct {
@@ -61,7 +64,7 @@ func (partition GoCachePartition) setValue(value *pb.Value) error {
 	return nil
 }
 
-func (partition GoCachePartition) Items() map[string]*pb.Value {
+func (partition GoCachePartition) Items(bucket, lowerEpoch, upperEpoch int) map[string]*pb.Value {
 	// Create a new map of type map[string]*pb.Value
 	itemsMap := make(map[string]*pb.Value)
 
@@ -100,6 +103,12 @@ func (partition LevelDbPartition) getValue(key string) (*pb.Value, bool, error) 
 	return value, true, nil
 }
 
+func IndexBucketEpoch(key string, bucket, epoch int) []byte {
+	epochStr := fmt.Sprintf("%d", epoch)
+	epochStr = fmt.Sprintf("%s%s", strings.Repeat("0", 4-len(epochStr)), epochStr)
+	return []byte(fmt.Sprintf("%04d_%s_%s", bucket, epochStr, key))
+}
+
 func (partition LevelDbPartition) setValue(value *pb.Value) error {
 	key := []byte(value.Key)
 	data, err := proto.Marshal(value)
@@ -112,22 +121,51 @@ func (partition LevelDbPartition) setValue(value *pb.Value) error {
 		logrus.Error("Error: ", err)
 		return err
 	}
+	bucketHash := CalculateHash(value.Key)
+	bucket := bucketHash % partitionBuckets
+	indexBytes := IndexBucketEpoch(value.Key, bucket, int(value.Epoch))
+
+	// logrus.Error("indexBytes ", string(indexBytes))
+	err = partition.db.Put(indexBytes, data, nil)
+	if err != nil {
+		logrus.Error("Error: ", err)
+		return err
+	}
 	return nil
 }
 
-func (partition LevelDbPartition) Items() map[string]*pb.Value {
-	// logrus.Fatal("LevelDbPartition.Items() no implemented.")
-	// return nil
+func (partition LevelDbPartition) Items(bucket, lowerEpoch, upperEpoch int) map[string]*pb.Value {
 	itemsMap := make(map[string]*pb.Value)
 	readOpts := &opt.ReadOptions{}
 
-	// Create an Iterator to iterate through all items
-	iter := partition.db.NewIterator(nil, readOpts)
+	startRange, endRange := IndexBucketEpoch("", bucket, lowerEpoch), IndexBucketEpoch("", bucket, upperEpoch)
+
+	startRangeBytes := []byte(startRange)
+	endRangeBytes := []byte(endRange)
+
+	// logrus.Errorf("startRange %s endRange %s lowerEpoch %d upperEpoch %d ", string(startRangeBytes), string(endRangeBytes), lowerEpoch, upperEpoch)
+	// startRangeBytes = []byte("00")
+	// endRangeBytes = []byte("0000_0007_")
+
+	rng := &util.Range{Start: startRangeBytes, Limit: endRangeBytes}
+
+	// rng = util.BytesPrefix(startRangeBytes)
+
+	// rng = &util.Range{Start: rng.Start, Limit: rng.Limit}
+
+	// logrus.Error("rng.Start = ", string(rng.Start), " rng.Limit = ", string(rng.Limit))
+
+	// Create an Iterator to iterate through the keys within the range
+	iter := partition.db.NewIterator(rng, readOpts)
+
+	// iter = partition.db.NewIterator(nil, readOpts)
 	defer iter.Release()
 
-	// Iterate through the items
 	for iter.Next() {
 		key := string(iter.Key())
+
+		// logrus.Error("got key: ", key)
+		logrus.Error("rng.Start = ", string(rng.Start), " rng.Limit = ", string(rng.Limit), " got key: ", key)
 
 		value, exist, err := partition.getValue(key)
 		if err != nil {
@@ -136,6 +174,7 @@ func (partition LevelDbPartition) Items() map[string]*pb.Value {
 		}
 
 		if !exist {
+			logrus.Error("Items value does not exist for key")
 			continue
 		}
 
@@ -164,6 +203,42 @@ func (store GoCacheStore) Close() {
 }
 
 func (store GoCacheStore) Clear() {
+}
+
+func (store GoCacheStore) Items(partions []int, bucket, lowerEpoch, upperEpoch int) map[string]*pb.Value {
+	logrus.Fatal("not implemented.")
+	// Create a new map of type map[string]*pb.Value
+	itemsMap := make(map[string]*pb.Value)
+
+	// // Iterate over the original map and perform the conversion
+	// for key, item := range partition.store.Items() {
+
+	// 	value, ok := item.Object.(*pb.Value)
+
+	// 	if !ok {
+	// 		continue
+	// 	}
+	// 	itemsMap[key] = value
+	// }
+	return itemsMap
+}
+
+func (store LevelDbStore) Items(partions []int, bucket, lowerEpoch, upperEpoch int) map[string]*pb.Value {
+	itemsMap := make(map[string]*pb.Value)
+
+	for _, partitionId := range partions {
+
+		partition, err := store.getPartition(partitionId)
+		if err != nil {
+			logrus.Error(err)
+			continue
+		}
+
+		for key, item := range partition.Items(bucket, lowerEpoch, upperEpoch) {
+			itemsMap[key] = item
+		}
+	}
+	return itemsMap
 }
 
 // Function to set a value in the global cache
@@ -285,6 +360,7 @@ func NewLevelDbStore() LevelDbStore {
 func (store LevelDbStore) setValue(value *pb.Value) error {
 	key := value.Key
 	partitionId := FindPartitionID(events.consistent, key)
+	// logrus.Errorf("partitionId is %d", partitionId)
 	partition, err := store.getPartition(partitionId)
 	if partition == nil && err != nil {
 		return err
@@ -369,9 +445,9 @@ func (store LevelDbStore) LoadPartitions(partitions []int) {
 func (store LevelDbStore) Close() {
 	items := store.partitionStore.Items()
 	logrus.Warnf("Level Db Close for partitions num %d", len(items))
-	for partitionId, partitionObj := range items {
+	for _, partitionObj := range items {
 		partition, ok := partitionObj.Object.(LevelDbPartition)
-		logrus.Warnf("Level Db Close for partition %s", partitionId)
+		// logrus.Warnf("Level Db Close for partition %s", partitionId)
 		if ok {
 			partition.db.Close()
 		} else {
@@ -385,10 +461,10 @@ func (store LevelDbStore) Clear() {
 
 	logrus.Warnf("Level Db Clear for partitions num %d", len(items))
 
-	for partitionId, partitionObj := range items {
+	for _, partitionObj := range items {
 		partition, ok := partitionObj.Object.(LevelDbPartition)
 		if ok {
-			logrus.Warnf("Level Db Clear for partition %s", partitionId)
+			// logrus.Warnf("Level Db Clear for partition %s", partitionId)
 			writeOpts := &opt.WriteOptions{Sync: true} // Optional: Sync data to disk
 
 			// Iterate through all keys and delete them
@@ -408,5 +484,4 @@ func (store LevelDbStore) Clear() {
 			logrus.Error("FAILED TO Clear PARTITION")
 		}
 	}
-
 }
