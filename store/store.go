@@ -143,17 +143,7 @@ func (partition LevelDbPartition) Items(bucket, lowerEpoch, upperEpoch int) map[
 	startRangeBytes := []byte(startRange)
 	endRangeBytes := []byte(endRange)
 
-	// logrus.Errorf("startRange %s endRange %s lowerEpoch %d upperEpoch %d ", string(startRangeBytes), string(endRangeBytes), lowerEpoch, upperEpoch)
-	// startRangeBytes = []byte("00")
-	// endRangeBytes = []byte("0000_0007_")
-
 	rng := &util.Range{Start: startRangeBytes, Limit: endRangeBytes}
-
-	// rng = util.BytesPrefix(startRangeBytes)
-
-	// rng = &util.Range{Start: rng.Start, Limit: rng.Limit}
-
-	// logrus.Error("rng.Start = ", string(rng.Start), " rng.Limit = ", string(rng.Limit))
 
 	// Create an Iterator to iterate through the keys within the range
 	iter := partition.db.NewIterator(rng, readOpts)
@@ -163,9 +153,6 @@ func (partition LevelDbPartition) Items(bucket, lowerEpoch, upperEpoch int) map[
 
 	for iter.Next() {
 		key := string(iter.Key())
-
-		// logrus.Error("got key: ", key)
-		logrus.Error("rng.Start = ", string(rng.Start), " rng.Limit = ", string(rng.Limit), " got key: ", key)
 
 		value, exist, err := partition.getValue(key)
 		if err != nil {
