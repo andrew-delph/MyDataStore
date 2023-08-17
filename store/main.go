@@ -121,13 +121,12 @@ func main() {
 			}
 
 			raftLock.Lock()
-
 			logEntry := raftNode.Apply(Uint64ToBytes(fsm.Epoch+1), 2*time.Second)
 
 			err := logEntry.Error()
 
 			if err == nil {
-				logrus.Warnf("UPDATE EPOCH. I am the leader. num_peers = %s E = %d", raftNode.Stats()["num_peers"], fsm.Epoch)
+				logrus.Warnf("Leader Update Epoch. Epoch = %d", fsm.Epoch)
 			} else {
 				logrus.Debugf("update fsm Err= %v", err)
 			}
