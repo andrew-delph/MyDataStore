@@ -80,9 +80,9 @@ func (s *internalServer) SyncPartition(req *pb.SyncPartitionRequest, stream pb.I
 	areEqual := bytes.Equal(partitionTree.Root.Hash, req.Hash)
 
 	if areEqual {
-		logrus.Warn("SERVER HASHES ARE EQUAL.")
 		return nil
 	}
+	logrus.Warnf("Server SyncPartition NOT EQUAL. Partition = %d Epoch = %d", req.Partition, req.Epoch)
 
 	partition, err := store.getPartition(int(req.Partition))
 	if err != nil {

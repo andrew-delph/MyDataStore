@@ -37,7 +37,7 @@ export let options = {
   },
 };
 
-// options = { iterations: 600, vus: 1 };
+options = { iterations: 100, vus: 1 };
 
 let address = "192.168.49.2:30033";
 address = "localhost:80";
@@ -85,7 +85,7 @@ export default function () {
       r.status === 200 || console.error(`Set Error: Status was ${r.status}`),
   });
 
-  sleep(10);
+  sleep(2);
 
   // Get a value from the map
   let getRes = http.get(`http://${address}/get?key=${key}`);

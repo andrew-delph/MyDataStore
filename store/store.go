@@ -110,13 +110,16 @@ func IndexBucketEpoch(key string, bucket, epoch int) []byte {
 }
 
 func (partition LevelDbPartition) setValue(value *pb.Value) error {
+	writeOpts := &opt.WriteOptions{}
+	writeOpts.Sync = true
+
 	key := []byte(value.Key)
 	data, err := proto.Marshal(value)
 	if err != nil {
 		logrus.Error("Error: ", err)
 		return err
 	}
-	err = partition.db.Put(key, data, nil)
+	err = partition.db.Put(key, data, writeOpts)
 	if err != nil {
 		logrus.Error("Error: ", err)
 		return err
@@ -126,17 +129,18 @@ func (partition LevelDbPartition) setValue(value *pb.Value) error {
 	indexBytes := IndexBucketEpoch(value.Key, bucket, int(value.Epoch))
 
 	// logrus.Error("indexBytes ", string(indexBytes))
-	err = partition.db.Put(indexBytes, data, nil)
+
+	err = partition.db.Put(indexBytes, data, writeOpts)
 	if err != nil {
 		logrus.Error("Error: ", err)
 		return err
 	}
+
 	return nil
 }
 
 func (partition LevelDbPartition) Items(bucket, lowerEpoch, upperEpoch int) map[string]*pb.Value {
 	itemsMap := make(map[string]*pb.Value)
-	readOpts := &opt.ReadOptions{}
 
 	startRange, endRange := IndexBucketEpoch("", bucket, lowerEpoch), IndexBucketEpoch("", bucket, upperEpoch)
 
@@ -146,6 +150,7 @@ func (partition LevelDbPartition) Items(bucket, lowerEpoch, upperEpoch int) map[
 	rng := &util.Range{Start: startRangeBytes, Limit: endRangeBytes}
 
 	// Create an Iterator to iterate through the keys within the range
+	readOpts := &opt.ReadOptions{}
 	iter := partition.db.NewIterator(rng, readOpts)
 
 	// iter = partition.db.NewIterator(nil, readOpts)
@@ -299,7 +304,7 @@ func (store GoCacheStore) InitStore() {
 
 func (store GoCacheStore) LoadPartitions(partitions []int) {
 	for _, partitionId := range partitions {
-		partitionFileName := fmt.Sprintf("/store/%s_%s.json", hostname, strconv.Itoa(partitionId))
+		partitionFileName := fmt.Sprintf("%s/%s_%s.json", dataPath, hostname, strconv.Itoa(partitionId))
 		partition, err := store.getPartition(partitionId)
 		if err != nil {
 			logrus.Debugf("failed getPartition: %v , %v", partitionId, err)
@@ -347,7 +352,7 @@ func NewLevelDbStore() LevelDbStore {
 func (store LevelDbStore) setValue(value *pb.Value) error {
 	key := value.Key
 	partitionId := FindPartitionID(events.consistent, key)
-	// logrus.Errorf("partitionId is %d", partitionId)
+
 	partition, err := store.getPartition(partitionId)
 	if partition == nil && err != nil {
 		return err
@@ -384,7 +389,7 @@ func (store LevelDbStore) getValue(key string) (*pb.Value, bool, error) {
 }
 
 func (store LevelDbStore) getPartition(partitionId int) (Partition, error) {
-	partitionKey := fmt.Sprintf("/store/data/%s_%d", hostname, partitionId)
+	partitionKey := fmt.Sprintf("%s/data/%s_%d", dataPath, hostname, partitionId)
 
 	if value, found := store.partitionStore.Get(partitionKey); found {
 		partition, ok := value.(Partition)
@@ -397,7 +402,7 @@ func (store LevelDbStore) getPartition(partitionId int) (Partition, error) {
 	db, err := NewLevelDbPartition(partitionKey)
 
 	if err != nil {
-		logrus.Error(err)
+		logrus.Errorf("NewLevelDbPartition err = %v", err)
 	} else {
 		err = store.partitionStore.Add(partitionKey, db, 0)
 		if err != nil {

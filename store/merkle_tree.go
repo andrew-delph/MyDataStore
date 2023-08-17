@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/md5"
 	"errors"
-	"sort"
 	"time"
 
 	"github.com/cbergoon/merkletree"
@@ -65,12 +64,22 @@ func (content MerkleContent) CalculateHash() ([]byte, error) {
 }
 
 type MerkleBucket struct {
-	content []MerkleContent
-	hash    []byte
+	contentList []MerkleContent
+	hash        []byte
 }
 
-func (content MerkleBucket) CalculateHash() ([]byte, error) {
-	return content.hash, nil
+func (bucket MerkleBucket) CalculateHash() ([]byte, error) {
+	h := md5.New()
+	for _, content := range bucket.contentList {
+		hash, err := content.CalculateHash()
+		if err != nil {
+			return nil, err
+		}
+		if _, err := h.Write(hash); err != nil {
+			return nil, err
+		}
+	}
+	return h.Sum(nil), nil
 }
 
 func (content MerkleBucket) Equals(other merkletree.Content) (bool, error) {
@@ -81,40 +90,23 @@ func (content MerkleBucket) Equals(other merkletree.Content) (bool, error) {
 	return bytes.Equal(content.hash, otherTC.hash), nil
 }
 
-func PartitionMerkleTree(partitionEpoch uint64, partitionId int) (*merkletree.MerkleTree, error) {
+func PartitionMerkleTree(treeEpoch uint64, partitionId int) (*merkletree.MerkleTree, error) {
 	partition, err := store.getPartition(partitionId)
 	if err != nil {
-
-		logrus.Debug(err)
+		logrus.Error(err)
 		return nil, err
 	}
-
-	items := partition.Items(partitionId, 0, int(partitionEpoch))
-	// if len(items) == 0 {
-	// 	return nil, fmt.Errorf("partition.Items() is %d", 0)
-	// }
-
-	// Extract keys and sort them
-	var keys []string
-	for key := range items {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
 
 	// Build content list in sorted order of keys
 	bucketList := make([]MerkleBucket, partitionBuckets)
 
 	for i := range bucketList {
-		bucketList[i] = MerkleBucket{content: []MerkleContent{}}
-	}
-
-	for _, key := range keys {
-		value := items[key]
-		if value.Epoch > int64(partitionEpoch) {
-			continue
+		bucket := MerkleBucket{contentList: []MerkleContent{}}
+		items := partition.Items(i, 0, int(treeEpoch))
+		for _, item := range items {
+			bucket.contentList = append(bucket.contentList, MerkleContent{key: item.Key, value: item.Value})
 		}
-		bucketHash := CalculateHash(key)
-		bucketList[bucketHash%partitionBuckets].content = append(bucketList[bucketHash%partitionBuckets].content, MerkleContent{key: value.Key, value: value.Value})
+		bucketList[i] = bucket
 	}
 
 	var contentList []merkletree.Content

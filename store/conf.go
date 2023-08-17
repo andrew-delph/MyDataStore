@@ -3,6 +3,7 @@ package main
 import (
 	"io"
 	"log"
+	"os"
 	"time"
 
 	"github.com/hashicorp/memberlist"
@@ -10,19 +11,27 @@ import (
 )
 
 var (
-	totalReplicas    int           = 4
-	writeResponse    int           = 2
+	totalReplicas    int           = 2
+	writeResponse    int           = 1
 	readResponse     int           = 2
 	saveInterval     time.Duration = 30 * time.Second
 	defaultTimeout   time.Duration = 2 * time.Second
 	partitionBuckets int           = 10
 	partitionCount   int           = 20
-	epochTime        time.Duration = 60 * time.Second
+	epochTime        time.Duration = 10 * time.Second
+	dataPath         string        = "/store"
 )
 
 func GetConf() (*memberlist.Config, *MyDelegate, *MyEventDelegate) {
 	delegate := GetMyDelegate()
 	events := GetMyEventDelegate()
+
+	dataPathValue, exists := os.LookupEnv("DATA_PATH")
+	if exists {
+		dataPath = dataPathValue
+	}
+
+	logrus.Infof("dataPath = %s", dataPath)
 
 	conf := memberlist.DefaultLocalConfig()
 	conf.Logger = log.New(io.Discard, "", 0)

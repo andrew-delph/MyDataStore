@@ -15,14 +15,13 @@ import (
 )
 
 func TestGoCacheStoreMerkleTree(t *testing.T) {
-
 	conf, delegate, events = GetConf()
 
 	store = NewGoCacheStore()
 	defer store.Close()
 
 	for i := 0; i < NumTestValues; i++ {
-		store.setValue(testValue(fmt.Sprintf("keyz%d", i), fmt.Sprintf("value%d", i),1))
+		store.setValue(testValue(fmt.Sprintf("keyz%d", i), fmt.Sprintf("value%d", i), 1))
 	}
 
 	startTime := time.Now()
@@ -57,7 +56,6 @@ func TestGoCacheStoreMerkleTree(t *testing.T) {
 	elapsedTime := time.Since(startTime).Seconds()
 
 	fmt.Printf("GoCache Elapsed Time: %.2f seconds\n", elapsedTime)
-
 }
 
 func TestLevelDbStoreMerkleTree(t *testing.T) {
@@ -67,39 +65,58 @@ func TestLevelDbStoreMerkleTree(t *testing.T) {
 
 	store = NewLevelDbStore()
 	defer store.Close()
+	extraKey := "Extra"
+	extraPartition := FindPartitionID(events.consistent, extraKey)
 
-	for i := 0; i < NumTestValues; i++ {
-		store.setValue(testValue(fmt.Sprintf("keyz%d", i), fmt.Sprintf("value%d", i),1))
+	for i := 0; i < 100; i++ {
+		err := store.setValue(testValue(fmt.Sprintf("keyz%d", i), fmt.Sprintf("value%d", i), 1))
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	startTime := time.Now()
 
-	tree1, err := PartitionMerkleTree(1, 1)
+	tree1, err := PartitionMerkleTree(6, extraPartition)
 	if err != nil {
 		t.Error(err)
 	}
 
-	_, err = tree1.VerifyTree()
+	tree2, err := PartitionMerkleTree(6, extraPartition)
 	if err != nil {
 		t.Error(err)
 	}
 
-	tree2, err := PartitionMerkleTree(1, 1)
+	// _, err = tree1.VerifyTree()
+	// if err != nil {
+	// 	t.Error(err)
+	// }
+
+	err = store.setValue(testValue(extraKey, "Extra2", 1))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tree3, err := PartitionMerkleTree(6, extraPartition)
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = tree1.RebuildTree()
-	if err != nil {
-		t.Error(err)
-	}
+	// err = tree1.RebuildTree()
+	// if err != nil {
+	// 	t.Error(err)
+	// }
 
-	err = tree2.RebuildTree()
-	if err != nil {
-		t.Error(err)
-	}
+	// err = tree2.RebuildTree()
+	// if err != nil {
+	// 	t.Error(err)
+	// }
+
+	logrus.Warnf("hash1 %s hash3 %s", tree1.Root.Hash, tree3.Root.Hash)
 
 	assert.EqualValues(t, tree1.Root.Hash, tree2.Root.Hash, "Tree hashes don't match")
+	assert.NotEqual(t, tree1.Root.Hash, tree3.Root.Hash, "Tree hashes match")
+	assert.NotEqual(t, tree2.Root.Hash, tree3.Root.Hash, "Tree hashes match")
 	elapsedTime := time.Since(startTime).Seconds()
 
 	fmt.Printf("LevelDb Elapsed Time: %.2f seconds\n", elapsedTime)
@@ -236,5 +253,4 @@ func TestCustomHash(t *testing.T) {
 	fmt.Printf("Hash after removing 'hello': %d\n", hash3)
 
 	assert.Equal(t, hash1, hash3, "The hash values should be equal")
-
 }

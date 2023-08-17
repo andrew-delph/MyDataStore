@@ -122,7 +122,7 @@ func SendGetMessage(key string) (string, error) {
 }
 
 func SyncPartition(hash []byte, epoch uint64, partitionId int) {
-	syncPartReqMsg := &pb.SyncPartitionRequest{Epoch: int64(epoch), Partition: int32(partitionId)}
+	syncPartReqMsg := &pb.SyncPartitionRequest{Epoch: int64(epoch), Partition: int32(partitionId), Hash: hash}
 
 	nodes, err := GetClosestNForPartition(events.consistent, partitionId, totalReplicas)
 	if err != nil {
