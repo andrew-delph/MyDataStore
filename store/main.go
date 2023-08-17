@@ -197,6 +197,7 @@ func main() {
 				err := AddVoter(node.Name)
 				if err != nil {
 					logrus.Errorf("Testing AddVoter: %v", err)
+					break
 				} else {
 					succ = fmt.Sprintf("%s,%d", succ, i)
 				}

@@ -184,7 +184,7 @@ var raftLock sync.Mutex
 
 func AddVoter(otherAddr string) error {
 	if raftNode.State() != raft.Leader {
-		return fmt.Errorf("not the leader! custom")
+		return fmt.Errorf("not the leader!")
 	}
 	err := raftNode.VerifyLeader().Error()
 	if err != nil {
