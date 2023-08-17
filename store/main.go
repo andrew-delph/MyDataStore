@@ -223,7 +223,7 @@ func main() {
 			message.Handle(messageHolder)
 
 		case epochObservation := <-epochObserver:
-			// logrus.Warnf("E= %d, S= %s, L= %s, IP= %s O1= %d O2= %d", fsm.Epoch, raftNode.State(), raftNode.Leader(), conf.Name, raftNode.AppliedIndex(), raftNode.LastIndex())
+			logrus.Warnf("E= %d, S= %s", fsm.Epoch, raftNode.State())
 			// logrus.Debugf("epochObservation %d %s", epoch, raftNode.State())
 			myPartions, err := GetMemberPartions(events.consistent, conf.Name)
 			if err != nil {

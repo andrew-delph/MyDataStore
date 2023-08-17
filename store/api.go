@@ -82,12 +82,43 @@ func leaderHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+
+func followerHandler(w http.ResponseWriter, r *http.Request) {
+	curr := raftNode.State()
+
+	if curr == raft.Follower {
+		logrus.Warnf("%s| RECIEVED PANIC!!!!!!! leaderHandler", curr)
+		go func() {
+			time.Sleep(1 * time.Second)
+			logrus.Fatalf("%s| EXCUTING PANIC!!!!!!! leaderHandler", curr)
+		}()
+		fmt.Fprintf(w, "Recieved panic.")
+	} else {
+		hijacker, ok := w.(http.Hijacker)
+		if !ok {
+			http.Error(w, "Server doesn't support hijacking", http.StatusInternalServerError)
+			return
+		}
+
+		// Hijack the connection
+		conn, _, err := hijacker.Hijack()
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Connection hijacking failed: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		// Close the connection
+		conn.Close()
+	}
+}
+
 func startHttpServer() {
 	http.HandleFunc("/", baseHandler)
 	http.HandleFunc("/set", setHandler)
 	http.HandleFunc("/get", getHandler)
 	http.HandleFunc("/panic", panicHandler)
 	http.HandleFunc("/leader", leaderHandler)
+	http.HandleFunc("/follower", followerHandler)
 
 	logrus.Info("Server is running on http://localhost:8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
