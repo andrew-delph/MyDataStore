@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"sort"
 
 	pb "github.com/andrew-delph/my-key-store/proto"
 
@@ -90,26 +89,13 @@ func (s *internalServer) SyncPartition(req *pb.SyncPartitionRequest, stream pb.I
 		return err
 	}
 
-	items := partition.Items(int(req.Partition), 0, int(req.Epoch))
-	// if len(items) == 0 {
-	// 	return nil, fmt.Errorf("partition.Items() is %d", 0)
-	// }
-
-	// Extract keys and sort them
-	var keys []string
-	for key := range items {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-
-	for _, key := range keys {
-		value := items[key]
-		if value.Epoch > req.Epoch {
-			continue
-		}
-		if err := stream.Send(value); err != nil {
-			logrus.Errorf("Sever send value. %v", err)
-			return err
+	for i := 1; i <= partitionBuckets; i++ {
+		items := partition.Items(i, 0, int(req.Epoch))
+		for _, value := range items {
+			if err := stream.Send(value); err != nil {
+				logrus.Errorf("Sever send value. %v", err)
+				return err
+			}
 		}
 	}
 

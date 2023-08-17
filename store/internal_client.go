@@ -46,6 +46,7 @@ func SendSetMessage(key, value string) error {
 				logrus.Debugf("SetRequest %s worked. msg ='%s'", currNode.String(), r.Message)
 			}
 		}(node)
+		break
 	}
 
 	timeout := time.After(defaultTimeout)

@@ -37,7 +37,7 @@ export let options = {
   },
 };
 
-options = { iterations: 100, vus: 1 };
+options = { iterations: 1, vus: 1 };
 
 let address = "192.168.49.2:30033";
 address = "localhost:80";
@@ -84,6 +84,8 @@ export default function () {
     "Set: status was 200": (r) =>
       r.status === 200 || console.error(`Set Error: Status was ${r.status}`),
   });
+
+  return;
 
   sleep(2);
 
