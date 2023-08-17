@@ -10,7 +10,8 @@
     "**/.git/objects/**": true,
     "**/.git/subtree-cache/**": true,
     "**/node_modules/*/**": true,
-    "**/*proto*/**": true
+    "**/*proto*/**": true,
+    "**/*bazel*/**": true
   },
   "files.exclude": {
     // "**/*proto*/**": true

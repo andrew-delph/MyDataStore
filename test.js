@@ -37,7 +37,7 @@ export let options = {
   },
 };
 
-options = {};
+options = { iterations: 600, vus: 1 };
 
 let address = "192.168.49.2:30033";
 address = "localhost:80";
@@ -53,8 +53,10 @@ export function handleSummary(data) {
 }
 
 export function panic() {
-  let baseRes = http.get(`http://${address}/panic`);
-
+  let addr = `http://${address}/leader`;
+  // addr = `http://${address}/panic`;
+  console.log(addr);
+  let baseRes = http.get(addr);
   check(baseRes, {
     "Panic: status was 200": (r) =>
       r.status === 200 || console.error(`Base Error: Status was ${r.status}`),
@@ -64,6 +66,7 @@ export function panic() {
 }
 export default function () {
   panic();
+  sleep(20);
   return;
 
   // the key value to insert

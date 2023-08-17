@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"sync"
@@ -39,12 +40,16 @@ var (
 	myPartions []int
 )
 
-var (
-	epoch = uint64(0)
-	store Store
-)
+var store Store
 
 func main() {
+	// time.Sleep(20 * time.Second)
+
+	defer func() {
+		if r := recover(); r != nil {
+			logrus.Warn("Recovered from panic:", r)
+		}
+	}()
 	go StartInterGrpcServer()
 	logrus.SetLevel(logrus.WarnLevel)
 	// logrus.SetFormatter(&logrus.JSONFormatter{})
@@ -63,8 +68,6 @@ func main() {
 	store.InitStore()
 
 	SetupRaft()
-
-	time.Sleep(10 * time.Second)
 
 	logrus.Infof("starting! %s", hostname)
 
@@ -111,30 +114,51 @@ func main() {
 			if raftNode.State() != raft.Leader {
 				continue
 			}
-			epoch++
 
-			logEntry := raftNode.Apply(Uint64ToBytes(epoch), 0*time.Second)
+			verifyErr := raftNode.VerifyLeader().Error()
+			if verifyErr != nil {
+				logrus.Warnf("verifyErr = %v", verifyErr)
+			}
+
+			raftLock.Lock()
+
+			logEntry := raftNode.Apply(Uint64ToBytes(fsm.Epoch+1), 2*time.Second)
 
 			err := logEntry.Error()
+
 			if err == nil {
-				logrus.Debugf("update fsm! epoch = %d", epoch)
+				logrus.Warnf("UPDATE EPOCH. I am the leader. num_peers = %s E = %d", raftNode.Stats()["num_peers"], fsm.Epoch)
 			} else {
 				logrus.Debugf("update fsm Err= %v", err)
+			}
+
+			if response, ok := (logEntry.Response()).(string); ok {
+				logrus.Debug("response = ", string(response), " ? ", hostname)
+			} else {
+				logrus.Warn("COULD NOT CAST. response = ", string(response))
+			}
+
+			raftLock.Unlock()
+
+			err = raftNode.Snapshot().Error()
+			if err != nil {
+				logrus.Error("Snapshot Error ", err)
 			}
 
 		case <-tick.C:
 
 			if raftNode.State() != raft.Leader && raftNode.State() != raft.Follower {
 				logrus.Warnf("State = %s, Leader = %s, num_peers = %s, Epoch = %d hostname = %s", raftNode.State(), raftNode.Leader(), raftNode.Stats()["num_peers"], fsm.Epoch, conf.Name)
+				// shutdownFuture := raftNode.Shutdown()
+				// logrus.Warnf("shutdownFuture complete.")
+				// shutdownErr := shutdownFuture.Error()
+				// if shutdownErr != nil {
+				// 	logrus.Warnf("shutdownErr = %v", shutdownErr)
+				// } else {
+				// 	logrus.Warnf("SHUTDOWN SUCCESS")
+				// }
 
-				shutdownErr := raftNode.Shutdown().Error()
-				if shutdownErr != nil {
-					logrus.Warnf("shutdownErr = %v", shutdownErr)
-				} else {
-					logrus.Warnf("SHUTDOWN SUCCESS")
-				}
-
-				SetupRaft()
+				// SetupRaft()
 
 				// reloadErr := raftNode.ReloadConfig(raftNode.ReloadableConfig())
 				// if reloadErr != nil {
@@ -157,12 +181,37 @@ func main() {
 				// if joinErr != nil {
 				// 	logrus.Warnf("joinErr = %v num = %d", joinErr, num)
 				// }
-
 			} else if raftNode.State() == raft.Leader {
-				logrus.Warnf("I am the leader. num_peers = %s", raftNode.Stats()["num_peers"])
+				// succ := ""
+				// for i, node := range clusterNodes.Members() {
+				// 	// logrus.Warnf("node name = %s addr = %s", node.Name, node.Addr.String())
+				// 	err := AddVoter(node.Name)
+				// 	if err != nil {
+				// 		logrus.Errorf("Testing AddVoter: %v", err)
+				// 	} else {
+				// 		succ = fmt.Sprintf("%s,%d", succ, i)
+				// 	}
+				// }
+				// logrus.Warn("succ= ", succ)
 			}
 
-			logrus.Debugf("Epoch = %d", fsm.Epoch)
+			if raftNode.Leader() == "" {
+				logrus.Warn("NO LEADER!")
+				// bootstrapFuture := raftNode.BootstrapCluster(raft.Configuration{
+				// 	Servers: []raft.Server{
+				// 		{
+				// 			Suffrage: raft.Voter,
+				// 			ID:       raftConf.LocalID,
+				// 			Address:  raft.ServerAddress(transport.LocalAddr()),
+				// 		},
+				// 	},
+				// })
+				// if err := bootstrapFuture.Error(); err != nil {
+				// 	logrus.Errorf("bootstrapFuture %v", err)
+				// }
+			}
+
+			// logrus.Warnf("E= %d, S= %s, L= %s, IP= %s O1= %d O2= %d", fsm.Epoch, raftNode.State(), raftNode.Leader(), conf.Name, raftNode.AppliedIndex(), raftNode.LastIndex())
 
 		case data := <-delegate.msgCh:
 
@@ -174,29 +223,50 @@ func main() {
 			message.Handle(messageHolder)
 
 		case epochObservation := <-epochObserver:
-			epoch = epochObservation
-			logrus.Debugf("epochObservation %d %s", epoch, raftNode.State())
+			// logrus.Warnf("E= %d, S= %s, L= %s, IP= %s O1= %d O2= %d", fsm.Epoch, raftNode.State(), raftNode.Leader(), conf.Name, raftNode.AppliedIndex(), raftNode.LastIndex())
+			// logrus.Debugf("epochObservation %d %s", epoch, raftNode.State())
 			myPartions, err := GetMemberPartions(events.consistent, conf.Name)
 			if err != nil {
 				logrus.Warn(err)
 				continue
 			}
 			for _, partitionId := range myPartions {
-				partitionTree, err := PartitionMerkleTree(epoch-1, partitionId)
+				partitionTree, err := PartitionMerkleTree(epochObservation-1, partitionId)
 				if err != nil {
 					logrus.Error(err)
 					continue
 				}
-				SyncPartition(partitionTree.Root.Hash, epoch-1, partitionId)
+				SyncPartition(partitionTree.Root.Hash, epochObservation-1, partitionId)
 				// logrus.Warnf("SyncPartition CLIENT COMPLETED epoch = %d hash =  %x", epochObservation, partitionTree.Root.Hash)
 				// events.SendRequestPartitionInfoMessage(partitionTree.Root.Hash, partitionId)
 			}
+		case temp := <-raftNode.LeaderCh():
+			if !temp {
+				logrus.Warnf("leader change. %t %s !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1", temp, raftNode.State())
+				continue
+			}
+			logrus.Warnf("leader change. %t %s %d", temp, raftNode.State(), fsm.Epoch)
+
+			logrus.Warnf("raftNode.VerifyLeader().Error() %v", raftNode.VerifyLeader().Error())
+			succ := ""
+			for i, node := range clusterNodes.Members() {
+				// logrus.Warnf("node name = %s addr = %s", node.Name, node.Addr.String())
+				// go func(node *memberlist.Node) {
+				err := AddVoter(node.Name)
+				if err != nil {
+					logrus.Errorf("Testing AddVoter: %v", err)
+				} else {
+					succ = fmt.Sprintf("%s,%d", succ, i)
+				}
+				// }(node)
+			}
+			logrus.Warnf("leader change DONE")
 		}
 	}
 
 	// grpcStart()
 
-	logrus.Info("bye..............................")
+	logrus.Warn("bye..............................")
 }
 
 var (

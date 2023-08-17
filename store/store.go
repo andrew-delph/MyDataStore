@@ -397,7 +397,7 @@ func (store LevelDbStore) getPartition(partitionId int) (Partition, error) {
 	db, err := NewLevelDbPartition(partitionKey)
 
 	if err != nil {
-		logrus.Debug(err)
+		logrus.Error(err)
 	} else {
 		err = store.partitionStore.Add(partitionKey, db, 0)
 		if err != nil {

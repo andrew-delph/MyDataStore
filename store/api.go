@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/hashicorp/raft"
 	"github.com/sirupsen/logrus"
 )
 
@@ -16,9 +17,6 @@ func setHandler(w http.ResponseWriter, r *http.Request) {
 	// Get the key and value from the query parameters
 	key := r.URL.Query().Get("key")
 	value := r.URL.Query().Get("value")
-
-	// Store the value associated with the key
-	// store[key] = value
 
 	err := SendSetMessage(key, value)
 	if err != nil {
@@ -47,12 +45,41 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func panicHandler(w http.ResponseWriter, r *http.Request) {
-	logrus.Warn("RECIEVED PANIC!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-	fmt.Fprintf(w, "Recieved panic.")
+	curr := raftNode.State()
 	go func() {
-		time.Sleep(5 * time.Second)
-		logrus.Fatal("EXCUTING PANIC!!!!!!!!!!!!!!!!!!!!!!")
+		time.Sleep(1 * time.Second)
+		logrus.Fatalf("%s| EXCUTING PANIC!!!!!!!!!!!!!!!!!!!!!!", curr)
 	}()
+	fmt.Fprintf(w, "Recieved panic.")
+}
+
+func leaderHandler(w http.ResponseWriter, r *http.Request) {
+	curr := raftNode.State()
+
+	if curr == raft.Leader {
+		logrus.Warnf("%s| RECIEVED PANIC!!!!!!! leaderHandler", curr)
+		go func() {
+			time.Sleep(1 * time.Second)
+			logrus.Fatalf("%s| EXCUTING PANIC!!!!!!! leaderHandler", curr)
+		}()
+		fmt.Fprintf(w, "Recieved panic.")
+	} else {
+		hijacker, ok := w.(http.Hijacker)
+		if !ok {
+			http.Error(w, "Server doesn't support hijacking", http.StatusInternalServerError)
+			return
+		}
+
+		// Hijack the connection
+		conn, _, err := hijacker.Hijack()
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Connection hijacking failed: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		// Close the connection
+		conn.Close()
+	}
 }
 
 func startHttpServer() {
@@ -60,6 +87,7 @@ func startHttpServer() {
 	http.HandleFunc("/set", setHandler)
 	http.HandleFunc("/get", getHandler)
 	http.HandleFunc("/panic", panicHandler)
+	http.HandleFunc("/leader", leaderHandler)
 
 	logrus.Info("Server is running on http://localhost:8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {

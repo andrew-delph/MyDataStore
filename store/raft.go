@@ -4,10 +4,10 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -28,23 +28,50 @@ func (sm *StateMachine) Apply(logEntry *raft.Log) interface{} {
 	epoch := binary.BigEndian.Uint64(logEntry.Data)
 	sm.Epoch = epoch
 	epochObserver <- epoch
-	return nil
+	return hostname
 }
 
 func (sm *StateMachine) Snapshot() (raft.FSMSnapshot, error) {
-	// Implement snapshot functionality if needed
-	return nil, nil
+	return sm, nil
+}
+
+func (sm *StateMachine) Persist(sink raft.SnapshotSink) error {
+	sink.Write(Uint64ToBytes(sm.Epoch))
+	return sink.Close()
+}
+
+func (sm *StateMachine) Release() {
 }
 
 func (sm *StateMachine) Restore(serialized io.ReadCloser) error {
 	// Implement restoring state from a snapshot if needed
-	return nil
+	data := make([]byte, 8)
+	_, err := serialized.Read(data)
+	if err != nil {
+		logrus.Errorf("Restore error = %v", err)
+		return err
+	}
+
+	restoreEpoch := binary.BigEndian.Uint64(data)
+	logrus.Warnf("Restore DATA ---- %d %d %d", restoreEpoch, sm.Epoch, fsm.Epoch)
+
+	sm.Epoch = restoreEpoch
+	fsm.Epoch = restoreEpoch
+
+	return serialized.Close()
 }
 
 var (
 	fsm      *StateMachine
 	raftConf *raft.Config
 )
+
+var (
+	logStore      *raftboltdb.BoltStore
+	stableStore   *raftboltdb.BoltStore
+	snapshotStore *raft.FileSnapshotStore
+)
+var transport *raft.NetworkTransport
 
 func SetupRaft() {
 	hostname, exists := os.LookupEnv("HOSTNAME")
@@ -74,7 +101,14 @@ func SetupRaft() {
 	}
 
 	// Create a network transport for raftNode1
-	transport, err := getTransport(raftBindAddr)
+	if transport != nil {
+		err = transport.Close()
+		if err != nil {
+			logrus.Fatal(err)
+		}
+	}
+
+	transport, err = getTransport(raftBindAddr)
 	if err != nil {
 		logrus.Fatal(err)
 	}
@@ -85,30 +119,38 @@ func SetupRaft() {
 
 	raftLogger := hclog.New(&hclog.LoggerOptions{
 		Name:   "discard",
-		Output: ioutil.Discard,
+		Output: io.Discard,
 		Level:  hclog.NoLevel,
 	})
-
 	raftConf.Logger = raftLogger
-
-	raftConf.LogLevel = "ERROR"
+	// raftConf.LogLevel = "ERROR"
 
 	// Create a store to persist Raft logrus entries
-	store, err := raftboltdb.NewBoltStore(filepath.Join(raftDir, "raft.db"))
-	if err != nil {
-		logrus.Fatal(err)
+	if logStore == nil {
+		logStore, err = raftboltdb.NewBoltStore(filepath.Join(raftDir, "log.db"))
+		if err != nil {
+			logrus.Fatal(err)
+		}
+	}
+
+	if stableStore == nil {
+		stableStore, err = raftboltdb.NewBoltStore(filepath.Join(raftDir, "stable.db"))
+		if err != nil {
+			logrus.Fatal(err)
+		}
 	}
 
 	// Create a snapshot store
-	snapshotStore, err := raft.NewFileSnapshotStore(raftDir, 2, os.Stdout)
-	if err != nil {
-		logrus.Fatal(err)
+	if snapshotStore == nil {
+		snapshotStore, err = raft.NewFileSnapshotStore(filepath.Join(raftDir, "snap"), 2, io.Discard)
+		if err != nil {
+			logrus.Fatal(err)
+		}
 	}
 
 	fsm = &StateMachine{} // Your state machine instance
-
 	// Create raftNode
-	raftNode, err = raft.NewRaft(raftConf, fsm, store, store, snapshotStore, transport)
+	raftNode, err = raft.NewRaft(raftConf, fsm, logStore, stableStore, snapshotStore, transport)
 	if err != nil {
 		logrus.Fatal(err)
 	}
@@ -124,8 +166,10 @@ func SetupRaft() {
 		},
 	})
 	if err := bootstrapFuture.Error(); err != nil {
-		logrus.Error(err)
+		logrus.Errorf("bootstrapFuture %v", err)
 	}
+
+	logrus.Warnf("after SetupRaft state = %s", raftNode.State())
 }
 
 func getTransport(bindAddr string) (*raft.NetworkTransport, error) {
@@ -136,28 +180,38 @@ func getTransport(bindAddr string) (*raft.NetworkTransport, error) {
 	return raft.NewTCPTransport(bindAddr, addr, 3, 10*time.Second, os.Stderr)
 }
 
-func AddVoter(otherAddr string) {
+var raftLock sync.Mutex
+
+func AddVoter(otherAddr string) error {
+	if raftNode.State() != raft.Leader {
+		return fmt.Errorf("not the leader! custom")
+	}
+	err := raftNode.VerifyLeader().Error()
+	if err != nil {
+		return err
+	}
+
+	raftLock.Lock()         // Lock the critical section
+	defer raftLock.Unlock() // Ensure the lock is released once the function completes
+
 	otherAddr = fmt.Sprintf("%s:7000", otherAddr)
 
 	config2 := raft.DefaultConfig()
 	config2.LocalID = raft.ServerID(otherAddr)
-	if raftNode.State() != raft.Leader {
-		return
-	}
 
-	addVoterFuture := raftNode.AddVoter(config2.LocalID, raft.ServerAddress(otherAddr), 0, 0)
-	if err := addVoterFuture.Error(); err != nil {
-		logrus.Errorf("AddVoter state: %s error: %v for %s", raftNode.State(), err, otherAddr)
-	} else {
-		logrus.Warnf("ADD SERVER SUCCESS %s", otherAddr)
-	}
+	addVoterFuture := raftNode.AddVoter(config2.LocalID, raft.ServerAddress(otherAddr), 0, time.Second)
+	return addVoterFuture.Error()
 }
 
 func RemoveServer(otherAddr string) {
-	removeServerFuture := raftNode.RemoveServer(raft.ServerID(otherAddr), 0, 0)
 	if raftNode.State() != raft.Leader {
 		return
 	}
+
+	raftLock.Lock()         // Lock the critical section
+	defer raftLock.Unlock() // Ensure the lock is released once the function completes
+
+	removeServerFuture := raftNode.RemoveServer(raft.ServerID(otherAddr), 0, time.Second)
 
 	if err := removeServerFuture.Error(); err != nil {
 		logrus.Errorf("RemoveServer state: %s error: %v", raftNode.State(), err)
@@ -165,14 +219,3 @@ func RemoveServer(otherAddr string) {
 		logrus.Warnf("REMOVE SERVER SUCCESS %s", otherAddr)
 	}
 }
-
-type StateMachineObserver struct{}
-
-func (o *StateMachineObserver) ApplyLog(logEntry *raft.Log) interface{} {
-	// This method is called when a log entry is applied to the state machine
-	// You can fire an event here or perform any necessary actions
-	fmt.Println("Log applied to the state machine:", logEntry.Data)
-	return nil
-}
-
-func (o *StateMachineObserver) Snapshot() {}
