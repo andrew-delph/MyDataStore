@@ -14,7 +14,30 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/proto"
 )
+
+func SendSetMessageNode(addr string, setReqMsg *pb.Value, responseCh chan *pb.StandardResponse, errorCh chan error) {
+	conn, client, err := GetClient(addr)
+	if err != nil {
+		logrus.Errorf("GetClient for node %s", addr)
+		errorCh <- err
+	}
+	defer conn.Close()
+
+	// Create a new context for the goroutine
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	r, err := client.SetRequest(ctx, setReqMsg)
+	if err != nil {
+		logrus.Errorf("Failed SetRequest for node %s", addr)
+		errorCh <- err
+	} else {
+		responseCh <- r
+		logrus.Debugf("SetRequest %s worked. msg ='%s'", addr, r.Message)
+	}
+}
 
 func SendSetMessage(key, value string) error {
 	unixTimestamp := time.Now().Unix()
@@ -29,27 +52,7 @@ func SendSetMessage(key, value string) error {
 	errorCh := make(chan error, N)
 
 	for _, node := range nodes {
-		go func(currNode HashRingMember) {
-			conn, client, err := GetClient(currNode.String())
-			if err != nil {
-				logrus.Errorf("GetClient for node %s", currNode.String())
-				errorCh <- err
-			}
-			defer conn.Close()
-
-			// Create a new context for the goroutine
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
-
-			r, err := client.SetRequest(ctx, setReqMsg)
-			if err != nil {
-				logrus.Errorf("Failed SetRequest for node %s", currNode.String())
-				errorCh <- err
-			} else {
-				responseCh <- r
-				logrus.Debugf("SetRequest %s worked. msg ='%s'", currNode.String(), r.Message)
-			}
-		}(node)
+		go SendSetMessageNode(node.String(), setReqMsg, responseCh, errorCh)
 		break
 	}
 
@@ -79,12 +82,19 @@ func SendGetMessage(key string) (string, error) {
 		return "", err
 	}
 
-	resCh := make(chan *pb.Value, len(nodes))
+	type Res struct {
+		Value *pb.Value
+		Addr  string
+	}
+	test := Res{}
+	logrus.Info(test)
+
+	resCh := make(chan *Res, len(nodes))
 	errorCh := make(chan error, len(nodes))
 
 	for i, node := range nodes {
-		go func(i int, node HashRingMember) {
-			conn, client, err := GetClient(node.String())
+		go func(i int, addr string) {
+			conn, client, err := GetClient(addr)
 			if err != nil {
 				errorCh <- err
 				return
@@ -98,44 +108,73 @@ func SendGetMessage(key string) (string, error) {
 			if err != nil {
 				errorCh <- err
 			} else {
-				resCh <- res
+				resCh <- &Res{Value: res, Addr: addr}
 			}
-		}(i, node)
+		}(i, node.String())
 	}
 
 	timeout := time.After(defaultTimeout)
 
-	recievedCount := 0
-
 	var recentValue *pb.Value
 
-	for responseCount := 0; responseCount < len(nodes); responseCount++ {
-		select {
-		case value := <-resCh:
+	var resList []*Res
 
-			logrus.Warnf("value.Key %s.", value.Key)
-			if recentValue == nil {
-				recentValue = value
-			} else if recentValue.Epoch < value.Epoch && recentValue.UnixTimestamp < value.UnixTimestamp {
-				recentValue = value
+	// defer Read Repair
+	defer func() {
+		logrus.Debugf("Read Repair. recentValue = %v len(resList) = %d len(nodes) = %d", recentValue, len(resList), len(nodes))
+		for len(resList) < len(nodes) {
+			select {
+			case res := <-resCh:
+				if recentValue == nil {
+					recentValue = res.Value
+				} else if recentValue.Epoch < res.Value.Epoch && recentValue.UnixTimestamp < res.Value.UnixTimestamp {
+					recentValue = res.Value
+				}
+				resList = append(resList, res)
+			case err := <-errorCh:
+				logrus.Debugf("GET ERROR = %v", err)
+				resList = append(resList, nil) // avoid waiting on errors.
 			}
-			recievedCount++
+		}
+		if recentValue == nil {
+			logrus.Debugf("Read Repair.")
+			return
+		}
+		for _, res := range resList {
+			if proto.Equal(res.Value, recentValue) == false {
+				logrus.Debugf("Read Repair addr = %s", res.Addr)
+				go SendSetMessageNode(res.Addr, recentValue, make(chan *pb.StandardResponse), make(chan error))
+			}
+		}
+	}()
+
+	for len(resList) < R {
+		select {
+		case res := <-resCh:
+
+			logrus.Debugf("value.Key %s. add = %s", res.Value.Key, res.Addr)
+			if recentValue == nil {
+				recentValue = res.Value
+			} else if recentValue.Epoch < res.Value.Epoch && recentValue.UnixTimestamp < res.Value.UnixTimestamp {
+				recentValue = res.Value
+			}
+			resList = append(resList, res)
 		case err := <-errorCh:
 			logrus.Debugf("GET ERROR = %v", err)
+			resList = append(resList, nil) // avoid waiting on errors.
 
 		case <-timeout:
 			return "", fmt.Errorf("timed out waiting for responses")
 		}
-		if recievedCount >= R {
-			if recentValue == nil {
-				return "", fmt.Errorf("Value doesnt exist.")
-			} else {
-				return recentValue.Value, nil
-			}
+	}
+	if len(resList) >= R {
+		if recentValue == nil {
+			return "", fmt.Errorf("Value doesnt exist.")
+		} else {
+			return recentValue.Value, nil
 		}
 	}
-
-	return "", fmt.Errorf("value not found. expected = %d recievedCount= %d", R, recievedCount)
+	return "", fmt.Errorf("value not found. expected = %d recievedCount= %d", R, len(resList))
 }
 
 func SyncPartition(addr string, hash []byte, epoch uint64, partitionId int) {

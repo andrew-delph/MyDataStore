@@ -18,7 +18,7 @@ var (
 	defaultTimeout   time.Duration = 2 * time.Second
 	partitionBuckets int           = 10
 	partitionCount   int           = 10
-	epochTime        time.Duration = 10 * time.Second
+	epochTime        time.Duration = 30 * time.Second
 	dataPath         string        = "/store"
 )
 
