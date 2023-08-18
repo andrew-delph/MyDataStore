@@ -7,7 +7,6 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"sync"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -181,7 +180,7 @@ func getTransport(bindAddr string) (*raft.NetworkTransport, error) {
 	return raft.NewTCPTransport(bindAddr, addr, 3, 10*time.Second, os.Stderr)
 }
 
-var raftLock sync.Mutex
+// var raftLock sync.Mutex
 
 func AddVoter(otherAddr string) error {
 	if raftNode.State() != raft.Leader {
@@ -192,8 +191,8 @@ func AddVoter(otherAddr string) error {
 		return err
 	}
 
-	raftLock.Lock()         // Lock the critical section
-	defer raftLock.Unlock() // Ensure the lock is released once the function completes
+	// raftLock.Lock()         // Lock the critical section
+	// defer raftLock.Unlock() // Ensure the lock is released once the function completes
 
 	otherAddr = fmt.Sprintf("%s:7000", otherAddr)
 
@@ -209,8 +208,8 @@ func RemoveServer(otherAddr string) {
 		return
 	}
 
-	raftLock.Lock()         // Lock the critical section
-	defer raftLock.Unlock() // Ensure the lock is released once the function completes
+	// raftLock.Lock()         // Lock the critical section
+	// defer raftLock.Unlock() // Ensure the lock is released once the function completes
 
 	removeServerFuture := raftNode.RemoveServer(raft.ServerID(otherAddr), 0, time.Second)
 

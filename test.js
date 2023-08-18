@@ -54,7 +54,7 @@ export function handleSummary(data) {
 
 export function panic() {
   let addr = `http://${address}/leader`;
-  // addr = `http://${address}/follower`;
+  addr = `http://${address}/follower`;
   // addr = `http://${address}/panic`;
   console.log(addr);
   let baseRes = http.get(addr);
@@ -85,7 +85,7 @@ export default function () {
       r.status === 200 || console.error(`Set Error: Status was ${r.status}`),
   });
 
-  // sleep(1);
+  sleep(10);
 
   // Get a value from the map
   let getRes = http.get(`http://${address}/get?key=${key}`);

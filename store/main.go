@@ -124,8 +124,8 @@ func main() {
 				logrus.Warnf("verifyErr = %v", verifyErr)
 			}
 
-			raftLock.Lock()
-			logEntry := raftNode.Apply(Uint64ToBytes(fsm.Epoch+1), 2*time.Second)
+			// raftLock.Lock()
+			logEntry := raftNode.Apply(Uint64ToBytes(fsm.Epoch+1), 0)
 
 			err := logEntry.Error()
 
@@ -141,7 +141,7 @@ func main() {
 				logrus.Warn("COULD NOT CAST. response = ", string(response))
 			}
 
-			raftLock.Unlock()
+			// raftLock.Unlock()
 
 			err = raftNode.Snapshot().Error()
 			if err != nil {
@@ -169,7 +169,7 @@ func main() {
 			message.Handle(messageHolder)
 
 		case epochObservation := <-epochObserver:
-			logrus.Debugf("E= %d, S= %s", fsm.Epoch, raftNode.State())
+			logrus.Warnf("E= %d", fsm.Epoch)
 			// logrus.Debugf("epochObservation %d %s", epoch, raftNode.State())
 			myPartions, err := GetMemberPartions(events.consistent, conf.Name)
 			if err != nil {
