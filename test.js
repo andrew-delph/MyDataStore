@@ -37,7 +37,7 @@ export let options = {
   },
 };
 
-options = { iterations: 100, vus: 5 };
+options = { iterations: 100, vus: 20 };
 
 let address = "192.168.49.2:30033";
 address = "localhost:80";
@@ -85,7 +85,7 @@ export default function () {
       r.status === 200 || console.error(`Set Error: Status was ${r.status}`),
   });
 
-  sleep(1);
+  // sleep(1);
 
   // Get a value from the map
   let getRes = http.get(`http://${address}/get?key=${key}`);
@@ -100,6 +100,21 @@ export default function () {
         `Get Error: Body does not contain ${value}. body = ${r.body}`
       ),
   });
+
+  // sleep(15);
+
+  // // Get a value from the map
+  // getRes = http.get(`http://${address}/get?key=${key}`);
+  // check(getRes, {
+  //   "Get2: status was 200": (r) =>
+  //     r.status === 200 ||
+  //     console.error(`Get Error: Status was ${r.status} body = ${r.body}`),
+  //   "Get2: body contains testValue": (r) =>
+  //     r.body.indexOf(value) !== -1 ||
+  //     console.error(
+  //       `Get Error: Body does not contain ${value}. body = ${r.body}`
+  //     ),
+  // });
 
   // console.log("getRes.body", getRes.body);
 

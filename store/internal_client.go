@@ -53,7 +53,6 @@ func SendSetMessage(key, value string) error {
 
 	for _, node := range nodes {
 		go SendSetMessageNode(node.String(), setReqMsg, responseCh, errorCh)
-		break
 	}
 
 	timeout := time.After(defaultTimeout)
@@ -126,9 +125,13 @@ func SendGetMessage(key string) (string, error) {
 			select {
 			case res := <-resCh:
 				if recentValue == nil {
+					logrus.Debugf("setting recentValue nil.")
 					recentValue = res.Value
-				} else if recentValue.Epoch < res.Value.Epoch && recentValue.UnixTimestamp < res.Value.UnixTimestamp {
+				} else if recentValue.Epoch <= res.Value.Epoch && recentValue.UnixTimestamp < res.Value.UnixTimestamp {
+					logrus.Debugf("update recentValue addr = %s value = %v", res.Addr, res.Value.Value)
 					recentValue = res.Value
+				} else {
+					logrus.Debugf("compare %v %v %v %v %v  %v %v....", recentValue.Epoch, res.Value.Epoch, recentValue.Epoch < res.Value.Epoch, recentValue.UnixTimestamp, res.Value.UnixTimestamp, recentValue.UnixTimestamp < res.Value.UnixTimestamp, res.Value.Value)
 				}
 				resList = append(resList, res)
 			case err := <-errorCh:
@@ -137,12 +140,14 @@ func SendGetMessage(key string) (string, error) {
 			}
 		}
 		if recentValue == nil {
-			logrus.Debugf("Read Repair.")
+			logrus.Warn("Nil Read Repair.")
 			return
 		}
+		// logrus.Warnf("Read Repair value = %v", recentValue)
 		for _, res := range resList {
+			// logrus.Warnf("Read Repair addr = %s recentValue = %v value = %v", res.Addr, recentValue.Value, res.Value.Value)
 			if proto.Equal(res.Value, recentValue) == false {
-				logrus.Debugf("Read Repair addr = %s", res.Addr)
+				logrus.Warnf("Read Repair addr = %s recentValue = %v value = %v", res.Addr, recentValue.Value, res.Value.Value)
 				go SendSetMessageNode(res.Addr, recentValue, make(chan *pb.StandardResponse), make(chan error))
 			}
 		}
@@ -152,15 +157,18 @@ func SendGetMessage(key string) (string, error) {
 		select {
 		case res := <-resCh:
 
-			logrus.Debugf("value.Key %s. add = %s", res.Value.Key, res.Addr)
 			if recentValue == nil {
+				logrus.Debugf("setting recentValue nil.")
 				recentValue = res.Value
-			} else if recentValue.Epoch < res.Value.Epoch && recentValue.UnixTimestamp < res.Value.UnixTimestamp {
+			} else if recentValue.Epoch <= res.Value.Epoch && recentValue.UnixTimestamp < res.Value.UnixTimestamp {
+				logrus.Debugf("update recentValue addr = %s value = %v", res.Addr, res.Value.Value)
 				recentValue = res.Value
+			} else {
+				logrus.Debugf("compare %v %v %v %v %v  %v %v....", recentValue.Epoch, res.Value.Epoch, recentValue.Epoch < res.Value.Epoch, recentValue.UnixTimestamp, res.Value.UnixTimestamp, recentValue.UnixTimestamp < res.Value.UnixTimestamp, res.Value.Value)
 			}
 			resList = append(resList, res)
 		case err := <-errorCh:
-			logrus.Debugf("GET ERROR = %v", err)
+			logrus.Warnf("GET ERROR = %v !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", err)
 			resList = append(resList, nil) // avoid waiting on errors.
 
 		case <-timeout:

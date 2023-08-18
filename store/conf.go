@@ -11,14 +11,14 @@ import (
 )
 
 var (
-	N                int           = 2
+	N                int           = 3
 	W                int           = 1
 	R                int           = 2
 	saveInterval     time.Duration = 30 * time.Second
 	defaultTimeout   time.Duration = 2 * time.Second
-	partitionBuckets int           = 10
-	partitionCount   int           = 10
-	epochTime        time.Duration = 30 * time.Second
+	partitionBuckets int           = 100
+	partitionCount   int           = 100
+	epochTime        time.Duration = 60 * time.Second
 	dataPath         string        = "/store"
 )
 
