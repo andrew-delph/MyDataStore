@@ -17,6 +17,9 @@ service InternalNodeService {
     }
 
     rpc SyncPartition(SyncPartitionRequest) returns (stream Value);
+
+
+    rpc VerifyMerkleTree(stream VerifyMerkleTreeNodeRequest) returns (stream VerifyMerkleTreeNodeResponse);
   
 }
 
@@ -44,4 +47,15 @@ message SyncPartitionRequest{
   int64 epoch = 1;
   int32 partition = 2;
   bytes hash = 3;
+}
+
+
+message VerifyMerkleTreeNodeRequest{
+  int64 epoch = 1;
+  int32 partition = 2;
+  bytes hash = 3;
+}
+
+message VerifyMerkleTreeNodeResponse{
+  bool isEqual = 1;
 }

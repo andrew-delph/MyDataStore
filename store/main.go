@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"sync"
@@ -173,15 +174,30 @@ func main() {
 				continue
 			}
 			for _, partitionId := range myPartions {
-				partitionTree, err := PartitionMerkleTree(epochObservation-1, partitionId)
+
+				nodes, err := GetClosestNForPartition(events.consistent, partitionId, totalReplicas)
 				if err != nil {
 					logrus.Error(err)
 					continue
 				}
-				SyncPartition(partitionTree.Root.Hash, epochObservation-1, partitionId)
 
-				// logrus.Warnf("SyncPartition CLIENT COMPLETED epoch = %d hash =  %x", epochObservation, partitionTree.Root.Hash)
-				// events.SendRequestPartitionInfoMessage(partitionTree.Root.Hash, partitionId)
+				for _, node := range nodes {
+					unsyncedBuckets, err := VerifyMerkleTree(node.String(), epochObservation-1, partitionId)
+					if err != nil && err != io.EOF {
+						logrus.Debugf("VerifyMerkleTree unsyncedBuckets = %v err = %v ", unsyncedBuckets, err)
+					} else if err != nil {
+						logrus.Errorf("VerifyMerkleTree unsyncedBuckets = %v err = %v ", unsyncedBuckets, err)
+					}
+
+					if len(unsyncedBuckets) > 0 {
+						logrus.Warnf("CLIENT unsyncedBuckets: %v", unsyncedBuckets)
+					}
+					// SyncPartition(partitionTree.Root.Hash, epochObservation-1, partitionId)
+
+					// logrus.Warnf("SyncPartition CLIENT COMPLETED epoch = %d hash =  %x", epochObservation, partitionTree.Root.Hash)
+					// events.SendRequestPartitionInfoMessage(partitionTree.Root.Hash, partitionId)
+				}
+
 			}
 		case temp := <-raftNode.LeaderCh():
 			logrus.Warnf("leader change. %t %s %d", temp, raftNode.State(), fsm.Epoch)

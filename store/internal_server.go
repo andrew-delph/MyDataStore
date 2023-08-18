@@ -2,9 +2,14 @@ package main
 
 import (
 	"bytes"
+	"container/list"
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"net"
+
+	"github.com/cbergoon/merkletree"
 
 	pb "github.com/andrew-delph/my-key-store/proto"
 
@@ -76,9 +81,9 @@ func (s *internalServer) SyncPartition(req *pb.SyncPartitionRequest, stream pb.I
 		logrus.Error(err)
 		return err
 	}
-	areEqual := bytes.Equal(partitionTree.Root.Hash, req.Hash)
+	isEqual := bytes.Equal(partitionTree.Root.Hash, req.Hash)
 
-	if areEqual {
+	if isEqual {
 		return nil
 	}
 	logrus.Warnf("Server SyncPartition NOT EQUAL. Partition = %d Epoch = %d", req.Partition, req.Epoch)
@@ -100,4 +105,94 @@ func (s *internalServer) SyncPartition(req *pb.SyncPartitionRequest, stream pb.I
 	}
 
 	return nil
+}
+
+func (*internalServer) VerifyMerkleTree(stream pb.InternalNodeService_VerifyMerkleTreeServer) error {
+	// defer logrus.Warn("server done.")
+	// logrus.Warn("server start.")
+	rootNode, err := stream.Recv()
+	if err != nil {
+		logrus.Error("SERVER ", err)
+		return err
+	}
+	epoch := rootNode.Epoch
+	partitionId := rootNode.Partition
+	partitionTree, err := PartitionMerkleTree(uint64(epoch), int(partitionId))
+	if err != nil {
+		logrus.Error("SERVER ", err)
+		return err
+	}
+
+	isEqual := bytes.Equal(partitionTree.Root.Hash, rootNode.Hash)
+	nodeResponse := &pb.VerifyMerkleTreeNodeResponse{IsEqual: isEqual}
+
+	err = stream.Send(nodeResponse)
+	if err != nil {
+		logrus.Error("SERVER ", err)
+		return err
+	}
+	if isEqual {
+		return nil
+	}
+	defer logrus.Warnf("SERVER COMPLETED SYNC")
+	logrus.Warn("server not equal.")
+
+	nodesQueue := list.New()
+	nodesQueue.PushFront(partitionTree.Root.Left)
+	nodesQueue.PushFront(partitionTree.Root.Right)
+
+	for nodesQueue.Len() > 0 {
+		element := nodesQueue.Front()
+		node, ok := element.Value.(*merkletree.Node)
+		if !ok {
+			logrus.Error("could not decode server.")
+			return fmt.Errorf("could not decode node server.")
+		}
+		nodesQueue.Remove(element)
+		logrus.Debugf("server waiting.")
+		nodeRequest, err := stream.Recv()
+		if err == io.EOF {
+			logrus.Warn("Server VerifyMerkleTree Done.")
+			return nil
+		}
+		if err != nil {
+			logrus.Error("SERVER ", err)
+			return err
+		}
+
+		isEqual := bytes.Equal(node.Hash, nodeRequest.Hash)
+		logrus.Warnf("server isEqual %t", isEqual)
+
+		nodeResponse := &pb.VerifyMerkleTreeNodeResponse{IsEqual: isEqual}
+
+		err = stream.Send(nodeResponse)
+		if err != nil {
+			logrus.Error("SERVER ", err)
+			return err
+		}
+
+		if !isEqual {
+			if node.Left == nil && node.Right == nil {
+				logrus.Debugf("SERVER the node is a leaf!")
+				bucket, ok := node.C.(MerkleBucket)
+				if !ok {
+					logrus.Error("SERVER could not decode bucket")
+					return errors.New("SERVER value is not of type MerkleContent")
+				}
+				logrus.Debugf("SERVER bucket.contentList length: %d", len(bucket.contentList))
+				for _, content := range bucket.contentList {
+					logrus.Debugf("SERVER bucket content: %s", content.key)
+				}
+			} else {
+				if node.Left != nil {
+					nodesQueue.PushFront(node.Left)
+				}
+				if node.Right != nil {
+					nodesQueue.PushFront(node.Right)
+				}
+			}
+		}
+	}
+
+	return io.EOF
 }

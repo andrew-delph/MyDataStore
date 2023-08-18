@@ -66,6 +66,7 @@ func (content MerkleContent) CalculateHash() ([]byte, error) {
 type MerkleBucket struct {
 	contentList []MerkleContent
 	hash        []byte
+	bucketId    int
 }
 
 func (bucket MerkleBucket) CalculateHash() ([]byte, error) {
@@ -101,7 +102,7 @@ func PartitionMerkleTree(treeEpoch uint64, partitionId int) (*merkletree.MerkleT
 	bucketList := make([]MerkleBucket, partitionBuckets)
 
 	for i := range bucketList {
-		bucket := MerkleBucket{contentList: []MerkleContent{}}
+		bucket := MerkleBucket{contentList: []MerkleContent{}, bucketId: i}
 		items := partition.Items(i, 0, int(treeEpoch))
 		for _, item := range items {
 			bucket.contentList = append(bucket.contentList, MerkleContent{key: item.Key, value: item.Value})

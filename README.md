@@ -4,7 +4,7 @@ bazel run //:gazelle -- update-repos -from_file="store/go.mod" -to_macro=reposit
 
 # DOCKER-COMPOSE DEV
 
-ibazel -run_command_after_success='./update_docker_compose.sh' build //store:store_image
+ibazel -run_command_after_success='./deploy_docker_compose.sh' build //store:store_image
 
 while true; do docker-compose logs -f --tail=1 store; done
 
