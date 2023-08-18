@@ -57,7 +57,6 @@ func leaderHandler(w http.ResponseWriter, r *http.Request) {
 	curr := raftNode.State()
 
 	if curr == raft.Leader {
-		logrus.Warnf("%s| RECIEVED PANIC!!!!!!! leaderHandler", curr)
 		go func() {
 			time.Sleep(1 * time.Second)
 			logrus.Fatalf("%s| EXCUTING PANIC!!!!!!! leaderHandler", curr)
@@ -82,12 +81,10 @@ func leaderHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-
 func followerHandler(w http.ResponseWriter, r *http.Request) {
 	curr := raftNode.State()
 
 	if curr == raft.Follower {
-		logrus.Warnf("%s| RECIEVED PANIC!!!!!!! leaderHandler", curr)
 		go func() {
 			time.Sleep(1 * time.Second)
 			logrus.Fatalf("%s| EXCUTING PANIC!!!!!!! leaderHandler", curr)

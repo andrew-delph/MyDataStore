@@ -37,7 +37,7 @@ export let options = {
   },
 };
 
-options = { iterations: 100, vus: 20 };
+options = { iterations: 1, vus: 1 };
 
 let address = "192.168.49.2:30033";
 address = "localhost:80";
@@ -55,7 +55,7 @@ export function handleSummary(data) {
 export function panic() {
   let addr = `http://${address}/leader`;
   // addr = `http://${address}/follower`;
-  addr = `http://${address}/panic`;
+  // addr = `http://${address}/panic`;
   console.log(addr);
   let baseRes = http.get(addr);
   check(baseRes, {
@@ -66,9 +66,9 @@ export function panic() {
   return;
 }
 export default function () {
-  // panic();
-  // // sleep(20);
-  // return;
+  panic();
+  // sleep(20);
+  return;
 
   // the key value to insert
   let key = randomString(15);

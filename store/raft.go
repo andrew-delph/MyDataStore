@@ -113,18 +113,6 @@ func SetupRaft() {
 		logrus.Fatal(err)
 	}
 
-	// Create a configuration for raftNode1
-	raftConf = raft.DefaultConfig()
-	raftConf.LocalID = raft.ServerID(fmt.Sprintf("%s:7000", localIp))
-
-	raftLogger := hclog.New(&hclog.LoggerOptions{
-		Name:   "discard",
-		Output: io.Discard,
-		Level:  hclog.NoLevel,
-	})
-	raftConf.Logger = raftLogger
-	// raftConf.LogLevel = "ERROR"
-
 	// Create a store to persist Raft logrus entries
 	if logStore == nil {
 		logStore, err = raftboltdb.NewBoltStore(filepath.Join(raftDir, "log.db"))
@@ -147,6 +135,19 @@ func SetupRaft() {
 			logrus.Fatal(err)
 		}
 	}
+
+	// Create a configuration for raftNode1
+	raftConf = raft.DefaultConfig()
+	raftConf.LocalID = raft.ServerID(fmt.Sprintf("%s:7000", localIp))
+
+	raftLogger := hclog.New(&hclog.LoggerOptions{
+		Name:   "discard",
+		Output: io.Discard,
+		Level:  hclog.NoLevel,
+	})
+	raftConf.Logger = raftLogger
+	// raftConf.LogLevel = "ERROR"
+	logrus.Warnf("raftConf.SnapshotInterval %v ... %v", raftConf.SnapshotInterval)
 
 	fsm = &StateMachine{} // Your state machine instance
 	// Create raftNode
