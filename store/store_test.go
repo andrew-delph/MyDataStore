@@ -46,13 +46,16 @@ func TestGoCacheStore(t *testing.T) {
 	assert.Equal(t, "value1", value.Value, "Both should be SetMessage")
 }
 
-func TestLevelDbStore(t *testing.T) {
+func TestLevelDbStoreSingle(t *testing.T) {
 	conf, delegate, events = GetConf()
-
-	store = NewLevelDbStore()
+	var err error
+	store, err = NewLevelDbStore()
+	if err != nil {
+		t.Error(fmt.Sprintf("NewLevelDbStore: %v", err))
+	}
 	defer store.Close()
 
-	err := store.setValue(testValue("keyz", "value1", 1))
+	err = store.setValue(testValue("keyz", "value1", 1))
 	if err != nil {
 		t.Error(fmt.Sprintf("setValue error: %v", err))
 	}
@@ -95,7 +98,11 @@ func TestLevelDbStoreSpeed(t *testing.T) {
 
 	conf, delegate, events = GetConf()
 
-	store = NewLevelDbStore()
+	var err error
+	store, err = NewLevelDbStore()
+	if err != nil {
+		t.Error(fmt.Sprintf("NewLevelDbStore: %v", err))
+	}
 	defer store.Close()
 
 	startTime := time.Now()
@@ -198,10 +205,10 @@ func TestExampleLevelDbIndex(t *testing.T) {
 	// Iterate through the keys within the range
 	count := 0
 	for iter.Next() {
-		key := iter.Key()
+		// key := iter.Key()
 		// value := iter.Value()
 		// fmt.Printf("Key: %s, Value: %s\n", key, value)
-		fmt.Printf("Key: %s\n", key)
+		// fmt.Printf("Key: %s\n", key)
 		count++
 	}
 
@@ -220,17 +227,30 @@ func TestLevelDbIndex(t *testing.T) {
 
 	conf, delegate, events = GetConf()
 
-	store = NewLevelDbStore()
+	var err error
+	store, err = NewLevelDbStore()
+	if err != nil {
+		t.Error(fmt.Sprintf("NewLevelDbStore: %v", err))
+		return
+	}
 	defer store.Close()
 
 	testInsertNum := 300
 
 	for i := 0; i < testInsertNum; i++ {
-		store.setValue(testValue(fmt.Sprintf("keyzds%d", i), fmt.Sprintf("value%d", i), 2))
+		err = store.setValue(testValue(fmt.Sprintf("keyzds%d", i), fmt.Sprintf("value%d", i), 2))
+		if err != nil {
+			t.Errorf("setValue: %v", err)
+			return
+		}
 	}
 
 	for i := 0; i < 33; i++ {
-		store.setValue(testValue(fmt.Sprintf("keyzx%d", i), fmt.Sprintf("value%d", i), 11))
+		err = store.setValue(testValue(fmt.Sprintf("keyzx%d", i), fmt.Sprintf("value%d", i), 11))
+		if err != nil {
+			t.Errorf("setValue: %v", err)
+			return
+		}
 	}
 
 	partitions := make([]int, partitionCount)

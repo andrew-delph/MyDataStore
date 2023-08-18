@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"crypto/md5"
 	"errors"
+	"sort"
 	"time"
 
 	"github.com/cbergoon/merkletree"
 	"github.com/patrickmn/go-cache"
 	"github.com/sirupsen/logrus"
-	// pb "github.com/andrew-delph/my-key-store/proto"
+
+	pb "github.com/andrew-delph/my-key-store/proto"
 )
 
 var hashMod = 999999
@@ -103,8 +105,15 @@ func PartitionMerkleTree(treeEpoch uint64, partitionId int) (*merkletree.MerkleT
 
 	for i := range bucketList {
 		bucket := MerkleBucket{contentList: []MerkleContent{}, bucketId: int32(i)}
-		items := partition.Items(i, 0, int(treeEpoch))
-		for _, item := range items {
+		itemsMap := partition.Items(i, 0, int(treeEpoch))
+		values := make([]*pb.Value, 0, len(itemsMap))
+		for _, v := range itemsMap {
+			values = append(values, v)
+		}
+		sort.Slice(values, func(i, j int) bool {
+			return values[i].Key < values[j].Key
+		})
+		for _, item := range values {
 			bucket.contentList = append(bucket.contentList, MerkleContent{key: item.Key, value: item.Value})
 		}
 		bucketList[i] = bucket

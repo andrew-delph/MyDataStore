@@ -63,7 +63,10 @@ func main() {
 
 	hostname = strings.TrimSpace(string(data))
 
-	store = NewLevelDbStore()
+	store, err2 = NewLevelDbStore()
+	if err2 != nil {
+		logrus.Fatalf("NewLevelDbStore: %v", err2)
+	}
 	defer store.Close()
 
 	store.InitStore()

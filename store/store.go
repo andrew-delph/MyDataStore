@@ -23,29 +23,67 @@ type Store interface {
 	getPartition(partitionId int) (Partition, error)
 	LoadPartitions(partitions []int)
 	Items(partions []int, bucket, lowerEpoch, upperEpoch int) map[string]*pb.Value
-	Close()
+	Close() error
 	Clear()
 }
 type Partition interface {
 	getValue(key string) (*pb.Value, bool, error)
 	setValue(value *pb.Value) error
 	Items(bucket, lowerEpoch, upperEpoch int) map[string]*pb.Value
+	GetPartitionId() int
 }
 
 type GoCacheStore struct {
 	partitionStore *cache.Cache
 }
 
+type BasePartition struct {
+	partitionId int
+}
+
+func (partition BasePartition) GetPartitionId() int {
+	return partition.partitionId
+}
+
 type GoCachePartition struct {
+	BasePartition
 	store *cache.Cache
 }
 
-type LevelDbPartition struct {
+func NewGoCachePartition(partitionId int) Partition {
+	partition := GoCachePartition{store: cache.New(0*time.Minute, 1*time.Minute)}
+	partition.partitionId = partitionId
+	return partition
+}
+
+func NewGoCacheStore() *GoCacheStore {
+	return &GoCacheStore{
+		partitionStore: cache.New(0*time.Minute, 1*time.Minute),
+	}
+}
+
+type LevelDbStore struct {
 	db *leveldb.DB
 }
 
-func NewGoCachePartition() Partition {
-	return GoCachePartition{store: cache.New(0*time.Minute, 1*time.Minute)}
+type LevelDbPartition struct {
+	BasePartition
+	db *leveldb.DB
+}
+
+func NewLevelDbPartition(db *leveldb.DB, partitionId int) Partition {
+	partition := LevelDbPartition{db: db}
+	partition.partitionId = partitionId
+	return partition
+}
+
+func NewLevelDbStore() (*LevelDbStore, error) {
+	storeFile := fmt.Sprintf("%s/data/%s", dataPath, hostname)
+	db, err := leveldb.OpenFile(storeFile, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &LevelDbStore{db: db}, nil
 }
 
 func (partition GoCachePartition) getValue(key string) (*pb.Value, bool, error) {
@@ -81,39 +119,21 @@ func (partition GoCachePartition) Items(bucket, lowerEpoch, upperEpoch int) map[
 	return itemsMap
 }
 
-func (partition LevelDbPartition) getValue(key string) (*pb.Value, bool, error) {
-	keyBytes := []byte(key)
-	valueBytes, err := partition.db.Get(keyBytes, nil)
-	if err != nil {
-		return nil, false, err
-	}
-
-	if valueBytes == nil {
-		return nil, false, nil
-	}
-
-	value := &pb.Value{}
-
-	err = proto.Unmarshal(valueBytes, value)
-	if err != nil {
-		logrus.Error("Error: ", err)
-		return nil, false, err
-	}
-
-	return value, true, nil
-}
-
-func IndexBucketEpoch(key string, bucket, epoch int) []byte {
+func IndexBucketEpoch(parition, bucket, epoch int, key string) []byte {
 	epochStr := fmt.Sprintf("%d", epoch)
 	epochStr = fmt.Sprintf("%s%s", strings.Repeat("0", 4-len(epochStr)), epochStr)
-	return []byte(fmt.Sprintf("%04d_%s_%s", bucket, epochStr, key))
+	return []byte(fmt.Sprintf("%04d_%04d_%s_%s", parition, bucket, epochStr, key))
+}
+
+func IndexKey(paritionint int, key string) []byte {
+	return []byte(fmt.Sprintf("real_%04d_%s", paritionint, key))
 }
 
 func (partition LevelDbPartition) setValue(value *pb.Value) error {
 	writeOpts := &opt.WriteOptions{}
 	writeOpts.Sync = true
 
-	key := []byte(value.Key)
+	key := IndexKey(partition.GetPartitionId(), value.Key)
 	data, err := proto.Marshal(value)
 	if err != nil {
 		logrus.Error("Error: ", err)
@@ -127,7 +147,7 @@ func (partition LevelDbPartition) setValue(value *pb.Value) error {
 	bucketHash := CalculateHash(value.Key)
 	bucket := bucketHash % partitionBuckets
 	logrus.Debugf("setValue bucket %v", bucket)
-	indexBytes := IndexBucketEpoch(value.Key, bucket, int(value.Epoch))
+	indexBytes := IndexBucketEpoch(partition.GetPartitionId(), bucket, int(value.Epoch), value.Key)
 
 	// logrus.Error("indexBytes ", string(indexBytes))
 
@@ -140,10 +160,31 @@ func (partition LevelDbPartition) setValue(value *pb.Value) error {
 	return nil
 }
 
+func (partition LevelDbPartition) getValue(key string) (*pb.Value, bool, error) {
+	keyBytes := IndexKey(partition.GetPartitionId(), key)
+	valueBytes, err := partition.db.Get(keyBytes, nil)
+	if err != nil {
+		return nil, false, err
+	}
+
+	if valueBytes == nil {
+		return nil, false, nil
+	}
+
+	value := &pb.Value{}
+	err = proto.Unmarshal(valueBytes, value)
+	if err != nil {
+		logrus.Error("Error: ", err)
+		return nil, false, err
+	}
+
+	return value, true, nil
+}
+
 func (partition LevelDbPartition) Items(bucket, lowerEpoch, upperEpoch int) map[string]*pb.Value {
 	itemsMap := make(map[string]*pb.Value)
 
-	startRange, endRange := IndexBucketEpoch("", bucket, lowerEpoch), IndexBucketEpoch("", bucket, upperEpoch)
+	startRange, endRange := IndexBucketEpoch(partition.GetPartitionId(), bucket, lowerEpoch, ""), IndexBucketEpoch(partition.GetPartitionId(), bucket, upperEpoch, "")
 
 	startRangeBytes := []byte(startRange)
 	endRangeBytes := []byte(endRange)
@@ -159,15 +200,12 @@ func (partition LevelDbPartition) Items(bucket, lowerEpoch, upperEpoch int) map[
 
 	for iter.Next() {
 		key := string(iter.Key())
-
-		value, exist, err := partition.getValue(key)
+		valueBytes := iter.Value()
+		logrus.Debugf("Items key: %s", key)
+		value := &pb.Value{}
+		err := proto.Unmarshal(valueBytes, value)
 		if err != nil {
-			logrus.Error(err)
-			continue
-		}
-
-		if !exist {
-			logrus.Error("Items value does not exist for key")
+			logrus.Error("LevelDbPartition Items Unmarshal: ", err)
 			continue
 		}
 
@@ -176,23 +214,10 @@ func (partition LevelDbPartition) Items(bucket, lowerEpoch, upperEpoch int) map[
 	return itemsMap
 }
 
-func NewLevelDbPartition(partitionKey string) (Partition, error) {
-	db, err := leveldb.OpenFile(partitionKey, nil)
-	if err != nil {
-		return nil, err
-	}
-	return LevelDbPartition{db: db}, nil
-}
-
-func NewGoCacheStore() GoCacheStore {
-	return GoCacheStore{
-		partitionStore: cache.New(0*time.Minute, 1*time.Minute),
-	}
-}
-
 // Define a global cache variable
 
-func (store GoCacheStore) Close() {
+func (store GoCacheStore) Close() error {
+	return nil
 }
 
 func (store GoCacheStore) Clear() {
@@ -275,7 +300,7 @@ func (store GoCacheStore) getValue(key string) (*pb.Value, bool, error) {
 
 func (store GoCacheStore) getPartition(partitionId int) (Partition, error) {
 	partitionKey := strconv.Itoa(partitionId)
-	err := store.partitionStore.Add(partitionKey, NewGoCachePartition(), 0)
+	err := store.partitionStore.Add(partitionKey, NewGoCachePartition(partitionId), 0)
 	if err != nil {
 		logrus.Debug(err)
 	}
@@ -339,14 +364,6 @@ func (store GoCacheStore) saveStore() {
 	}
 }
 
-type LevelDbStore struct {
-	partitionStore *cache.Cache
-}
-
-func NewLevelDbStore() LevelDbStore {
-	return LevelDbStore{partitionStore: cache.New(0*time.Minute, 1*time.Minute)}
-}
-
 // Define a global cache variable
 
 // Function to set a value in the global cache
@@ -392,35 +409,7 @@ func (store LevelDbStore) getValue(key string) (*pb.Value, bool, error) {
 }
 
 func (store LevelDbStore) getPartition(partitionId int) (Partition, error) {
-	partitionKey := fmt.Sprintf("%s/data/%s_%d", dataPath, hostname, partitionId)
-
-	if value, found := store.partitionStore.Get(partitionKey); found {
-		partition, ok := value.(Partition)
-
-		if ok {
-			return partition, nil
-		}
-	}
-
-	db, err := NewLevelDbPartition(partitionKey)
-
-	if err != nil {
-		logrus.Errorf("NewLevelDbPartition err = %v", err)
-	} else {
-		err = store.partitionStore.Add(partitionKey, db, 0)
-		if err != nil {
-			logrus.Debug(err)
-		}
-	}
-
-	if value, found := store.partitionStore.Get(partitionKey); found {
-		partition, ok := value.(Partition)
-
-		if ok {
-			return partition, nil
-		}
-	}
-	return nil, fmt.Errorf("partion not found: %d", partitionId)
+	return NewLevelDbPartition(store.db, partitionId), nil
 }
 
 func (store LevelDbStore) InitStore() {
@@ -428,55 +417,46 @@ func (store LevelDbStore) InitStore() {
 }
 
 func (store LevelDbStore) LoadPartitions(partitions []int) {
-	for _, partitionId := range partitions {
-		_, err := store.getPartition(partitionId)
-		if err != nil {
-			logrus.Debugf("failed getPartition: %v , %v", partitionId, err)
-			continue
-		}
-	}
+	// for _, partitionId := range partitions {
+	// 	_, err := store.getPartition(partitionId)
+	// 	if err != nil {
+	// 		logrus.Debugf("failed getPartition: %v , %v", partitionId, err)
+	// 		continue
+	// 	}
+	// }
 }
 
-func (store LevelDbStore) Close() {
-	items := store.partitionStore.Items()
-	logrus.Warnf("Level Db Close for partitions num %d", len(items))
-	for _, partitionObj := range items {
-		partition, ok := partitionObj.Object.(LevelDbPartition)
-		// logrus.Warnf("Level Db Close for partition %s", partitionId)
-		if ok {
-			partition.db.Close()
-		} else {
-			logrus.Error("FAILED TO CLOSE PARTITION")
-		}
-	}
+func (store LevelDbStore) Close() error {
+	return store.db.Close()
 }
 
 func (store LevelDbStore) Clear() {
-	items := store.partitionStore.Items()
+	logrus.Fatal("LevelDbStore Clear not implemented.")
+	// items := store.partitionStore.Items()
 
-	logrus.Warnf("Level Db Clear for partitions num %d", len(items))
+	// logrus.Warnf("Level Db Clear for partitions num %d", len(items))
 
-	for _, partitionObj := range items {
-		partition, ok := partitionObj.Object.(LevelDbPartition)
-		if ok {
-			// logrus.Warnf("Level Db Clear for partition %s", partitionId)
-			writeOpts := &opt.WriteOptions{Sync: true} // Optional: Sync data to disk
+	// for _, partitionObj := range items {
+	// 	partition, ok := partitionObj.Object.(LevelDbPartition)
+	// 	if ok {
+	// 		// logrus.Warnf("Level Db Clear for partition %s", partitionId)
+	// 		writeOpts := &opt.WriteOptions{Sync: true} // Optional: Sync data to disk
 
-			// Iterate through all keys and delete them
-			iter := partition.db.NewIterator(nil, nil)
-			for iter.Next() {
-				err := partition.db.Delete(iter.Key(), writeOpts)
-				if err != nil {
-					logrus.Error("Error deleting key:", err)
-				}
-			}
-			iter.Release()
-			err := iter.Error()
-			if err != nil {
-				logrus.Error("Iterator error:", err)
-			}
-		} else {
-			logrus.Error("FAILED TO Clear PARTITION")
-		}
-	}
+	// 		// Iterate through all keys and delete them
+	// 		iter := partition.db.NewIterator(nil, nil)
+	// 		for iter.Next() {
+	// 			err := partition.db.Delete(iter.Key(), writeOpts)
+	// 			if err != nil {
+	// 				logrus.Error("Error deleting key:", err)
+	// 			}
+	// 		}
+	// 		iter.Release()
+	// 		err := iter.Error()
+	// 		if err != nil {
+	// 			logrus.Error("Iterator error:", err)
+	// 		}
+	// 	} else {
+	// 		logrus.Error("FAILED TO Clear PARTITION")
+	// 	}
+	// }
 }

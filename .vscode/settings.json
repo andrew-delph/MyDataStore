@@ -34,7 +34,8 @@
       "-bazel-bin",
       "-bazel-out",
       "-bazel-testlogs",
-      "-bazel-my-key-store"
+      "-bazel-my-key-store",
+      "-store/proto"
     ],
     "formatting.gofumpt": true,
     "formatting.local": "github.com/andrew-delph",

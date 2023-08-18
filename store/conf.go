@@ -16,8 +16,8 @@ var (
 	readResponse     int           = 2
 	saveInterval     time.Duration = 30 * time.Second
 	defaultTimeout   time.Duration = 2 * time.Second
-	partitionBuckets int           = 100
-	partitionCount   int           = 100
+	partitionBuckets int           = 10
+	partitionCount   int           = 10
 	epochTime        time.Duration = 10 * time.Second
 	dataPath         string        = "/store"
 )

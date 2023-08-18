@@ -15,6 +15,7 @@ import (
 )
 
 func TestGoCacheStoreMerkleTree(t *testing.T) {
+	hostname = randomString(5)
 	conf, delegate, events = GetConf()
 
 	store = NewGoCacheStore()
@@ -63,7 +64,11 @@ func TestLevelDbStoreMerkleTree(t *testing.T) {
 
 	conf, delegate, events = GetConf()
 
-	store = NewLevelDbStore()
+	var err error
+	store, err = NewLevelDbStore()
+	if err != nil {
+		t.Error(fmt.Sprintf("NewLevelDbStore: %v", err))
+	}
 	defer store.Close()
 	extraKey := "Extra"
 	extraPartition := FindPartitionID(events.consistent, extraKey)
