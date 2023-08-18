@@ -200,10 +200,6 @@ func main() {
 
 						StreamBuckets(node.String(), requstBuckets, epochRequest, partitionId)
 					}
-					// SyncPartition(partitionTree.Root.Hash, epochObservation-1, partitionId)
-
-					// logrus.Warnf("SyncPartition CLIENT COMPLETED epoch = %d hash =  %x", epochObservation, partitionTree.Root.Hash)
-					// events.SendRequestPartitionInfoMessage(partitionTree.Root.Hash, partitionId)
 				}
 
 			}

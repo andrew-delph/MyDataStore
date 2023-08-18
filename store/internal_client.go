@@ -126,52 +126,42 @@ func SendGetMessage(key string) (string, error) {
 	return "", fmt.Errorf("value not found. expected = %d maxRecieved= %d", readResponse, maxRecieved)
 }
 
-func SyncPartition(hash []byte, epoch uint64, partitionId int) {
+func SyncPartition(addr string, hash []byte, epoch uint64, partitionId int) {
 	syncPartReqMsg := &pb.SyncPartitionRequest{Epoch: int64(epoch), Partition: int32(partitionId), Hash: hash}
 
-	nodes, err := GetClosestNForPartition(events.consistent, partitionId, totalReplicas)
+	conn, client, err := GetClient(addr)
 	if err != nil {
-		logrus.Error(err)
+		return
+	}
+	defer conn.Close()
+
+	// ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	// defer cancel()
+	stream, err := client.SyncPartition(context.Background(), syncPartReqMsg)
+	if err != nil {
+		logrus.Warnf("CLIENT SyncPartition Failed to open stream: %v", err)
 		return
 	}
 
-	for i, node := range nodes {
-		go func(i int, node HashRingMember) {
-			conn, client, err := GetClient(node.String())
-			if err != nil {
-				return
-			}
-			defer conn.Close()
+	for {
+		value, err := stream.Recv()
 
-			// ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-			// defer cancel()
-			stream, err := client.SyncPartition(context.Background(), syncPartReqMsg)
-			if err != nil {
-				logrus.Warnf("CLIENT SyncPartition Failed to open stream: %v", err)
-				return
-			}
+		if err == io.EOF {
+			logrus.Debug("Stream completed.")
+			break
+		}
+		if err != nil {
+			logrus.Errorf("CLIENT SyncPartition stream receive error: %v", err)
+			break
+		}
 
-			for {
-				value, err := stream.Recv()
-
-				if err == io.EOF {
-					logrus.Debug("Stream completed.")
-					break
-				}
-				if err != nil {
-					logrus.Errorf("CLIENT SyncPartition stream receive error: %v", err)
-					break
-				}
-
-				err = store.setValue(value)
-				if err != nil {
-					logrus.Warnf("CLIENT SyncPartition stream error store.setValue: %v", err)
-					continue
-				}
-			}
-			logrus.Debugf("CLIENT COMPLETED SYNC")
-		}(i, node)
+		err = store.setValue(value)
+		if err != nil {
+			logrus.Warnf("CLIENT SyncPartition stream error store.setValue: %v", err)
+			continue
+		}
 	}
+	logrus.Debugf("CLIENT COMPLETED SYNC")
 }
 
 func VerifyMerkleTree(addr string, epoch uint64, partitionId int) (map[int32]struct{}, error) {

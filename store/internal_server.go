@@ -76,17 +76,8 @@ func (s *internalServer) GetRequest(ctx context.Context, m *pb.GetRequestMessage
 }
 
 func (s *internalServer) SyncPartition(req *pb.SyncPartitionRequest, stream pb.InternalNodeService_SyncPartitionServer) error {
-	partitionTree, err := PartitionMerkleTree(uint64(req.Epoch), int(req.Partition))
-	if err != nil {
-		logrus.Error(err)
-		return err
-	}
-	isEqual := bytes.Equal(partitionTree.Root.Hash, req.Hash)
-
-	if isEqual {
-		return nil
-	}
-	logrus.Warnf("Server SyncPartition NOT EQUAL. Partition = %d Epoch = %d", req.Partition, req.Epoch)
+	// TODO stream all contents of partition.
+	logrus.Warnf("Server SyncPartition")
 
 	partition, err := store.getPartition(int(req.Partition))
 	if err != nil {
