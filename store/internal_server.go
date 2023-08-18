@@ -68,10 +68,10 @@ func (s *internalServer) GetRequest(ctx context.Context, m *pb.GetRequestMessage
 
 	if exists {
 		return value, nil
-	} else if err != nil {
-		return nil, err
+	} else if err == nil {
+		return &pb.Value{}, nil
 	} else {
-		return nil, fmt.Errorf("Value not found for %s", m.Key)
+		return nil, err
 	}
 }
 

@@ -20,13 +20,13 @@ func SendSetMessage(key, value string) error {
 	unixTimestamp := time.Now().Unix()
 	setReqMsg := &pb.Value{Key: key, Value: value, Epoch: int64(fsm.Epoch), UnixTimestamp: unixTimestamp}
 
-	nodes, err := GetClosestN(events.consistent, key, totalReplicas)
+	nodes, err := GetClosestN(events.consistent, key, N)
 	if err != nil {
 		return err
 	}
 
-	responseCh := make(chan *pb.StandardResponse, totalReplicas)
-	errorCh := make(chan error, totalReplicas)
+	responseCh := make(chan *pb.StandardResponse, N)
+	errorCh := make(chan error, N)
 
 	for _, node := range nodes {
 		go func(currNode HashRingMember) {
@@ -56,7 +56,7 @@ func SendSetMessage(key, value string) error {
 	timeout := time.After(defaultTimeout)
 	responseCount := 0
 
-	for responseCount < writeResponse {
+	for responseCount < W {
 		select {
 		case <-responseCh:
 			responseCount++
@@ -74,13 +74,12 @@ func SendSetMessage(key, value string) error {
 func SendGetMessage(key string) (string, error) {
 	getReqMsg := &pb.GetRequestMessage{Key: key}
 
-	nodes, err := GetClosestN(events.consistent, key, totalReplicas)
+	nodes, err := GetClosestN(events.consistent, key, N)
 	if err != nil {
 		return "", err
 	}
 
-	getSet := make(map[string]int)
-	responseCh := make(chan string, len(nodes))
+	resCh := make(chan *pb.Value, len(nodes))
 	errorCh := make(chan error, len(nodes))
 
 	for i, node := range nodes {
@@ -94,36 +93,49 @@ func SendGetMessage(key string) (string, error) {
 
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 			defer cancel()
-			r, err := client.GetRequest(ctx, getReqMsg)
+			res, err := client.GetRequest(ctx, getReqMsg)
+
 			if err != nil {
 				errorCh <- err
 			} else {
-				logrus.Debugf("GetRequest %s value='%s'", node.String(), r.Value)
-				responseCh <- r.Value
+				resCh <- res
 			}
 		}(i, node)
 	}
 
 	timeout := time.After(defaultTimeout)
 
-	maxRecieved := 0
+	recievedCount := 0
+
+	var recentValue *pb.Value
 
 	for responseCount := 0; responseCount < len(nodes); responseCount++ {
 		select {
-		case value := <-responseCh:
-			getSet[value]++
-			if getSet[value] >= readResponse {
-				return value, nil
+		case value := <-resCh:
+
+			logrus.Warnf("value.Key %s.", value.Key)
+			if recentValue == nil {
+				recentValue = value
+			} else if recentValue.Epoch < value.Epoch && recentValue.UnixTimestamp < value.UnixTimestamp {
+				recentValue = value
 			}
-			maxRecieved = max(maxRecieved, getSet[value])
-		case <-errorCh:
-			// handle error if needed.
+			recievedCount++
+		case err := <-errorCh:
+			logrus.Debugf("GET ERROR = %v", err)
+
 		case <-timeout:
 			return "", fmt.Errorf("timed out waiting for responses")
 		}
+		if recievedCount >= R {
+			if recentValue == nil {
+				return "", fmt.Errorf("Value doesnt exist.")
+			} else {
+				return recentValue.Value, nil
+			}
+		}
 	}
 
-	return "", fmt.Errorf("value not found. expected = %d maxRecieved= %d", readResponse, maxRecieved)
+	return "", fmt.Errorf("value not found. expected = %d recievedCount= %d", R, recievedCount)
 }
 
 func SyncPartition(addr string, hash []byte, epoch uint64, partitionId int) {

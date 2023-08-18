@@ -85,7 +85,7 @@ export default function () {
       r.status === 200 || console.error(`Set Error: Status was ${r.status}`),
   });
 
-  sleep(20);
+  sleep(1);
 
   // Get a value from the map
   let getRes = http.get(`http://${address}/get?key=${key}`);

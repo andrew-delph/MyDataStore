@@ -163,12 +163,13 @@ func (partition LevelDbPartition) setValue(value *pb.Value) error {
 func (partition LevelDbPartition) getValue(key string) (*pb.Value, bool, error) {
 	keyBytes := IndexKey(partition.GetPartitionId(), key)
 	valueBytes, err := partition.db.Get(keyBytes, nil)
-	if err != nil {
-		return nil, false, err
+
+	if err == leveldb.ErrNotFound {
+		return nil, false, nil
 	}
 
-	if valueBytes == nil {
-		return nil, false, nil
+	if err != nil {
+		return nil, false, err
 	}
 
 	value := &pb.Value{}

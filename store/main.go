@@ -178,7 +178,7 @@ func main() {
 			}
 			for _, partitionId := range myPartions {
 
-				nodes, err := GetClosestNForPartition(events.consistent, partitionId, totalReplicas)
+				nodes, err := GetClosestNForPartition(events.consistent, partitionId, N)
 				if err != nil {
 					logrus.Error(err)
 					continue

@@ -78,13 +78,13 @@ func (events *MyEventDelegate) SendRequestPartitionInfoMessage(hash []byte, part
 
 	partitionMsg := NewRequestPartitionInfo(ackId, partitionId)
 
-	nodes, err := GetClosestNForPartition(events.consistent, partitionId, totalReplicas)
+	nodes, err := GetClosestNForPartition(events.consistent, partitionId, N)
 	if err != nil {
 		logrus.Debug(err)
 		return err
 	}
 
-	ackChannel := make(chan *MessageHolder, totalReplicas)
+	ackChannel := make(chan *MessageHolder, N)
 	defer close(ackChannel)
 
 	setAckChannel(ackId, ackChannel)
@@ -136,7 +136,7 @@ func (events *MyEventDelegate) SendRequestPartitionInfoMessage(hash []byte, part
 				unHealthyPartitionSet[ackMessageHolder.SenderName] = true
 			}
 
-			if len(equalPartitionSet) >= readResponse {
+			if len(equalPartitionSet) >= R {
 				logrus.Debugf("The partition %d is healthy. health neighbors are %d", partitionId, len(equalPartitionSet))
 
 				partitionVerified[partitionId] = true
