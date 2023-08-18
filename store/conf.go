@@ -16,8 +16,8 @@ var (
 	readResponse     int           = 2
 	saveInterval     time.Duration = 30 * time.Second
 	defaultTimeout   time.Duration = 2 * time.Second
-	partitionBuckets int           = 10
-	partitionCount   int           = 20
+	partitionBuckets int           = 100
+	partitionCount   int           = 100
 	epochTime        time.Duration = 10 * time.Second
 	dataPath         string        = "/store"
 )
@@ -32,6 +32,14 @@ func GetConf() (*memberlist.Config, *MyDelegate, *MyEventDelegate) {
 	}
 
 	logrus.Infof("dataPath = %s", dataPath)
+
+	// files, err := os.ReadDir(dataPath)
+	// if err != nil {
+	// 	logrus.Fatalf("Failed reading directory: %s", err)
+	// }
+	// for _, file := range files {
+	// 	logrus.Warnf("File/Dir: %s", file.Name())
+	// }
 
 	conf := memberlist.DefaultLocalConfig()
 	conf.Logger = log.New(io.Discard, "", 0)

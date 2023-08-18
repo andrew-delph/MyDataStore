@@ -37,4 +37,4 @@ services:
       - nginx
     restart: always
     volumes:
-      - ./store_data:/store
+      - /tmp/store_data:/store

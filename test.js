@@ -37,7 +37,7 @@ export let options = {
   },
 };
 
-options = { iterations: 1, vus: 1 };
+options = { iterations: 100, vus: 5 };
 
 let address = "192.168.49.2:30033";
 address = "localhost:80";
@@ -67,7 +67,7 @@ export function panic() {
 }
 export default function () {
   // panic();
-  // sleep(20);
+  // // sleep(20);
   // return;
 
   // the key value to insert
@@ -85,9 +85,7 @@ export default function () {
       r.status === 200 || console.error(`Set Error: Status was ${r.status}`),
   });
 
-  return;
-
-  sleep(2);
+  sleep(20);
 
   // Get a value from the map
   let getRes = http.get(`http://${address}/get?key=${key}`);

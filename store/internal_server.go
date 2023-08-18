@@ -134,8 +134,8 @@ func (*internalServer) VerifyMerkleTree(stream pb.InternalNodeService_VerifyMerk
 	if isEqual {
 		return nil
 	}
-	defer logrus.Warnf("SERVER COMPLETED SYNC")
-	logrus.Warn("server not equal.")
+	defer logrus.Debugf("SERVER COMPLETED SYNC")
+	logrus.Debugf("server not equal.")
 
 	nodesQueue := list.New()
 	nodesQueue.PushFront(partitionTree.Root.Left)
@@ -161,7 +161,7 @@ func (*internalServer) VerifyMerkleTree(stream pb.InternalNodeService_VerifyMerk
 		}
 
 		isEqual := bytes.Equal(node.Hash, nodeRequest.Hash)
-		logrus.Warnf("server isEqual %t", isEqual)
+		logrus.Debugf("server isEqual %t", isEqual)
 
 		nodeResponse := &pb.VerifyMerkleTreeNodeResponse{IsEqual: isEqual}
 
@@ -195,4 +195,22 @@ func (*internalServer) VerifyMerkleTree(stream pb.InternalNodeService_VerifyMerk
 	}
 
 	return io.EOF
+}
+
+func (s *internalServer) StreamBuckets(req *pb.StreamBucketsRequest, stream pb.InternalNodeService_StreamBucketsServer) error {
+	logrus.Debugf("SERVER StreamBuckets Buckets %v Epoch %v Partition %v", req.Buckets, req.Epoch, req.Partition)
+	streamPartions := []int{int(req.Partition)}
+	for _, bucket := range req.Buckets {
+		items := store.Items(streamPartions, int(bucket), 0, int(req.Epoch))
+
+		for _, value := range items {
+			err := stream.Send(value)
+			if err != nil {
+				logrus.Errorf("SERVER StreamBuckets err = %v", err)
+				return err
+			}
+		}
+	}
+
+	return nil
 }

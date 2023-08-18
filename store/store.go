@@ -126,6 +126,7 @@ func (partition LevelDbPartition) setValue(value *pb.Value) error {
 	}
 	bucketHash := CalculateHash(value.Key)
 	bucket := bucketHash % partitionBuckets
+	logrus.Debugf("setValue bucket %v", bucket)
 	indexBytes := IndexBucketEpoch(value.Key, bucket, int(value.Epoch))
 
 	// logrus.Error("indexBytes ", string(indexBytes))
@@ -352,6 +353,8 @@ func NewLevelDbStore() LevelDbStore {
 func (store LevelDbStore) setValue(value *pb.Value) error {
 	key := value.Key
 	partitionId := FindPartitionID(events.consistent, key)
+
+	logrus.Debugf("setValue partitionId = %v", partitionId)
 
 	partition, err := store.getPartition(partitionId)
 	if partition == nil && err != nil {

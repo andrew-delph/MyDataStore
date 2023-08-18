@@ -18,8 +18,9 @@ service InternalNodeService {
 
     rpc SyncPartition(SyncPartitionRequest) returns (stream Value);
 
-
     rpc VerifyMerkleTree(stream VerifyMerkleTreeNodeRequest) returns (stream VerifyMerkleTreeNodeResponse);
+
+    rpc StreamBuckets(StreamBucketsRequest) returns (stream Value);
   
 }
 
@@ -59,3 +60,11 @@ message VerifyMerkleTreeNodeRequest{
 message VerifyMerkleTreeNodeResponse{
   bool isEqual = 1;
 }
+
+message StreamBucketsRequest{
+  int64 epoch = 1;
+  int32 partition = 2;
+  repeated int32 buckets =3;
+}
+
+

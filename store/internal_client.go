@@ -174,8 +174,8 @@ func SyncPartition(hash []byte, epoch uint64, partitionId int) {
 	}
 }
 
-func VerifyMerkleTree(addr string, epoch uint64, partitionId int) ([]int, error) {
-	var unsyncedBuckets []int
+func VerifyMerkleTree(addr string, epoch uint64, partitionId int) (map[int32]struct{}, error) {
+	unsyncedBuckets := make(map[int32]struct{})
 	partitionTree, err := PartitionMerkleTree(epoch, partitionId)
 	if err != nil {
 		logrus.Error(err)
@@ -231,7 +231,7 @@ func VerifyMerkleTree(addr string, epoch uint64, partitionId int) ([]int, error)
 					logrus.Error("CLIENT could not decode bucket")
 					return unsyncedBuckets, errors.New("CLIENT value is not of type MerkleContent")
 				}
-				unsyncedBuckets = append(unsyncedBuckets, bucket.bucketId)
+				unsyncedBuckets[bucket.bucketId] = struct{}{}
 				logrus.Debugf("CLIENT bucket.bucketId %d", bucket.bucketId)
 
 			} else {
@@ -241,6 +241,7 @@ func VerifyMerkleTree(addr string, epoch uint64, partitionId int) ([]int, error)
 				if node.Right != nil {
 					nodesQueue.PushFront(node.Right)
 				}
+
 			}
 		}
 
@@ -248,6 +249,41 @@ func VerifyMerkleTree(addr string, epoch uint64, partitionId int) ([]int, error)
 
 	logrus.Debugf("CLIENT COMPLETED SYNC")
 	return unsyncedBuckets, nil
+}
+
+func StreamBuckets(addr string, buckets []int32, epoch uint64, partitionId int) error {
+	conn, client, err := GetClient(addr)
+	if err != nil {
+		logrus.Errorf("CLIENT StreamBuckets err = %v", err)
+		return err
+	}
+	defer conn.Close()
+	bucketsReq := &pb.StreamBucketsRequest{Buckets: buckets, Epoch: int64(epoch), Partition: int32(partitionId)}
+
+	stream, err := client.StreamBuckets(context.Background(), bucketsReq)
+	if err != nil {
+		logrus.Errorf("CLIENT StreamBuckets err = %v", err)
+		return err
+	}
+	for {
+		value, err := stream.Recv()
+
+		if err == io.EOF {
+			logrus.Debug("CLIENT StreamBuckets completed.")
+			return nil
+		} else if err != nil {
+			logrus.Errorf("CLIENT SyncPartition stream receive error: %v", err)
+			return err
+		}
+
+		err = store.setValue(value)
+		if err != nil {
+			logrus.Errorf("CLIENT StreamBuckets store.setValue error: %v", err)
+			continue
+		} else {
+			logrus.Debugf("CLIENT StreamBuckets setValue SUCCESS key = %v", value.Key)
+		}
+	}
 }
 
 func GetClient(addr string) (*grpc.ClientConn, pb.InternalNodeServiceClient, error) {
