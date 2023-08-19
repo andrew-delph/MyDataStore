@@ -78,8 +78,8 @@ export function bootstrap() {
   return;
 }
 export default function () {
-  // panic();
-  bootstrap();
+  panic();
+  // bootstrap();
   // sleep(20);
   return;
 

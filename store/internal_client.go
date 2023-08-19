@@ -41,7 +41,7 @@ func SendSetMessageNode(addr string, setReqMsg *pb.Value, responseCh chan *pb.St
 
 func SendSetMessage(key, value string) error {
 	unixTimestamp := time.Now().Unix()
-	setReqMsg := &pb.Value{Key: key, Value: value, Epoch: int64(fsm.Epoch), UnixTimestamp: unixTimestamp}
+	setReqMsg := &pb.Value{Key: key, Value: value, Epoch: int64(currEpoch), UnixTimestamp: unixTimestamp}
 
 	nodes, err := GetClosestN(events.consistent, key, N)
 	if err != nil {

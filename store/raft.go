@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -17,53 +18,67 @@ import (
 
 var raftNode *raft.Raft
 
-type StateMachine struct {
+type FSM struct {
 	Epoch uint64
 }
 
 var epochObserver = make(chan uint64, 1)
 
-func (sm *StateMachine) Apply(logEntry *raft.Log) interface{} {
+func (fsm *FSM) Apply(logEntry *raft.Log) interface{} {
 	epoch := binary.BigEndian.Uint64(logEntry.Data)
-	sm.Epoch = epoch
+	fsm.Epoch = epoch
 	epochObserver <- epoch
-	return hostname
+	return nil
 }
 
-func (sm *StateMachine) Snapshot() (raft.FSMSnapshot, error) {
-	return sm, nil
+func (fsm *FSM) Snapshot() (raft.FSMSnapshot, error) {
+	return &FSMSnapshot{stateValue: fsm.Epoch}, nil
 }
 
-func (sm *StateMachine) Persist(sink raft.SnapshotSink) error {
-	sink.Write(Uint64ToBytes(sm.Epoch))
-	return sink.Close()
-}
-
-func (sm *StateMachine) Release() {
-}
-
-func (sm *StateMachine) Restore(serialized io.ReadCloser) error {
-	// Implement restoring state from a snapshot if needed
-	data := make([]byte, 8)
-	_, err := serialized.Read(data)
-	if err != nil {
-		logrus.Errorf("Restore error = %v", err)
+func (fsm *FSM) Restore(serialized io.ReadCloser) error {
+	var snapshot FSMSnapshot
+	if err := json.NewDecoder(serialized).Decode(&snapshot); err != nil {
 		return err
 	}
 
-	restoreEpoch := binary.BigEndian.Uint64(data)
-	logrus.Warnf("Restore DATA ---- %d %d %d", restoreEpoch, sm.Epoch, fsm.Epoch)
+	fsm.Epoch = snapshot.stateValue
 
-	sm.Epoch = restoreEpoch
-	fsm.Epoch = restoreEpoch
-
-	return serialized.Close()
+	return nil
 }
 
-var (
-	fsm      *StateMachine
-	raftConf *raft.Config
-)
+type FSMSnapshot struct {
+	stateValue uint64 `json:"value"`
+}
+
+func (fsmSnapshot *FSMSnapshot) Persist(sink raft.SnapshotSink) error {
+	err := func() error {
+		snapshotBytes, err := json.Marshal(fsmSnapshot)
+		if err != nil {
+			return err
+		}
+
+		if _, err := sink.Write(snapshotBytes); err != nil {
+			return err
+		}
+
+		if err := sink.Close(); err != nil {
+			return err
+		}
+
+		return nil
+	}()
+	if err != nil {
+		sink.Cancel()
+		return err
+	}
+
+	return nil
+}
+
+func (fsmSnapshot *FSMSnapshot) Release() {
+}
+
+var raftConf *raft.Config
 
 var transport *raft.NetworkTransport
 
@@ -144,7 +159,7 @@ func SetupRaft() {
 
 	logrus.Warnf("raftConf.SnapshotInterval %v ... %v", raftConf.SnapshotInterval)
 
-	fsm = &StateMachine{} // Your state machine instance
+	fsm := &FSM{} // Your state machine instance
 	// Create raftNode
 	raftNode, err = raft.NewRaft(raftConf, fsm, logStore, stableStore, snapshotStore, transport)
 	if err != nil {
@@ -165,6 +180,27 @@ func RaftBootstrap() error {
 		},
 	})
 	return bootstrapFuture.Error()
+}
+
+func RaftTryLead() error {
+	err := RaftBootstrap()
+	if err != nil {
+		return err
+	}
+	succ := ""
+	for i, node := range clusterNodes.Members() {
+		// logrus.Warnf("node name = %s addr = %s", node.Name, node.Addr.String())
+		// go func(node *memberlist.Node) {
+		err := AddVoter(node.Name)
+		if err != nil {
+			logrus.Errorf("Testing AddVoter: %v", err)
+			return nil
+		} else {
+			succ = fmt.Sprintf("%s,%d", succ, i)
+		}
+		// }(node)
+	}
+	return nil
 }
 
 // var raftLock sync.Mutex

@@ -43,6 +43,8 @@ var (
 
 var store Store
 
+var currEpoch uint64 = 0
+
 func main() {
 	// time.Sleep(20 * time.Second)
 
@@ -125,12 +127,12 @@ func main() {
 			}
 
 			// raftLock.Lock()
-			logEntry := raftNode.Apply(Uint64ToBytes(fsm.Epoch+1), 0)
+			logEntry := raftNode.Apply(Uint64ToBytes(currEpoch+1), 0)
 
 			err := logEntry.Error()
 
 			if err == nil {
-				logrus.Warnf("Leader Update Epoch. Epoch = %d", fsm.Epoch)
+				logrus.Warnf("Leader Update Epoch. Epoch = %d", currEpoch)
 			} else {
 				logrus.Debugf("update fsm Err= %v", err)
 			}
@@ -151,7 +153,7 @@ func main() {
 		case <-tick.C:
 
 			if raftNode.State() != raft.Leader && raftNode.State() != raft.Follower {
-				logrus.Warnf("State = %s, Leader = %s, num_peers = %s, Epoch = %d hostname = %s", raftNode.State(), raftNode.Leader(), raftNode.Stats()["num_peers"], fsm.Epoch, conf.Name)
+				logrus.Warnf("State = %s, Leader = %s, num_peers = %s, Epoch = %d hostname = %s", raftNode.State(), raftNode.Leader(), raftNode.Stats()["num_peers"], currEpoch, conf.Name)
 			}
 
 			if raftNode.Leader() == "" {
@@ -168,8 +170,8 @@ func main() {
 
 			message.Handle(messageHolder)
 
-		case epochObservation := <-epochObserver:
-			logrus.Warnf("E= %d state = %s last = %d applied = %d", fsm.Epoch, raftNode.State(), raftNode.LastIndex(), raftNode.AppliedIndex())
+		case currEpoch = <-epochObserver:
+			logrus.Warnf("E= %d state = %s last = %d applied = %d", currEpoch, raftNode.State(), raftNode.LastIndex(), raftNode.AppliedIndex())
 			// logrus.Debugf("epochObservation %d %s", epoch, raftNode.State())
 			myPartions, err := GetMemberPartions(events.consistent, conf.Name)
 			if err != nil {
@@ -185,7 +187,7 @@ func main() {
 				}
 
 				for _, node := range nodes {
-					epochRequest := epochObservation - 1
+					epochRequest := currEpoch - 1
 					unsyncedBuckets, err := VerifyMerkleTree(node.String(), epochRequest, partitionId)
 					if err != nil && err != io.EOF {
 						logrus.Debugf("VerifyMerkleTree unsyncedBuckets = %v err = %v ", unsyncedBuckets, err)
@@ -207,7 +209,7 @@ func main() {
 
 			}
 		case temp := <-raftNode.LeaderCh():
-			logrus.Warnf("leader change. %t %s %d", temp, raftNode.State(), fsm.Epoch)
+			logrus.Warnf("leader change. %t %s %d", temp, raftNode.State(), currEpoch)
 
 			if !temp {
 				continue
