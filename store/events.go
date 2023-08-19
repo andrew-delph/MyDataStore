@@ -42,7 +42,10 @@ func (events *MyEventDelegate) NotifyJoin(node *memberlist.Node) {
 	}
 	logrus.Debugf("myPartions %v", myPartions)
 	store.LoadPartitions(myPartions)
-	AddVoter(node.Name)
+	err = AddVoter(node.Name)
+	if err != nil {
+		logrus.Errorf("add voter err = %v", err)
+	}
 }
 
 func (events *MyEventDelegate) NotifyLeave(node *memberlist.Node) {
@@ -60,7 +63,10 @@ func (events *MyEventDelegate) NotifyLeave(node *memberlist.Node) {
 	logrus.Debugf("myPartions %v", myPartions)
 	store.LoadPartitions(myPartions)
 
-	RemoveServer(node.Name)
+	err = RemoveServer(node.Name)
+	if err != nil {
+		logrus.Errorf("remove server err = %v", err)
+	}
 }
 
 func (events *MyEventDelegate) NotifyUpdate(node *memberlist.Node) {

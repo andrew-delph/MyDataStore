@@ -109,6 +109,19 @@ func followerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func bootstrapHandler(w http.ResponseWriter, r *http.Request) {
+	err := RaftBootstrap()
+
+	if err != nil {
+		logrus.Warnf("RaftBootstrap failed: %v", err)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "RaftBootstrap failed: %v", err)
+	} else {
+		logrus.Warnf("RaftBootstrap Success.")
+		fmt.Fprintf(w, "RaftBootstrap Success.")
+	}
+}
+
 func startHttpServer() {
 	http.HandleFunc("/", baseHandler)
 	http.HandleFunc("/set", setHandler)
@@ -116,6 +129,7 @@ func startHttpServer() {
 	http.HandleFunc("/panic", panicHandler)
 	http.HandleFunc("/leader", leaderHandler)
 	http.HandleFunc("/follower", followerHandler)
+	http.HandleFunc("/bootstrap", bootstrapHandler)
 
 	logrus.Info("Server is running on http://localhost:8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {

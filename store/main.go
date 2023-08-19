@@ -155,8 +155,8 @@ func main() {
 			}
 
 			if raftNode.Leader() == "" {
-				logrus.Warn("NO LEADER!")
-				// possible bootstrap
+				logrus.Warnf("NO LEADER! state = %s  num_peers = %s", raftNode.State(), raftNode.Stats()["num_peers"])
+				// RaftBootstrap()
 			}
 
 		case data := <-delegate.msgCh:
@@ -169,7 +169,7 @@ func main() {
 			message.Handle(messageHolder)
 
 		case epochObservation := <-epochObserver:
-			logrus.Warnf("E= %d", fsm.Epoch)
+			logrus.Warnf("E= %d state = %s last = %d applied = %d", fsm.Epoch, raftNode.State(), raftNode.LastIndex(), raftNode.AppliedIndex())
 			// logrus.Debugf("epochObservation %d %s", epoch, raftNode.State())
 			myPartions, err := GetMemberPartions(events.consistent, conf.Name)
 			if err != nil {

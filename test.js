@@ -65,8 +65,21 @@ export function panic() {
 
   return;
 }
+
+export function bootstrap() {
+  let addr = `http://${address}/bootstrap`;
+
+  let baseRes = http.get(addr);
+  check(baseRes, {
+    "Bootstrap: status was 200": (r) =>
+      r.status === 200 || console.error(`Base Error: Status was ${r.status}`),
+  });
+
+  return;
+}
 export default function () {
-  panic();
+  // panic();
+  bootstrap();
   // sleep(20);
   return;
 

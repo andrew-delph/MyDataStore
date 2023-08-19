@@ -21,6 +21,14 @@ services:
   #     - 9000:9000
   #   restart: always
 
+  dozzle:
+    container_name: dozzle
+    image: amir20/dozzle:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - 9999:8080
+
   nginx:
     image: nginx:alpine
     volumes:
@@ -31,7 +39,7 @@ services:
 
   store:
     image: docker.io/andrew-delph/store:store_image
-    scale: 5
+    scale: 4
     depends_on:
       # - zookeeper
       - nginx

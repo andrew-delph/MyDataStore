@@ -65,11 +65,6 @@ var (
 	raftConf *raft.Config
 )
 
-var (
-	logStore      *raftboltdb.BoltStore
-	stableStore   *raftboltdb.BoltStore
-	snapshotStore *raft.FileSnapshotStore
-)
 var transport *raft.NetworkTransport
 
 func SetupRaft() {
@@ -86,8 +81,6 @@ func SetupRaft() {
 	} else {
 		logrus.Warnf("localIp='%s'", localIp)
 	}
-
-	raftBindAddr = fmt.Sprintf("%s:7000", localIp)
 
 	raftDir = fmt.Sprintf("/store/raft/raft_%s", hostname)
 
@@ -107,45 +100,48 @@ func SetupRaft() {
 		}
 	}
 
-	transport, err = getTransport(raftBindAddr)
+	raftBindAddr = fmt.Sprintf("%s:7000", localIp)
+	advertiseAddr, err := net.ResolveTCPAddr("tcp", raftBindAddr)
+	if err != nil {
+		logrus.Fatal(err)
+	}
+
+	transport, err = raft.NewTCPTransport(raftBindAddr, advertiseAddr, 3, 10*time.Second, os.Stderr)
 	if err != nil {
 		logrus.Fatal(err)
 	}
 
 	// Create a store to persist Raft logrus entries
-	if logStore == nil {
-		logStore, err = raftboltdb.NewBoltStore(filepath.Join(raftDir, "log.db"))
-		if err != nil {
-			logrus.Fatal(err)
-		}
+	logStore, err := raftboltdb.NewBoltStore(filepath.Join(raftDir, "log.db"))
+	if err != nil {
+		logrus.Fatal(err)
 	}
 
-	if stableStore == nil {
-		stableStore, err = raftboltdb.NewBoltStore(filepath.Join(raftDir, "stable.db"))
-		if err != nil {
-			logrus.Fatal(err)
-		}
+	stableStore, err := raftboltdb.NewBoltStore(filepath.Join(raftDir, "stable.db"))
+	if err != nil {
+		logrus.Fatal(err)
 	}
 
 	// Create a snapshot store
-	if snapshotStore == nil {
-		snapshotStore, err = raft.NewFileSnapshotStore(filepath.Join(raftDir, "snap"), 2, io.Discard)
-		if err != nil {
-			logrus.Fatal(err)
-		}
+	snapshotStore, err := raft.NewFileSnapshotStore(filepath.Join(raftDir, "snap"), 2, io.Discard)
+	if err != nil {
+		logrus.Fatal(err)
 	}
 
 	// Create a configuration for raftNode1
 	raftConf = raft.DefaultConfig()
 	raftConf.LocalID = raft.ServerID(fmt.Sprintf("%s:7000", localIp))
 
-	raftLogger := hclog.New(&hclog.LoggerOptions{
-		Name:   "discard",
-		Output: io.Discard,
-		Level:  hclog.NoLevel,
-	})
-	raftConf.Logger = raftLogger
-	// raftConf.LogLevel = "ERROR"
+	if !raftLogs {
+		raftLogger := hclog.New(&hclog.LoggerOptions{
+			Name:   "discard",
+			Output: io.Discard,
+			Level:  hclog.NoLevel,
+		})
+		raftConf.Logger = raftLogger
+		raftConf.LogLevel = "ERROR"
+	}
+
 	logrus.Warnf("raftConf.SnapshotInterval %v ... %v", raftConf.SnapshotInterval)
 
 	fsm = &StateMachine{} // Your state machine instance
@@ -155,7 +151,10 @@ func SetupRaft() {
 		logrus.Fatal(err)
 	}
 
-	// Bootstrap the leader (raftNode1)
+	logrus.Warnf("after SetupRaft state = %s", raftNode.State())
+}
+
+func RaftBootstrap() error {
 	bootstrapFuture := raftNode.BootstrapCluster(raft.Configuration{
 		Servers: []raft.Server{
 			{
@@ -165,27 +164,12 @@ func SetupRaft() {
 			},
 		},
 	})
-	if err := bootstrapFuture.Error(); err != nil {
-		logrus.Errorf("bootstrapFuture %v", err)
-	}
-
-	logrus.Warnf("after SetupRaft state = %s", raftNode.State())
-}
-
-func getTransport(bindAddr string) (*raft.NetworkTransport, error) {
-	addr, err := net.ResolveTCPAddr("tcp", bindAddr)
-	if err != nil {
-		return nil, err
-	}
-	return raft.NewTCPTransport(bindAddr, addr, 3, 10*time.Second, os.Stderr)
+	return bootstrapFuture.Error()
 }
 
 // var raftLock sync.Mutex
 
 func AddVoter(otherAddr string) error {
-	if raftNode.State() != raft.Leader {
-		return fmt.Errorf("not the leader!")
-	}
 	err := raftNode.VerifyLeader().Error()
 	if err != nil {
 		return err
@@ -198,14 +182,21 @@ func AddVoter(otherAddr string) error {
 
 	config2 := raft.DefaultConfig()
 	config2.LocalID = raft.ServerID(otherAddr)
-
+	// if raftNode.AppliedIndex() > 20 {
+	// 	addVoterFuture := raftNode.AddVoter(config2.LocalID, raft.ServerAddress(otherAddr), raftNode.AppliedIndex(), time.Second)
+	// 	return addVoterFuture.Error()
+	// } else {
+	// 	addVoterFuture := raftNode.AddVoter(config2.LocalID, raft.ServerAddress(otherAddr), 0, time.Second)
+	// 	return addVoterFuture.Error()
+	// }
 	addVoterFuture := raftNode.AddVoter(config2.LocalID, raft.ServerAddress(otherAddr), 0, time.Second)
 	return addVoterFuture.Error()
 }
 
-func RemoveServer(otherAddr string) {
-	if raftNode.State() != raft.Leader {
-		return
+func RemoveServer(otherAddr string) error {
+	err := raftNode.VerifyLeader().Error()
+	if err != nil {
+		return err
 	}
 
 	// raftLock.Lock()         // Lock the critical section
@@ -213,9 +204,5 @@ func RemoveServer(otherAddr string) {
 
 	removeServerFuture := raftNode.RemoveServer(raft.ServerID(otherAddr), 0, time.Second)
 
-	if err := removeServerFuture.Error(); err != nil {
-		logrus.Errorf("RemoveServer state: %s error: %v", raftNode.State(), err)
-	} else {
-		logrus.Warnf("REMOVE SERVER SUCCESS %s", otherAddr)
-	}
+	return removeServerFuture.Error()
 }

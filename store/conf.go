@@ -18,8 +18,9 @@ var (
 	defaultTimeout   time.Duration = 2 * time.Second
 	partitionBuckets int           = 100
 	partitionCount   int           = 100
-	epochTime        time.Duration = 500 * time.Millisecond
+	epochTime        time.Duration = 20000 * time.Millisecond
 	dataPath         string        = "/store"
+	raftLogs bool = true
 )
 
 func GetConf() (*memberlist.Config, *MyDelegate, *MyEventDelegate) {
