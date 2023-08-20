@@ -35,17 +35,19 @@ func (events *MyEventDelegate) NotifyJoin(node *memberlist.Node) {
 
 	events.nodes[node.Name] = node
 	var err error
-	myPartions, err = GetMemberPartions(events.consistent, conf.Name)
-	if err != nil {
-		logrus.Error(err)
-		return
-	}
-	logrus.Debugf("myPartions %v", myPartions)
-	store.LoadPartitions(myPartions)
 	err = AddVoter(node.Name)
 	if err != nil {
 		logrus.Errorf("add voter err = %v", err)
 	}
+
+	// myPartions, err = GetMemberPartions(events.consistent, conf.Name)
+	// if err != nil {
+	// 	logrus.Error(err)
+	// 	return
+	// }
+
+	// logrus.Debugf("myPartions %v", myPartions)
+	// store.LoadPartitions(myPartions)
 }
 
 func (events *MyEventDelegate) NotifyLeave(node *memberlist.Node) {
@@ -55,18 +57,22 @@ func (events *MyEventDelegate) NotifyLeave(node *memberlist.Node) {
 
 	delete(events.nodes, node.Name)
 	var err error
-	myPartions, err = GetMemberPartions(events.consistent, conf.Name)
-	if err != nil {
-		logrus.Error(err)
-		return
-	}
-	logrus.Debugf("myPartions %v", myPartions)
-	store.LoadPartitions(myPartions)
 
 	err = RemoveServer(node.Name)
 	if err != nil {
 		logrus.Errorf("remove server err = %v", err)
+		return
 	}
+	// Snapshot()
+	logrus.Warn("SUCCESS")
+
+	// myPartions, err = GetMemberPartions(events.consistent, conf.Name)
+	// if err != nil {
+	// 	logrus.Error(err)
+	// 	return
+	// }
+	// logrus.Debugf("myPartions %v", myPartions)
+	// store.LoadPartitions(myPartions)
 }
 
 func (events *MyEventDelegate) NotifyUpdate(node *memberlist.Node) {

@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -18,6 +19,12 @@ import (
 
 var raftNode *raft.Raft
 
+var trans *raft.NetworkTransport
+
+var applyLock sync.RWMutex
+
+var snapshotLock sync.RWMutex
+
 type FSM struct {
 	Epoch uint64
 }
@@ -25,13 +32,18 @@ type FSM struct {
 var epochObserver = make(chan uint64, 1)
 
 func (fsm *FSM) Apply(logEntry *raft.Log) interface{} {
+	applyLock.Lock()
+	defer applyLock.Unlock()
 	epoch := binary.BigEndian.Uint64(logEntry.Data)
 	fsm.Epoch = epoch
+
 	epochObserver <- epoch
 	return nil
 }
 
 func (fsm *FSM) Snapshot() (raft.FSMSnapshot, error) {
+	snapshotLock.Lock()
+	defer snapshotLock.Unlock()
 	return &FSMSnapshot{stateValue: fsm.Epoch}, nil
 }
 
@@ -80,7 +92,11 @@ func (fsmSnapshot *FSMSnapshot) Release() {
 
 var raftConf *raft.Config
 
-var transport *raft.NetworkTransport
+var (
+	logStore      *raftboltdb.BoltStore
+	stableStore   *raftboltdb.BoltStore
+	snapshotStore *raft.FileSnapshotStore
+)
 
 func SetupRaft() {
 	hostname, exists := os.LookupEnv("HOSTNAME")
@@ -107,38 +123,25 @@ func SetupRaft() {
 		logrus.Fatal(err)
 	}
 
-	// Create a network transport for raftNode1
-	if transport != nil {
-		err = transport.Close()
-		if err != nil {
-			logrus.Fatal(err)
-		}
-	}
-
 	raftBindAddr = fmt.Sprintf("%s:7000", localIp)
 	advertiseAddr, err := net.ResolveTCPAddr("tcp", raftBindAddr)
 	if err != nil {
 		logrus.Fatal(err)
 	}
 
-	transport, err = raft.NewTCPTransport(raftBindAddr, advertiseAddr, 3, 10*time.Second, os.Stderr)
-	if err != nil {
-		logrus.Fatal(err)
-	}
-
 	// Create a store to persist Raft logrus entries
-	logStore, err := raftboltdb.NewBoltStore(filepath.Join(raftDir, "log.db"))
+	logStore, err = raftboltdb.NewBoltStore(filepath.Join(raftDir, "log.db"))
 	if err != nil {
 		logrus.Fatal(err)
 	}
 
-	stableStore, err := raftboltdb.NewBoltStore(filepath.Join(raftDir, "stable.db"))
+	stableStore, err = raftboltdb.NewBoltStore(filepath.Join(raftDir, "stable.db"))
 	if err != nil {
 		logrus.Fatal(err)
 	}
 
 	// Create a snapshot store
-	snapshotStore, err := raft.NewFileSnapshotStore(filepath.Join(raftDir, "snap"), 2, io.Discard)
+	snapshotStore, err = raft.NewFileSnapshotStore(filepath.Join(raftDir, "snap"), 2, io.Discard)
 	if err != nil {
 		logrus.Fatal(err)
 	}
@@ -159,9 +162,22 @@ func SetupRaft() {
 
 	logrus.Warnf("raftConf.SnapshotInterval %v ... %v", raftConf.SnapshotInterval)
 
+	if trans != nil {
+		err = trans.Close()
+		if err != nil {
+			logrus.Fatal(err)
+		}
+	}
+	trans, err = raft.NewTCPTransport(raftBindAddr, advertiseAddr, 3, 10*time.Second, os.Stderr)
+	if err != nil {
+		logrus.Fatal(err)
+	}
+
+	// tm := transport.New(raft.ServerAddress(raftBindAddr), []grpc.DialOption{grpc.WithInsecure()})
+
 	fsm := &FSM{} // Your state machine instance
 	// Create raftNode
-	raftNode, err = raft.NewRaft(raftConf, fsm, logStore, stableStore, snapshotStore, transport)
+	raftNode, err = raft.NewRaft(raftConf, fsm, logStore, stableStore, snapshotStore, trans)
 	if err != nil {
 		logrus.Fatal(err)
 	}
@@ -175,7 +191,7 @@ func RaftBootstrap() error {
 			{
 				Suffrage: raft.Voter,
 				ID:       raftConf.LocalID,
-				Address:  raft.ServerAddress(transport.LocalAddr()),
+				Address:  raft.ServerAddress(trans.LocalAddr()),
 			},
 		},
 	})
@@ -214,10 +230,9 @@ func AddVoter(otherAddr string) error {
 	// raftLock.Lock()         // Lock the critical section
 	// defer raftLock.Unlock() // Ensure the lock is released once the function completes
 
-	otherAddr = fmt.Sprintf("%s:7000", otherAddr)
+	otherRaftAddr := fmt.Sprintf("%s:7000", otherAddr)
+	logrus.Warn("AddVoter otherRaftAddr ", otherRaftAddr)
 
-	config2 := raft.DefaultConfig()
-	config2.LocalID = raft.ServerID(otherAddr)
 	// if raftNode.AppliedIndex() > 20 {
 	// 	addVoterFuture := raftNode.AddVoter(config2.LocalID, raft.ServerAddress(otherAddr), raftNode.AppliedIndex(), time.Second)
 	// 	return addVoterFuture.Error()
@@ -225,7 +240,7 @@ func AddVoter(otherAddr string) error {
 	// 	addVoterFuture := raftNode.AddVoter(config2.LocalID, raft.ServerAddress(otherAddr), 0, time.Second)
 	// 	return addVoterFuture.Error()
 	// }
-	addVoterFuture := raftNode.AddVoter(config2.LocalID, raft.ServerAddress(otherAddr), 0, time.Second)
+	addVoterFuture := raftNode.AddVoter(raft.ServerID(otherRaftAddr), raft.ServerAddress(otherRaftAddr), 0, defaultTimeout)
 	return addVoterFuture.Error()
 }
 
@@ -235,10 +250,80 @@ func RemoveServer(otherAddr string) error {
 		return err
 	}
 
+	otherRaftAddr := fmt.Sprintf("%s:7000", otherAddr)
+	logrus.Warn("RemoveServer otherRaftAddr ", otherRaftAddr)
+
 	// raftLock.Lock()         // Lock the critical section
 	// defer raftLock.Unlock() // Ensure the lock is released once the function completes
 
-	removeServerFuture := raftNode.RemoveServer(raft.ServerID(otherAddr), 0, time.Second)
+	// err = raftNode.DemoteVoter(raft.ServerID(otherRaftAddr), raftNode.GetConfiguration().Index(), defaultTimeout).Error()
+	// if err != nil {
+	// 	for i := 0; i < 100; i++ {
+	// 		logrus.Warn("DemoteVoter ", err)
+	// 	}
+	// 	return err
+	// }
 
-	return removeServerFuture.Error()
+	// raftNode.GetConfiguration().Index()
+	err = raftNode.RemoveServer(raft.ServerID(otherRaftAddr), 0, defaultTimeout).Error()
+	if err != nil {
+		for i := 0; i < 100; i++ {
+			logrus.Warn("RemoveServer ", err)
+		}
+		return err
+	}
+
+	// err = raftNode.ReloadConfig(raftNode.ReloadableConfig())
+	// if err != nil {
+	// 	for i := 0; i < 100; i++ {
+	// 		logrus.Warn("ReloadConfig ", err)
+	// 	}
+	// 	return err
+	// }
+
+	// servers := raftNode.GetConfiguration().Configuration()
+
+	// for i := 0; i < 100; i++ {
+	// 	logrus.Warn("servers ", servers)
+	// }
+
+	// err = raft.RecoverCluster(raftConf, &FSM{}, logStore, stableStore, snapshotStore, trans, raftNode.GetConfiguration().Configuration())
+	// if err != nil {
+	// 	for i := 0; i < 100; i++ {
+	// 		logrus.Warn("RecoverCluster ", err)
+	// 	}
+	// 	return err
+	// }
+
+	return err
+}
+
+func Snapshot() error {
+	if raftNode.LastIndex() != raftNode.AppliedIndex() {
+		for i := 0; i < 4; i++ {
+			logrus.Warnf("INDEX NOT EQUAL %d %d", raftNode.LastIndex(), raftNode.AppliedIndex())
+		}
+		return nil
+	}
+
+	err := raftNode.Snapshot().Error()
+	if err != nil {
+		logrus.Error("Snapshot Error ", err)
+	}
+	return err
+}
+
+func UpdateEpoch() error {
+	logrus.Warnf("Leader Update Epoch. Epoch = %d", currEpoch+1)
+
+	logEntry := raftNode.Apply(Uint64ToBytes(currEpoch+1), defaultTimeout)
+	err := logEntry.Error()
+
+	if err == nil {
+		// logrus.Warnf("Leader Update Epoch. Epoch = %d", currEpoch)
+	} else {
+		logrus.Warnf("update fsm Err= %v", err)
+	}
+	logrus.Warnf("Done.")
+	return err
 }

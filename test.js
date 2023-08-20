@@ -66,6 +66,18 @@ export function panic() {
   return;
 }
 
+export function follower() {
+  let addr = `http://${address}/follower`;
+  console.log(addr);
+  let baseRes = http.get(addr);
+  check(baseRes, {
+    "Follower: status was 200": (r) =>
+      r.status === 200 || console.error(`Base Error: Status was ${r.status}`),
+  });
+
+  return;
+}
+
 export function bootstrap() {
   let addr = `http://${address}/bootstrap`;
 
@@ -77,9 +89,46 @@ export function bootstrap() {
 
   return;
 }
+
+export function epoch() {
+  let addr = `http://${address}/epoch`;
+
+  let baseRes = http.get(addr);
+  check(baseRes, {
+    "Epoch: status was 200": (r) =>
+      r.status === 200 || console.error(`Base Error: Status was ${r.status}`),
+  });
+  return;
+}
+
+export function remove() {
+  let addr = `http://${address}/remove`;
+
+  let baseRes = http.get(addr);
+  check(baseRes, {
+    "Epoch: status was 200": (r) =>
+      r.status === 200 || console.error(`Base Error: Status was ${r.status}`),
+  });
+  return;
+}
 export default function () {
-  panic();
-  // bootstrap();
+  follower();
+  return;
+  // panic();
+  bootstrap();
+  sleep(15);
+
+  epoch();
+  sleep(10);
+  epoch();
+  sleep(10);
+
+  follower();
+  sleep(10);
+
+  epoch();
+  sleep(10);
+  epoch();
   // sleep(20);
   return;
 

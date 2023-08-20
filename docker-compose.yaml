@@ -22,7 +22,6 @@ services:
   #   restart: always
 
   dozzle:
-    container_name: dozzle
     image: amir20/dozzle:latest
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -39,10 +38,10 @@ services:
 
   store:
     image: docker.io/andrew-delph/store:store_image
-    scale: 4
+    scale: 10
     depends_on:
       # - zookeeper
       - nginx
-    restart: always
+    # restart: always
     volumes:
       - /tmp/store_data:/store

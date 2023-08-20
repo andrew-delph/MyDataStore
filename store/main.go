@@ -103,17 +103,43 @@ func main() {
 
 	// verify partitions every x seconds
 
-	tick := time.NewTicker(2 * time.Second)
+	// go func() {
+	// 	tick := time.NewTicker(3 * time.Second)
+	// 	for true {
+	// 		select {
+	// 		case <-tick.C:
+	// 			// logrus.Warnf("Apply E = %d state = %s last = %d applied = %d", currEpoch, raftNode.State(), raftNode.LastIndex(), raftNode.AppliedIndex())
+	// 			// if raftNode.State() != raft.Leader && raftNode.State() != raft.Follower {
+	// 			// logrus.Warnf("E = %d state = %s last = %d applied = %d", currEpoch, raftNode.State(), raftNode.LastIndex(), raftNode.AppliedIndex())
+	// 			// }
+
+	// 			if raftNode.Leader() == "" {
+	// 				logrus.Warnf("NO LEADER! state = %s  err = %v", raftNode.State(), RaftTryLead())
+	// 				// RaftBootstrap()
+	// 			}
+	// 		}
+	// 	}
+	// }()
 
 	epochTick := time.NewTicker(epochTime)
 
 	// var count uint32
 
 	logrus.Warn("starting run.")
-
+	tick := time.NewTicker(3 * time.Second)
 	run := true
 	for run {
 		select {
+		case <-tick.C:
+			// logrus.Warnf("Apply E = %d state = %s last = %d applied = %d", currEpoch, raftNode.State(), raftNode.LastIndex(), raftNode.AppliedIndex())
+			// if raftNode.State() != raft.Leader && raftNode.State() != raft.Follower {
+			// logrus.Warnf("E = %d state = %s last = %d applied = %d", currEpoch, raftNode.State(), raftNode.LastIndex(), raftNode.AppliedIndex())
+			// }
+
+			if raftNode.Leader() == "" {
+				logrus.Warnf("NO LEADER! state = %s ME = %s err = %v", raftNode.State(), conf.Name, RaftTryLead()) // RaftTryLead()
+				// RaftBootstrap()
+			}
 
 		case <-epochTick.C:
 
@@ -124,42 +150,21 @@ func main() {
 			verifyErr := raftNode.VerifyLeader().Error()
 			if verifyErr != nil {
 				logrus.Warnf("verifyErr = %v", verifyErr)
+				continue
 			}
 
 			// raftLock.Lock()
-			logEntry := raftNode.Apply(Uint64ToBytes(currEpoch+1), 0)
+			UpdateEpoch()
 
-			err := logEntry.Error()
-
-			if err == nil {
-				logrus.Warnf("Leader Update Epoch. Epoch = %d", currEpoch)
-			} else {
-				logrus.Debugf("update fsm Err= %v", err)
-			}
-
-			if response, ok := (logEntry.Response()).(string); ok {
-				logrus.Debug("response = ", string(response), " ? ", hostname)
-			} else {
-				logrus.Warn("COULD NOT CAST. response = ", string(response))
-			}
+			// if response, ok := (logEntry.Response()).(string); ok {
+			// 	logrus.Debugf("response = %s ? %s ", string(response), hostname)
+			// } else {
+			// 	logrus.Debugf("COULD NOT CAST. response = %s", string(response))
+			// }
 
 			// raftLock.Unlock()
 
-			err = raftNode.Snapshot().Error()
-			if err != nil {
-				logrus.Error("Snapshot Error ", err)
-			}
-
-		case <-tick.C:
-
-			if raftNode.State() != raft.Leader && raftNode.State() != raft.Follower {
-				logrus.Warnf("State = %s, Leader = %s, num_peers = %s, Epoch = %d hostname = %s", raftNode.State(), raftNode.Leader(), raftNode.Stats()["num_peers"], currEpoch, conf.Name)
-			}
-
-			if raftNode.Leader() == "" {
-				logrus.Warnf("NO LEADER! state = %s  num_peers = %s", raftNode.State(), raftNode.Stats()["num_peers"])
-				// RaftBootstrap()
-			}
+			// Snapshot()
 
 		case data := <-delegate.msgCh:
 
@@ -171,7 +176,13 @@ func main() {
 			message.Handle(messageHolder)
 
 		case currEpoch = <-epochObserver:
-			logrus.Warnf("E= %d state = %s last = %d applied = %d", currEpoch, raftNode.State(), raftNode.LastIndex(), raftNode.AppliedIndex())
+			logrus.Warnf("E = %d state = %s last = %d applied = %d name = %s", currEpoch, raftNode.State(), raftNode.LastIndex(), raftNode.AppliedIndex(), conf.Name)
+
+			// err := Snapshot()
+			// if err != nil {
+			// 	logrus.Warnf("Snapshot err = %v", err)
+			// 	continue
+			// }
 			// logrus.Debugf("epochObservation %d %s", epoch, raftNode.State())
 			myPartions, err := GetMemberPartions(events.consistent, conf.Name)
 			if err != nil {
@@ -209,6 +220,7 @@ func main() {
 
 			}
 		case temp := <-raftNode.LeaderCh():
+
 			logrus.Warnf("leader change. %t %s %d", temp, raftNode.State(), currEpoch)
 
 			if !temp {

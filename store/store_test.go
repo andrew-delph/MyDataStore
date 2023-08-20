@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/raft"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/syndtr/goleveldb/leveldb"
@@ -292,4 +293,9 @@ func TestLevelDbIndex(t *testing.T) {
 	elapsedTime := time.Since(startTime).Seconds()
 
 	logrus.Infof("TestLevelDbIndex Elapsed Time: %.2f seconds\n", elapsedTime)
+}
+
+func TestMain22(t *testing.T) {
+	logrus.Warn("HELLO1", raft.ServerID("HELLO"))
+	logrus.Warn("HELLO2", raft.ServerID("HELLO"))
 }

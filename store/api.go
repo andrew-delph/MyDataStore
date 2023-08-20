@@ -122,6 +122,72 @@ func bootstrapHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func removeHandler(w http.ResponseWriter, r *http.Request) {
+	curr := raftNode.State()
+
+	if curr == raft.Leader {
+		// 172.26.0.2
+		members := events.consistent.GetMembers()
+
+		logrus.Warnf("TO_REMOVE = %s MINE = %s", members[0].String(), conf.Name)
+		if members[0].String() == conf.Name {
+			logrus.Warnf("USING NEXT!!! TO_REMOVE = %s MINE = %s", members[1].String(), conf.Name)
+			RemoveServer(members[1].String())
+		} else {
+			RemoveServer(members[0].String())
+		}
+
+		fmt.Fprintf(w, "Recieved panic.")
+	} else {
+		hijacker, ok := w.(http.Hijacker)
+		if !ok {
+			http.Error(w, "Server doesn't support hijacking", http.StatusInternalServerError)
+			return
+		}
+
+		// Hijack the connection
+		conn, _, err := hijacker.Hijack()
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Connection hijacking failed: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		// Close the connection
+		conn.Close()
+	}
+}
+
+func epochHandler(w http.ResponseWriter, r *http.Request) {
+	curr := raftNode.State()
+
+	if curr == raft.Leader {
+		// 172.26.0.2
+		err := UpdateEpoch()
+		if err != nil {
+			http.NotFound(w, r)
+		} else {
+			fmt.Fprintf(w, "Recieved epoch.")
+		}
+
+	} else {
+		hijacker, ok := w.(http.Hijacker)
+		if !ok {
+			http.Error(w, "Server doesn't support hijacking", http.StatusInternalServerError)
+			return
+		}
+
+		// Hijack the connection
+		conn, _, err := hijacker.Hijack()
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Connection hijacking failed: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		// Close the connection
+		conn.Close()
+	}
+}
+
 func startHttpServer() {
 	http.HandleFunc("/", baseHandler)
 	http.HandleFunc("/set", setHandler)
@@ -130,6 +196,8 @@ func startHttpServer() {
 	http.HandleFunc("/leader", leaderHandler)
 	http.HandleFunc("/follower", followerHandler)
 	http.HandleFunc("/bootstrap", bootstrapHandler)
+	http.HandleFunc("/remove", removeHandler)
+	http.HandleFunc("/epoch", epochHandler)
 
 	logrus.Info("Server is running on http://localhost:8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
