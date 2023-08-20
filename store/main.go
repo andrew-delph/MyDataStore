@@ -141,6 +141,11 @@ func main() {
 				// RaftBootstrap()
 			}
 
+			if raftNode.State() != raft.Leader && raftNode.State() != raft.Follower {
+				logrus.Warnf("BAD state = %s ME = %s", raftNode.State(), conf.Name) // RaftTryLead()
+				// RaftBootstrap()
+			}
+
 		case <-epochTick.C:
 
 			if raftNode.State() != raft.Leader {
@@ -176,13 +181,13 @@ func main() {
 			message.Handle(messageHolder)
 
 		case currEpoch = <-epochObserver:
-			logrus.Warnf("E = %d state = %s last = %d applied = %d name = %s", currEpoch, raftNode.State(), raftNode.LastIndex(), raftNode.AppliedIndex(), conf.Name)
+			
 
-			// err := Snapshot()
-			// if err != nil {
-			// 	logrus.Warnf("Snapshot err = %v", err)
-			// 	continue
-			// }
+			err := Snapshot()
+			if err != nil {
+				logrus.Warnf("Snapshot err = %v", err)
+				continue
+			}
 			// logrus.Debugf("epochObservation %d %s", epoch, raftNode.State())
 			myPartions, err := GetMemberPartions(events.consistent, conf.Name)
 			if err != nil {

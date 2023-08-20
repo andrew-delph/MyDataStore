@@ -37,6 +37,8 @@ func (fsm *FSM) Apply(logEntry *raft.Log) interface{} {
 	epoch := binary.BigEndian.Uint64(logEntry.Data)
 	fsm.Epoch = epoch
 
+	logrus.Warnf("E = %d state = %s fsm.index = %d last = %d applied = %d name = %s", epoch, raftNode.State(), logEntry.Index, raftNode.LastIndex(), raftNode.AppliedIndex(), conf.Name)
+
 	epochObserver <- epoch
 	return nil
 }
