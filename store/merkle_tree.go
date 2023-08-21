@@ -94,9 +94,32 @@ func (content MerkleBucket) Equals(other merkletree.Content) (bool, error) {
 }
 
 func AddBucket(epoch uint64, partitionId, bucket int, value string) {
+	if epoch == currEpoch {
+		//
+	} else {
+		//
+	}
 }
 
 func RemoveBucket(epoch uint64, partitionId, bucket int, value string) {
+	if epoch > currGlobalBucketEpoch {
+		//
+	} else {
+		//
+	}
+}
+
+func GetBucket(epoch uint64, partitionId, bucket int) {
+	//
+}
+
+var (
+	bucketEpochLag        = 3
+	currGlobalBucketEpoch = uint64(1)
+)
+
+func UpdateGlobalBucket() {
+	//
 }
 
 func PartitionMerkleTree(epoch uint64, globalEpoch bool, partitionId int) (*merkletree.MerkleTree, error) {
