@@ -266,7 +266,7 @@ func TestLevelDbIndex(t *testing.T) {
 
 	for bucket := 0; bucket < partitionBuckets; bucket++ {
 		// for bucket := 0; bucket < 1; bucket++ {
-		items := store.Items(partitions, bucket, 0, 3)
+		items := store.Items(partitions, bucket, 2, 3)
 		// logrus.Infof("bucket = %d Number of items: %d", bucket, len(items))
 
 		for itemKey, itemValue := range items {
