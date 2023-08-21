@@ -185,7 +185,7 @@ func SendGetMessage(key string) (string, error) {
 	return "", fmt.Errorf("value not found. expected = %d recievedCount= %d", R, len(resList))
 }
 
-func SyncPartition(addr string, hash []byte, epoch uint64, partitionId int) {
+func SyncPartition(addr string, hash []byte, epoch int64, partitionId int) {
 	syncPartReqMsg := &pb.SyncPartitionRequest{Epoch: int64(epoch), Partition: int32(partitionId), Hash: hash}
 
 	conn, client, err := GetClient(addr)
@@ -223,7 +223,7 @@ func SyncPartition(addr string, hash []byte, epoch uint64, partitionId int) {
 	logrus.Debugf("CLIENT COMPLETED SYNC")
 }
 
-func VerifyMerkleTree(addr string, epoch uint64, globalEpoch bool, partitionId int) (map[int32]struct{}, error) {
+func VerifyMerkleTree(addr string, epoch int64, globalEpoch bool, partitionId int) (map[int32]struct{}, error) {
 	unsyncedBuckets := make(map[int32]struct{})
 	partitionTree, err := PartitionMerkleTree(epoch, globalEpoch, partitionId)
 	if err != nil {
@@ -300,7 +300,7 @@ func VerifyMerkleTree(addr string, epoch uint64, globalEpoch bool, partitionId i
 	return unsyncedBuckets, nil
 }
 
-func StreamBuckets(addr string, buckets []int32, epoch uint64, globalEpoch bool, partitionId int) error {
+func StreamBuckets(addr string, buckets []int32, epoch int64, globalEpoch bool, partitionId int) error {
 	conn, client, err := GetClient(addr)
 	if err != nil {
 		logrus.Errorf("CLIENT StreamBuckets err = %v", err)

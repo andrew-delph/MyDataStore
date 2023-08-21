@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math/rand"
 	"net"
@@ -57,22 +59,33 @@ func getLocalIP() (string, error) {
 	return "", fmt.Errorf("Local IP not found")
 }
 
-func Uint64ToBytes(value uint64) []byte {
-	bytes := make([]byte, 8)
-	binary.BigEndian.PutUint64(bytes, value)
-	return bytes
+// EncodeInt64ToBytes encodes an int64 value to a byte slice using little-endian encoding.
+func EncodeInt64ToBytes(value int64) ([]byte, error) {
+	buf := new(bytes.Buffer)
+	err := binary.Write(buf, binary.LittleEndian, value)
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
 
-func RandomUint64() uint64 {
-	// Generate a random 8-byte buffer
-	randomBytes := make([]byte, 8)
-	_, err := rand.Read(randomBytes)
-	if err != nil {
-		panic(err) // Handle the error appropriately in your code
+// DecodeBytesToInt64 decodes an int64 value from a byte slice using little-endian encoding.
+func DecodeBytesToInt64(data []byte) (int64, error) {
+	if len(data) != 8 {
+		return 0, errors.New("byte slice should be 8 bytes long for int64 decoding")
 	}
 
-	// Convert the random bytes to a uint64 value
-	return binary.BigEndian.Uint64(randomBytes)
+	buf := bytes.NewReader(data)
+	var result int64
+	err := binary.Read(buf, binary.LittleEndian, &result)
+	if err != nil {
+		return 0, err
+	}
+	return result, nil
+}
+
+func RandomInt64() int64 {
+	return rand.Int63()
 }
 
 func CalculateHash(input string) int {

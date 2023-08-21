@@ -43,7 +43,7 @@ var (
 
 var store Store
 
-var currEpoch uint64 = 0
+var currEpoch int64 = 0
 
 func main() {
 	// time.Sleep(20 * time.Second)

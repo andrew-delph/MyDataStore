@@ -83,12 +83,12 @@ func TestLevelDbStoreMerkleTree(t *testing.T) {
 
 	startTime := time.Now()
 
-	tree1, err := PartitionMerkleTree(uint64(setEpoch), false, extraPartition)
+	tree1, err := PartitionMerkleTree(int64(setEpoch), false, extraPartition)
 	if err != nil {
 		t.Error(err)
 	}
 
-	tree2, err := PartitionMerkleTree(uint64(setEpoch), false, extraPartition)
+	tree2, err := PartitionMerkleTree(int64(setEpoch), false, extraPartition)
 	if err != nil {
 		t.Error(err)
 	}
@@ -104,7 +104,7 @@ func TestLevelDbStoreMerkleTree(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tree3, err := PartitionMerkleTree(uint64(setEpoch), true, extraPartition)
+	tree3, err := PartitionMerkleTree(int64(setEpoch), true, extraPartition)
 	if err != nil {
 		t.Error(err)
 	}
@@ -137,7 +137,7 @@ func TestLevelDbStoreMerkleTree(t *testing.T) {
 
 	assert.NotEqual(t, tree6.Root.Hash, tree7.Root.Hash, "Tree hashes don't match")
 
-	// tree6, err := PartitionMerkleTree(uint64(setEpoch), true, extraPartition)
+	// tree6, err := PartitionMerkleTree(int64(setEpoch), true, extraPartition)
 	// if err != nil {
 	// 	t.Error(err)
 	// }

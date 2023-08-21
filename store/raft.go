@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -25,10 +24,10 @@ var applyLock sync.RWMutex
 var snapshotLock sync.RWMutex
 
 type FSM struct {
-	Epoch uint64
+	Epoch int64
 }
 
-var epochObserver = make(chan uint64, 1)
+var epochObserver = make(chan int64, 1)
 
 func MakeRaftConf(localIp string) *raft.Config {
 	conf := raft.DefaultConfig()
@@ -51,7 +50,11 @@ func MakeRaftConf(localIp string) *raft.Config {
 func (fsm *FSM) Apply(logEntry *raft.Log) interface{} {
 	applyLock.Lock()
 	defer applyLock.Unlock()
-	epoch := binary.BigEndian.Uint64(logEntry.Data)
+	epoch, err := DecodeBytesToInt64(logEntry.Data)
+	if err != nil {
+		logrus.Error("DecodeBytesToInt64 Error on Apply: %v", err)
+		return nil
+	}
 	fsm.Epoch = epoch
 
 	logrus.Warnf("E = %d state = %s fsm.index = %d last = %d applied = %d name = %s", epoch, raftNode.State(), logEntry.Index, raftNode.LastIndex(), raftNode.AppliedIndex(), conf.Name)
@@ -82,7 +85,7 @@ func (fsm *FSM) Restore(serialized io.ReadCloser) error {
 }
 
 type FSMSnapshot struct {
-	stateValue uint64 `json:"value"`
+	stateValue int64 `json:"value"`
 }
 
 func (fsmSnapshot *FSMSnapshot) Persist(sink raft.SnapshotSink) error {
@@ -339,8 +342,12 @@ func Snapshot() error {
 func UpdateEpoch() error {
 	logrus.Warnf("Leader Update Epoch. Epoch = %d", currEpoch+1)
 
-	logEntry := raftNode.Apply(Uint64ToBytes(currEpoch+1), defaultTimeout)
-	err := logEntry.Error()
+	epochBytes, err := EncodeInt64ToBytes(currEpoch + 1)
+	if err != nil {
+		return err
+	}
+	logEntry := raftNode.Apply(epochBytes, defaultTimeout)
+	err = logEntry.Error()
 
 	if err == nil {
 		// logrus.Warnf("Leader Update Epoch. Epoch = %d", currEpoch)

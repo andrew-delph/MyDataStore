@@ -93,7 +93,7 @@ func (content MerkleBucket) Equals(other merkletree.Content) (bool, error) {
 	return bytes.Equal(content.hash, otherTC.hash), nil
 }
 
-func AddBucket(epoch uint64, partitionId, bucket int, value string) {
+func AddBucket(epoch int64, partitionId, bucket int, value string) {
 	if epoch == currEpoch {
 		//
 	} else {
@@ -101,7 +101,7 @@ func AddBucket(epoch uint64, partitionId, bucket int, value string) {
 	}
 }
 
-func RemoveBucket(epoch uint64, partitionId, bucket int, value string) {
+func RemoveBucket(epoch int64, partitionId, bucket int, value string) {
 	if epoch > currGlobalBucketEpoch {
 		//
 	} else {
@@ -109,20 +109,20 @@ func RemoveBucket(epoch uint64, partitionId, bucket int, value string) {
 	}
 }
 
-func GetBucket(epoch uint64, partitionId, bucket int) {
+func GetBucket(epoch int64, partitionId, bucket int) {
 	//
 }
 
 var (
 	bucketEpochLag        = 3
-	currGlobalBucketEpoch = uint64(1)
+	currGlobalBucketEpoch = int64(1)
 )
 
 func UpdateGlobalBucket() {
 	//
 }
 
-func PartitionMerkleTree(epoch uint64, globalEpoch bool, partitionId int) (*merkletree.MerkleTree, error) {
+func PartitionMerkleTree(epoch int64, globalEpoch bool, partitionId int) (*merkletree.MerkleTree, error) {
 	partition, err := store.getPartition(partitionId)
 	if err != nil {
 		logrus.Error(err)
