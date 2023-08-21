@@ -59,7 +59,7 @@ func TestGoCacheStoreMerkleTree(t *testing.T) {
 	fmt.Printf("GoCache Elapsed Time: %.2f seconds\n", elapsedTime)
 }
 
-func TestLevelDbStoreMerkleTree(t *testing.T) {
+func TestLevelDbStoreRawMerkleTree(t *testing.T) {
 	hostname = randomString(5)
 
 	conf, delegate, events = GetConf()
@@ -147,6 +147,61 @@ func TestLevelDbStoreMerkleTree(t *testing.T) {
 	elapsedTime := time.Since(startTime).Seconds()
 
 	fmt.Printf("LevelDb Elapsed Time: %.2f seconds\n", elapsedTime)
+}
+
+func TestLevelDbStoreCacheMerkleTree(t *testing.T) {
+	hostname = randomString(5)
+
+	conf, delegate, events = GetConf()
+
+	var err error
+	store, err = NewLevelDbStore()
+	if err != nil {
+		t.Error(fmt.Sprintf("NewLevelDbStore: %v", err))
+	}
+	defer store.Close()
+	extraKey := "Extra"
+	extraPartition := FindPartitionID(events.consistent, extraKey)
+	setEpoch := 5
+	for i := 0; i <= setEpoch; i++ {
+		UpdateGlobalBucket(int64(i))
+	}
+
+	err = store.SetValue(testValue(extraKey, "Extra2", setEpoch))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tree1, err := CachePartitionMerkleTree(int64(setEpoch), extraPartition)
+	if err != nil {
+		t.Error(err)
+	}
+
+	tree2, err := CachePartitionMerkleTree(int64(setEpoch-1), extraPartition)
+	if err != nil {
+		t.Error(err)
+	}
+	assert.NotEqual(t, tree1.Root.Hash, tree2.Root.Hash, "Tree hashes don't match")
+
+	tree3, err := RawPartitionMerkleTree(int64(setEpoch), false, extraPartition)
+	if err != nil {
+		t.Error(err)
+	}
+	assert.EqualValues(t, tree1.Root.Hash, tree3.Root.Hash, "Tree hashes don't match")
+
+	tree4, err := RawPartitionMerkleTree(int64(setEpoch), true, extraPartition)
+	if err != nil {
+		t.Error(err)
+	}
+	assert.EqualValues(t, tree1.Root.Hash, tree4.Root.Hash, "Tree hashes don't match")
+
+	tree5, err := RawPartitionMerkleTree(int64(setEpoch+1), true, extraPartition)
+	if err != nil {
+		t.Error(err)
+	}
+	assert.EqualValues(t, tree1.Root.Hash, tree5.Root.Hash, "Tree hashes don't match")
+
+	return
 }
 
 func BFS(root *merkletree.Node) []*merkletree.Node {

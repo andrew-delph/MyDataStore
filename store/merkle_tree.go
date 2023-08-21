@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"time"
 
@@ -132,19 +133,26 @@ func GetBucket(epoch int64, partitionId, bucket int) (*MerkleBucket, error) {
 	if bucketHolder, ok := bucketsMap[epoch]; ok {
 		return bucketHolder[partitionId][bucket], nil
 	}
-	return nil, errors.New("Bucket does not exist")
+	keys := make([]int64, bucketEpochLag)
+	for i := range bucketsMap {
+		keys = append(keys, i)
+	}
+	return nil, fmt.Errorf("Bucket does not exist epoch = %d partitionId = %d bucket = %d currGlobalBucketEpoch = %d len(bucketsMap) = %d keys = %v", epoch, partitionId, bucket, currGlobalBucketEpoch, len(bucketsMap), keys)
 }
 
 func UpdateGlobalBucket(newEpoch int64) {
-	currGlobalBucketEpoch = newEpoch - 1
+	logrus.Warnf("UpdateGlobalBucket newEpoch = %d", newEpoch)
 	bucketsMap[newEpoch] = NewBucketsHolder()
 	for len(bucketsMap) > bucketEpochLag {
 		minBucket := int64(math.MaxInt64)
 		for bucket := range bucketsMap {
 			minBucket = min(minBucket, bucket)
+			min(minBucket, bucket)
 		}
+		logrus.Warnf("Delete Buckets on Epoch = %v", minBucket)
 		delete(bucketsMap, minBucket)
 	}
+	currGlobalBucketEpoch = newEpoch - 1
 }
 
 func NewBucketsHolder() map[int][]*MerkleBucket {

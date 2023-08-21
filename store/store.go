@@ -274,7 +274,7 @@ func (store GoCacheStore) SetValue(value *pb.Value) error {
 	}
 
 	existingValue, exists, err := store.GetValue(key)
-	if exists && existingValue.Epoch < value.Epoch {
+	if exists && value.Epoch < existingValue.Epoch {
 		return fmt.Errorf("cannot set value with a lower Epoch. set = %d existing = %d", value.Epoch, existingValue.Epoch)
 	}
 
@@ -384,7 +384,7 @@ func (store LevelDbStore) SetValue(value *pb.Value) error {
 	}
 
 	existingValue, exists, err := store.GetValue(key)
-	if exists && existingValue.Epoch < value.Epoch {
+	if exists && value.Epoch < existingValue.Epoch {
 		return fmt.Errorf("cannot set value with a lower Epoch. set = %d existing = %d", value.Epoch, existingValue.Epoch)
 	}
 
