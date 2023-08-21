@@ -109,7 +109,7 @@ func (*internalServer) VerifyMerkleTree(stream pb.InternalNodeService_VerifyMerk
 	epoch := rootNode.Epoch
 	global := rootNode.Global
 	partitionId := rootNode.Partition
-	partitionTree, err := RawPartitionMerkleTree(int64(epoch), global, int(partitionId))
+	partitionTree, _, err := RawPartitionMerkleTree(int64(epoch), global, int(partitionId))
 	if err != nil {
 		logrus.Error("SERVER ", err)
 		return err

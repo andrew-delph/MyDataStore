@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"log"
 	"testing"
 	"time"
 
@@ -27,7 +26,7 @@ func TestGoCacheStoreMerkleTree(t *testing.T) {
 
 	startTime := time.Now()
 
-	tree1, err := RawPartitionMerkleTree(1, true, 1)
+	tree1, _, err := RawPartitionMerkleTree(1, true, 1)
 	if err != nil {
 		t.Error(err)
 	}
@@ -37,7 +36,7 @@ func TestGoCacheStoreMerkleTree(t *testing.T) {
 		t.Error(err)
 	}
 
-	tree2, err := RawPartitionMerkleTree(1, true, 1)
+	tree2, _, err := RawPartitionMerkleTree(1, true, 1)
 	if err != nil {
 		t.Error(err)
 	}
@@ -83,12 +82,12 @@ func TestLevelDbStoreRawMerkleTree(t *testing.T) {
 
 	startTime := time.Now()
 
-	tree1, err := RawPartitionMerkleTree(int64(setEpoch), false, extraPartition)
+	tree1, _, err := RawPartitionMerkleTree(int64(setEpoch), false, extraPartition)
 	if err != nil {
 		t.Error(err)
 	}
 
-	tree2, err := RawPartitionMerkleTree(int64(setEpoch), false, extraPartition)
+	tree2, _, err := RawPartitionMerkleTree(int64(setEpoch), false, extraPartition)
 	if err != nil {
 		t.Error(err)
 	}
@@ -104,7 +103,7 @@ func TestLevelDbStoreRawMerkleTree(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tree3, err := RawPartitionMerkleTree(int64(setEpoch), true, extraPartition)
+	tree3, _, err := RawPartitionMerkleTree(int64(setEpoch), true, extraPartition)
 	if err != nil {
 		t.Error(err)
 	}
@@ -113,24 +112,24 @@ func TestLevelDbStoreRawMerkleTree(t *testing.T) {
 	assert.NotEqual(t, tree2.Root.Hash, tree3.Root.Hash, "Tree hashes match")
 
 	// Test global
-	tree4, err := RawPartitionMerkleTree(2, true, extraPartition)
+	tree4, _, err := RawPartitionMerkleTree(2, true, extraPartition)
 	if err != nil {
 		t.Error(err)
 	}
 
-	tree5, err := RawPartitionMerkleTree(1, false, extraPartition)
+	tree5, _, err := RawPartitionMerkleTree(1, false, extraPartition)
 	if err != nil {
 		t.Error(err)
 	}
 
 	assert.EqualValues(t, tree4.Root.Hash, tree5.Root.Hash, "Tree hashes don't match")
 
-	tree6, err := RawPartitionMerkleTree(2, false, extraPartition)
+	tree6, _, err := RawPartitionMerkleTree(2, false, extraPartition)
 	if err != nil {
 		t.Error(err)
 	}
 
-	tree7, err := RawPartitionMerkleTree(1, false, extraPartition)
+	tree7, _, err := RawPartitionMerkleTree(1, false, extraPartition)
 	if err != nil {
 		t.Error(err)
 	}
@@ -164,7 +163,10 @@ func TestLevelDbStoreCacheMerkleTree(t *testing.T) {
 	extraPartition := FindPartitionID(events.consistent, extraKey)
 	setEpoch := 5
 	for i := 0; i <= setEpoch; i++ {
-		UpdateGlobalBucket(int64(i))
+		err = UpdateGlobalBucket(int64(i))
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	err = store.SetValue(testValue(extraKey, "Extra2", setEpoch))
@@ -183,25 +185,37 @@ func TestLevelDbStoreCacheMerkleTree(t *testing.T) {
 	}
 	assert.NotEqual(t, tree1.Root.Hash, tree2.Root.Hash, "Tree hashes don't match")
 
-	tree3, err := RawPartitionMerkleTree(int64(setEpoch), false, extraPartition)
+	tree3, _, err := RawPartitionMerkleTree(int64(setEpoch), false, extraPartition)
 	if err != nil {
 		t.Error(err)
 	}
 	assert.EqualValues(t, tree1.Root.Hash, tree3.Root.Hash, "Tree hashes don't match")
 
-	tree4, err := RawPartitionMerkleTree(int64(setEpoch), true, extraPartition)
+	tree4, _, err := RawPartitionMerkleTree(int64(setEpoch), true, extraPartition)
 	if err != nil {
 		t.Error(err)
 	}
 	assert.EqualValues(t, tree1.Root.Hash, tree4.Root.Hash, "Tree hashes don't match")
 
-	tree5, err := RawPartitionMerkleTree(int64(setEpoch+1), true, extraPartition)
+	tree5, _, err := RawPartitionMerkleTree(int64(setEpoch+1), true, extraPartition)
 	if err != nil {
 		t.Error(err)
 	}
 	assert.EqualValues(t, tree1.Root.Hash, tree5.Root.Hash, "Tree hashes don't match")
+	err = UpdateGlobalBucket(int64(setEpoch + 1))
+	if err != nil {
+		t.Error(err)
+	}
+	tree6, err := GlobalPartitionMerkleTree(extraPartition)
+	if err != nil {
+		t.Error(err)
+	}
 
-	return
+	tree7, _, err := RawPartitionMerkleTree(int64(setEpoch+10), true, extraPartition)
+	if err != nil {
+		t.Error(err)
+	}
+	assert.EqualValues(t, tree7.Root.Hash, tree6.Root.Hash, "Tree hashes don't match")
 }
 
 func BFS(root *merkletree.Node) []*merkletree.Node {
@@ -252,67 +266,6 @@ func (t TestContent) Equals(other merkletree.Content) (bool, error) {
 		return false, errors.New("value is not of type TestContent")
 	}
 	return t.x == otherTC.x, nil
-}
-
-func TestMerkleTree(t *testing.T) {
-	return
-	var list1 []merkletree.Content
-	for i := 0; i < 10; i++ {
-		list1 = append(list1, TestContent{x: "Hello"})
-		list1 = append(list1, TestContent{x: "Hi"})
-		list1 = append(list1, TestContent{x: "Hey"})
-		list1 = append(list1, TestContent{x: "Hola"})
-		list1 = append(list1, TestContent{x: "Hello"})
-	}
-
-	// Create a new Merkle Tree from the list of Content
-	tree1, err := merkletree.NewTree(list1)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var list2 []merkletree.Content
-
-	for i := 0; i < 10; i++ {
-		list2 = append(list2, TestContent{x: "Hello"})
-		list2 = append(list2, TestContent{x: "Hi"})
-		list2 = append(list2, TestContent{x: "Hey"})
-		list2 = append(list2, TestContent{x: "Hola"})
-		list2 = append(list2, TestContent{x: "Hello"})
-	}
-
-	list2 = append(list2, TestContent{x: "Hello"})
-
-	// Create a new Merkle Tree from the list of Content
-	tree2, err := merkletree.NewTree(list2)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	nodes1 := BFS(tree1.Root)
-	nodes2 := BFS(tree2.Root)
-
-	// diff := 0
-	// for i, _ := range nodes1 {
-	// 	logrus.Info("compare ", bytes.Compare(nodes1[i].Hash, nodes2[i].Hash))
-	// 	diff += bytes.Compare(nodes1[i].Hash, nodes2[i].Hash)
-	// 	// logrus.Info(node.C)
-	// 	// logrus.Info("hash ", node.Hash)
-	// 	// logrus.Info(tree1.VerifyContent(node.C))
-	// }
-	// logrus.Info("diff ", diff)
-
-	logrus.Info("len1 ", len(nodes1))
-
-	logrus.Info("len2 ", len(nodes2))
-
-	logrus.Info(tree1.VerifyContent(TestContent{x: "Hello"}))
-
-	logrus.Info(tree1.Root.C)
-	logrus.Info(len(nodes1))
-	// tree1.VerifyContent(verifyList)
-
-	// assert.EqualValues(t, tree1.Root.Hash, tree2.Root.Hash, "Tree hashes don't match")
 }
 
 func TestCustomHash(t *testing.T) {

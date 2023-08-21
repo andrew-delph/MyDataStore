@@ -225,7 +225,7 @@ func SyncPartition(addr string, hash []byte, epoch int64, partitionId int) {
 
 func VerifyMerkleTree(addr string, epoch int64, globalEpoch bool, partitionId int) (map[int32]struct{}, error) {
 	unsyncedBuckets := make(map[int32]struct{})
-	partitionTree, err := RawPartitionMerkleTree(epoch, globalEpoch, partitionId)
+	partitionTree,_, err := RawPartitionMerkleTree(epoch, globalEpoch, partitionId)
 	if err != nil {
 		logrus.Error(err)
 		return nil, err
