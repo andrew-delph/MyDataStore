@@ -16,6 +16,8 @@ import (
 
 var GLOBAL_BUCKET_ERROR = errors.New("Could not update global bucket.")
 
+var NOT_EXIST_BUCKET_ERROR = errors.New("Bucket does not exist.")
+
 var hashMod = int64(999999)
 
 type CustomHash struct {
@@ -125,11 +127,13 @@ func AddBucket(epoch int64, partitionId, bucket int, value *pb.Value) error {
 	}
 	currBucket, err := GetBucket(epoch, partitionId, bucket)
 	if err != nil {
-		return err
+		logrus.Warnf("currBucket.AddValue GetBucket err = %v", err)
+		return NOT_EXIST_BUCKET_ERROR
 	}
 	err = currBucket.AddValue(value)
 	if err != nil {
 		logrus.Warnf("currBucket.AddValue err = %v", err)
+		return err
 	}
 	return nil
 }
@@ -277,7 +281,7 @@ func CachePartitionMerkleTree(epoch int64, partitionId int) (*merkletree.MerkleT
 	tree, err := merkletree.NewTree(contentList)
 	if err != nil {
 		logrus.Debug(err)
-		return nil, fmt.Errorf("CachePartitionMerkleTree err = %v", err)
+		return nil, err
 	}
 
 	return tree, nil

@@ -174,38 +174,41 @@ func TestLevelDbStoreCacheMerkleTree(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tree1, err := CachePartitionMerkleTree(int64(setEpoch), extraPartition)
+	tree1, err := CachePartitionMerkleTree(int64(setEpoch-1), extraPartition)
 	if err != nil {
 		t.Error(err)
 	}
 
-	tree2, err := CachePartitionMerkleTree(int64(setEpoch-1), extraPartition)
+	tree2, err := CachePartitionMerkleTree(int64(setEpoch), extraPartition)
 	if err != nil {
 		t.Error(err)
 	}
+
 	assert.NotEqual(t, tree1.Root.Hash, tree2.Root.Hash, "Tree hashes don't match")
 
 	tree3, _, err := RawPartitionMerkleTree(int64(setEpoch), false, extraPartition)
 	if err != nil {
 		t.Error(err)
 	}
-	assert.EqualValues(t, tree1.Root.Hash, tree3.Root.Hash, "Tree hashes don't match")
+	assert.EqualValues(t, tree2.Root.Hash, tree3.Root.Hash, "Tree hashes don't match")
 
 	tree4, _, err := RawPartitionMerkleTree(int64(setEpoch), true, extraPartition)
 	if err != nil {
 		t.Error(err)
 	}
-	assert.EqualValues(t, tree1.Root.Hash, tree4.Root.Hash, "Tree hashes don't match")
+	assert.EqualValues(t, tree2.Root.Hash, tree4.Root.Hash, "Tree hashes don't match")
 
 	tree5, _, err := RawPartitionMerkleTree(int64(setEpoch+1), true, extraPartition)
 	if err != nil {
 		t.Error(err)
 	}
-	assert.EqualValues(t, tree1.Root.Hash, tree5.Root.Hash, "Tree hashes don't match")
+	assert.EqualValues(t, tree2.Root.Hash, tree5.Root.Hash, "Tree hashes don't match")
+
 	err = UpdateGlobalBucket(int64(setEpoch + 1))
 	if err != nil {
 		t.Error(err)
 	}
+
 	tree6, err := GlobalPartitionMerkleTree(extraPartition)
 	if err != nil {
 		t.Error(err)
@@ -215,7 +218,10 @@ func TestLevelDbStoreCacheMerkleTree(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+
 	assert.EqualValues(t, tree7.Root.Hash, tree6.Root.Hash, "Tree hashes don't match")
+	assert.EqualValues(t, tree6.Root.Hash, tree3.Root.Hash, "Tree hashes don't match")
+	assert.EqualValues(t, tree6.Root.Hash, tree3.Root.Hash, "Tree hashes don't match")
 }
 
 func BFS(root *merkletree.Node) []*merkletree.Node {
