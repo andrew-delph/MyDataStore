@@ -27,12 +27,12 @@ func TestGoCacheStore(t *testing.T) {
 	store = NewGoCacheStore()
 	defer store.Close()
 
-	err := store.setValue(testValue("key1", "value1", 1))
+	err := store.SetValue(testValue("key1", "value1", 1))
 	if err != nil {
-		t.Error(fmt.Sprintf("setValue error: %v", err))
+		t.Error(fmt.Sprintf("SetValue error: %v", err))
 	}
 
-	value, exists, err := store.getValue("key1")
+	value, exists, err := store.GetValue("key1")
 
 	if !exists {
 		t.Error(fmt.Sprintf("exists is false: %v", err))
@@ -56,12 +56,12 @@ func TestLevelDbStoreSingle(t *testing.T) {
 	}
 	defer store.Close()
 
-	err = store.setValue(testValue("keyz", "value1", 1))
+	err = store.SetValue(testValue("keyz", "value1", 1))
 	if err != nil {
-		t.Error(fmt.Sprintf("setValue error: %v", err))
+		t.Error(fmt.Sprintf("SetValue error: %v", err))
 	}
 
-	value, exists, err := store.getValue("keyz")
+	value, exists, err := store.GetValue("keyz")
 
 	if !exists {
 		t.Error(fmt.Sprintf("exists is false: %v", err))
@@ -87,7 +87,7 @@ func TestGoCacheStoreSpeed(t *testing.T) {
 	startTime := time.Now()
 
 	for i := 0; i < NumTestValues; i++ {
-		store.setValue(testValue(fmt.Sprintf("keyz%d", i), fmt.Sprintf("value%d", i), 1))
+		store.SetValue(testValue(fmt.Sprintf("keyz%d", i), fmt.Sprintf("value%d", i), 1))
 	}
 
 	elapsedTime := time.Since(startTime).Seconds()
@@ -109,7 +109,7 @@ func TestLevelDbStoreSpeed(t *testing.T) {
 	startTime := time.Now()
 
 	for i := 0; i < NumTestValues; i++ {
-		store.setValue(testValue(fmt.Sprintf("keyz%d", i), fmt.Sprintf("value%d", i), 1))
+		store.SetValue(testValue(fmt.Sprintf("keyz%d", i), fmt.Sprintf("value%d", i), 1))
 	}
 
 	elapsedTime := time.Since(startTime).Seconds()
@@ -239,17 +239,17 @@ func TestLevelDbIndex(t *testing.T) {
 	testInsertNum := 300
 
 	for i := 0; i < testInsertNum; i++ {
-		err = store.setValue(testValue(fmt.Sprintf("keyzds%d", i), fmt.Sprintf("value%d", i), 2))
+		err = store.SetValue(testValue(fmt.Sprintf("keyzds%d", i), fmt.Sprintf("value%d", i), 2))
 		if err != nil {
-			t.Errorf("setValue: %v", err)
+			t.Errorf("SetValue: %v", err)
 			return
 		}
 	}
 
 	for i := 0; i < 33; i++ {
-		err = store.setValue(testValue(fmt.Sprintf("keyzx%d", i), fmt.Sprintf("value%d", i), 11))
+		err = store.SetValue(testValue(fmt.Sprintf("keyzx%d", i), fmt.Sprintf("value%d", i), 11))
 		if err != nil {
-			t.Errorf("setValue: %v", err)
+			t.Errorf("SetValue: %v", err)
 			return
 		}
 	}

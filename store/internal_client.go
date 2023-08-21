@@ -214,9 +214,9 @@ func SyncPartition(addr string, hash []byte, epoch uint64, partitionId int) {
 			break
 		}
 
-		err = store.setValue(value)
+		err = store.SetValue(value)
 		if err != nil {
-			logrus.Warnf("CLIENT SyncPartition stream error store.setValue: %v", err)
+			logrus.Warnf("CLIENT SyncPartition stream error store.SetValue: %v", err)
 			continue
 		}
 	}
@@ -328,12 +328,12 @@ func StreamBuckets(addr string, buckets []int32, lowerEpoch, upperEpoch uint64, 
 			return err
 		}
 
-		err = store.setValue(value)
+		err = store.SetValue(value)
 		if err != nil {
-			logrus.Errorf("CLIENT StreamBuckets store.setValue error: %v", err)
+			logrus.Errorf("CLIENT StreamBuckets store.SetValue error: %v", err)
 			continue
 		} else {
-			logrus.Debugf("CLIENT StreamBuckets setValue SUCCESS key = %v", value.Key)
+			logrus.Debugf("CLIENT StreamBuckets SetValue SUCCESS key = %v", value.Key)
 		}
 	}
 }

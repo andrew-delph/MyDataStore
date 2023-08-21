@@ -18,8 +18,8 @@ import (
 
 type Store interface {
 	InitStore()
-	setValue(value *pb.Value) error
-	getValue(key string) (*pb.Value, bool, error)
+	SetValue(value *pb.Value) error
+	GetValue(key string) (*pb.Value, bool, error)
 	getPartition(partitionId int) (Partition, error)
 	LoadPartitions(partitions []int)
 	Items(partions []int, bucket, lowerEpoch, upperEpoch int) map[string]*pb.Value
@@ -27,8 +27,8 @@ type Store interface {
 	Clear()
 }
 type Partition interface {
-	getValue(key string) (*pb.Value, bool, error)
-	setValue(value *pb.Value) error
+	GetPartitionValue(key string) (*pb.Value, bool, error)
+	SetPartitionValue(value *pb.Value) error
 	Items(bucket, lowerEpoch, upperEpoch int) map[string]*pb.Value
 	GetPartitionId() int
 }
@@ -86,7 +86,7 @@ func NewLevelDbStore() (*LevelDbStore, error) {
 	return &LevelDbStore{db: db}, nil
 }
 
-func (partition GoCachePartition) getValue(key string) (*pb.Value, bool, error) {
+func (partition GoCachePartition) GetPartitionValue(key string) (*pb.Value, bool, error) {
 	valueObj, exists := partition.store.Get(key)
 	if exists {
 		value, ok := valueObj.(*pb.Value)
@@ -97,7 +97,7 @@ func (partition GoCachePartition) getValue(key string) (*pb.Value, bool, error) 
 	return nil, false, nil
 }
 
-func (partition GoCachePartition) setValue(value *pb.Value) error {
+func (partition GoCachePartition) SetPartitionValue(value *pb.Value) error {
 	partition.store.Set(value.Key, value, 0)
 	return nil
 }
@@ -129,7 +129,7 @@ func IndexKey(paritionint int, key string) []byte {
 	return []byte(fmt.Sprintf("real_%04d_%s", paritionint, key))
 }
 
-func (partition LevelDbPartition) setValue(value *pb.Value) error {
+func (partition LevelDbPartition) SetPartitionValue(value *pb.Value) error {
 	writeOpts := &opt.WriteOptions{}
 	writeOpts.Sync = true
 
@@ -146,7 +146,7 @@ func (partition LevelDbPartition) setValue(value *pb.Value) error {
 	}
 	bucketHash := CalculateHash(value.Key)
 	bucket := bucketHash % partitionBuckets
-	logrus.Debugf("setValue bucket %v", bucket)
+	logrus.Debugf("SetValue bucket %v", bucket)
 	indexBytes := IndexBucketEpoch(partition.GetPartitionId(), bucket, int(value.Epoch), value.Key)
 
 	// logrus.Error("indexBytes ", string(indexBytes))
@@ -160,7 +160,7 @@ func (partition LevelDbPartition) setValue(value *pb.Value) error {
 	return nil
 }
 
-func (partition LevelDbPartition) getValue(key string) (*pb.Value, bool, error) {
+func (partition LevelDbPartition) GetPartitionValue(key string) (*pb.Value, bool, error) {
 	keyBytes := IndexKey(partition.GetPartitionId(), key)
 	valueBytes, err := partition.db.Get(keyBytes, nil)
 
@@ -261,7 +261,7 @@ func (store LevelDbStore) Items(partions []int, bucket, lowerEpoch, upperEpoch i
 }
 
 // Function to set a value in the global cache
-func (store GoCacheStore) setValue(value *pb.Value) error {
+func (store GoCacheStore) SetValue(value *pb.Value) error {
 	key := value.Key
 	partitionId := FindPartitionID(events.consistent, key)
 	partition, err := store.getPartition(partitionId)
@@ -269,7 +269,7 @@ func (store GoCacheStore) setValue(value *pb.Value) error {
 		return err
 	}
 
-	existingValue, exists, err := store.getValue(key)
+	existingValue, exists, err := store.GetValue(key)
 	if exists && existingValue.Epoch < value.Epoch {
 		return fmt.Errorf("cannot set value with a lower Epoch. set = %d existing = %d", value.Epoch, existingValue.Epoch)
 	}
@@ -277,12 +277,12 @@ func (store GoCacheStore) setValue(value *pb.Value) error {
 	if exists && existingValue.UnixTimestamp < value.UnixTimestamp {
 		return fmt.Errorf("cannot set value with a lower UnixTimestamp. set = %d existing = %d", value.UnixTimestamp, existingValue.UnixTimestamp)
 	}
-	partition.setValue(value)
+	partition.SetPartitionValue(value)
 	return nil
 }
 
 // Function to get a value from the global cache
-func (store GoCacheStore) getValue(key string) (*pb.Value, bool, error) {
+func (store GoCacheStore) GetValue(key string) (*pb.Value, bool, error) {
 	partitionId := FindPartitionID(events.consistent, key)
 
 	partition, err := store.getPartition(partitionId)
@@ -292,7 +292,7 @@ func (store GoCacheStore) getValue(key string) (*pb.Value, bool, error) {
 	if partition == nil {
 		return nil, false, fmt.Errorf("partition is nil")
 	}
-	value, found, err := partition.getValue(key)
+	value, found, err := partition.GetPartitionValue(key)
 	if found {
 		return value, true, nil
 	}
@@ -368,18 +368,18 @@ func (store GoCacheStore) saveStore() {
 // Define a global cache variable
 
 // Function to set a value in the global cache
-func (store LevelDbStore) setValue(value *pb.Value) error {
+func (store LevelDbStore) SetValue(value *pb.Value) error {
 	key := value.Key
 	partitionId := FindPartitionID(events.consistent, key)
 
-	logrus.Debugf("setValue partitionId = %v", partitionId)
+	logrus.Debugf("SetValue partitionId = %v", partitionId)
 
 	partition, err := store.getPartition(partitionId)
 	if partition == nil && err != nil {
 		return err
 	}
 
-	existingValue, exists, err := store.getValue(key)
+	existingValue, exists, err := store.GetValue(key)
 	if exists && existingValue.Epoch < value.Epoch {
 		return fmt.Errorf("cannot set value with a lower Epoch. set = %d existing = %d", value.Epoch, existingValue.Epoch)
 	}
@@ -388,11 +388,11 @@ func (store LevelDbStore) setValue(value *pb.Value) error {
 		return fmt.Errorf("cannot set value with a lower UnixTimestamp. set = %d existing = %d", value.UnixTimestamp, existingValue.UnixTimestamp)
 	}
 
-	return partition.setValue(value)
+	return partition.SetPartitionValue(value)
 }
 
 // Function to get a value from the global cache
-func (store LevelDbStore) getValue(key string) (*pb.Value, bool, error) {
+func (store LevelDbStore) GetValue(key string) (*pb.Value, bool, error) {
 	partitionId := FindPartitionID(events.consistent, key)
 
 	partition, err := store.getPartition(partitionId)
@@ -402,7 +402,7 @@ func (store LevelDbStore) getValue(key string) (*pb.Value, bool, error) {
 	if partition == nil {
 		return nil, false, fmt.Errorf("partition is nil")
 	}
-	value, found, err := partition.getValue(key)
+	value, found, err := partition.GetPartitionValue(key)
 	if found {
 		return value, true, nil
 	}

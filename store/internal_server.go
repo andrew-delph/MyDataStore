@@ -53,7 +53,7 @@ func (s *internalServer) TestRequest(ctx context.Context, in *pb.StandardRespons
 func (s *internalServer) SetRequest(ctx context.Context, m *pb.Value) (*pb.StandardResponse, error) {
 	logrus.Debugf("Handling SetRequest: key=%s value=%s ", m.Key, m.Value)
 
-	err := store.setValue(m)
+	err := store.SetValue(m)
 	if err != nil {
 		logrus.Errorf("failed to set %s : %s error= %v", m.Key, m.Value, err)
 		return nil, err
@@ -64,7 +64,7 @@ func (s *internalServer) SetRequest(ctx context.Context, m *pb.Value) (*pb.Stand
 
 func (s *internalServer) GetRequest(ctx context.Context, m *pb.GetRequestMessage) (*pb.Value, error) {
 	logrus.Debugf("Handling GetRequest: key=%s ", m.Key)
-	value, exists, err := store.getValue(m.Key)
+	value, exists, err := store.GetValue(m.Key)
 
 	if exists {
 		return value, nil

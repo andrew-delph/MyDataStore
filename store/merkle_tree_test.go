@@ -22,7 +22,7 @@ func TestGoCacheStoreMerkleTree(t *testing.T) {
 	defer store.Close()
 
 	for i := 0; i < NumTestValues; i++ {
-		store.setValue(testValue(fmt.Sprintf("keyz%d", i), fmt.Sprintf("value%d", i), 1))
+		store.SetValue(testValue(fmt.Sprintf("keyz%d", i), fmt.Sprintf("value%d", i), 1))
 	}
 
 	startTime := time.Now()
@@ -74,7 +74,7 @@ func TestLevelDbStoreMerkleTree(t *testing.T) {
 	extraPartition := FindPartitionID(events.consistent, extraKey)
 
 	for i := 0; i < 100; i++ {
-		err := store.setValue(testValue(fmt.Sprintf("keyz%d", i), fmt.Sprintf("value%d", i), 1))
+		err := store.SetValue(testValue(fmt.Sprintf("keyz%d", i), fmt.Sprintf("value%d", i), 1))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -97,7 +97,7 @@ func TestLevelDbStoreMerkleTree(t *testing.T) {
 	// 	t.Error(err)
 	// }
 
-	err = store.setValue(testValue(extraKey, "Extra2", 1))
+	err = store.SetValue(testValue(extraKey, "Extra2", 1))
 	if err != nil {
 		t.Fatal(err)
 	}
