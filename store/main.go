@@ -192,7 +192,6 @@ func main() {
 			// 	continue
 			// }
 			// logrus.Debugf("epochObservation %d %s", epoch, raftNode.State())
-			continue
 			myPartions, err := GetMemberPartions(events.consistent, conf.Name)
 			if err != nil {
 				logrus.Warn(err)
@@ -209,21 +208,26 @@ func main() {
 				for _, node := range nodes {
 					epochRequest := currEpoch - 1
 					unsyncedBuckets, err := VerifyMerkleTree(node.String(), epochRequest, partitionId)
-					if err != nil && err != io.EOF {
-						logrus.Debugf("VerifyMerkleTree unsyncedBuckets = %v err = %v ", unsyncedBuckets, err)
+					if err != nil && err == io.EOF {
+						logrus.Debugf("VerifyMerkleTree unsyncedBuckets = %v partitionId = %v err = %v ", unsyncedBuckets, partitionId, err)
 					} else if err != nil {
-						logrus.Errorf("VerifyMerkleTree unsyncedBuckets = %v err = %v ", unsyncedBuckets, err)
+						logrus.Errorf("VerifyMerkleTree unsyncedBuckets = %v partitionId = %v err = %v ", unsyncedBuckets, partitionId, err)
 					}
 
 					if len(unsyncedBuckets) > 0 {
-						var requstBuckets []int32
+						var requestBuckets []int32
 						for b := range unsyncedBuckets {
-							requstBuckets = append(requstBuckets, b)
+							requestBuckets = append(requestBuckets, b)
 						}
 
-						logrus.Warnf("CLIENT requstBuckets: %v", requstBuckets)
+						logrus.Warnf("CLIENT requstBuckets: %v", requestBuckets)
 
-						StreamBuckets(node.String(), requstBuckets, epochRequest, partitionId)
+						err = StreamBuckets(node.String(), requestBuckets, epochRequest, partitionId)
+						if err != nil && err == io.EOF {
+							logrus.Debugf("StreamBuckets unsyncedBuckets = %v partitionId = %v err = %v ", unsyncedBuckets, partitionId, err)
+						} else if err != nil {
+							logrus.Errorf("StreamBuckets unsyncedBuckets = %v partitionId = %v err = %v ", unsyncedBuckets, partitionId, err)
+						}
 					}
 				}
 

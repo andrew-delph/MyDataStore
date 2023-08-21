@@ -237,9 +237,9 @@ func VerifyMerkleTree(addr string, epoch uint64, partitionId int) (map[int32]str
 	}
 	defer conn.Close()
 
-	// ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	// defer cancel()
-	stream, err := client.VerifyMerkleTree(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+	stream, err := client.VerifyMerkleTree(ctx)
 	if err != nil {
 		logrus.Warnf("CLIENT SyncPartition Failed to open stream: %v", err)
 		return nil, err
@@ -309,7 +309,10 @@ func StreamBuckets(addr string, buckets []int32, epoch uint64, partitionId int) 
 	defer conn.Close()
 	bucketsReq := &pb.StreamBucketsRequest{Buckets: buckets, Epoch: int64(epoch), Partition: int32(partitionId)}
 
-	stream, err := client.StreamBuckets(context.Background(), bucketsReq)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	stream, err := client.StreamBuckets(ctx, bucketsReq)
 	if err != nil {
 		logrus.Errorf("CLIENT StreamBuckets err = %v", err)
 		return err
