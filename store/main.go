@@ -223,7 +223,6 @@ func main() {
 
 					if len(unsyncedBuckets) > 0 {
 						logrus.Warnf("VerifyMerkleTree unsyncedBuckets = %v partitionId = %v ", unsyncedBuckets, partitionId)
-						continue
 
 						var requestBuckets []int32
 						for b := range unsyncedBuckets {
