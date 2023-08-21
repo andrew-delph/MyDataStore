@@ -66,6 +66,17 @@ export function panic() {
   return;
 }
 
+export function leader() {
+  let addr = `http://${address}/leader`;
+  let baseRes = http.get(addr);
+  check(baseRes, {
+    "Leader: status was 200": (r) =>
+      r.status === 200 || console.error(`Base Error: Status was ${r.status}`),
+  });
+
+  return;
+}
+
 export function follower() {
   let addr = `http://${address}/follower`;
   console.log(addr);
@@ -112,7 +123,9 @@ export function remove() {
   return;
 }
 export default function () {
-  follower();
+  bootstrap();
+  // leader();
+  // follower()
   return;
   // panic();
   bootstrap();

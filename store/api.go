@@ -162,10 +162,13 @@ func epochHandler(w http.ResponseWriter, r *http.Request) {
 
 	if curr == raft.Leader {
 		// 172.26.0.2
+		logrus.Warnf("epochHandler start")
 		err := UpdateEpoch()
 		if err != nil {
+			logrus.Warnf("epochHandler err =  %v", err)
 			http.NotFound(w, r)
 		} else {
+			logrus.Warnf("epochHandler done")
 			fmt.Fprintf(w, "Recieved epoch.")
 		}
 

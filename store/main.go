@@ -137,12 +137,12 @@ func main() {
 			// }
 
 			if raftNode.Leader() == "" {
-				logrus.Warnf("NO LEADER! state = %s ME = %s err = %v", raftNode.State(), conf.Name, RaftTryLead()) // RaftTryLead()
-				// RaftBootstrap()
+				logrus.Warnf("NO LEADER! state = %s ME = %s err = %v", raftNode.State(), conf.Name, nil) // RaftTryLead()
+				RaftTryLead()
 			}
 
 			if raftNode.State() != raft.Leader && raftNode.State() != raft.Follower {
-				logrus.Warnf("BAD state = %s ME = %s", raftNode.State(), conf.Name) // RaftTryLead()
+				logrus.Warnf("BAD state = %s ME = %s", raftNode.State(), conf.Name)
 				// RaftBootstrap()
 			}
 
@@ -181,14 +181,18 @@ func main() {
 			message.Handle(messageHolder)
 
 		case currEpoch = <-epochObserver:
-			
+			// continue
 
-			err := Snapshot()
-			if err != nil {
-				logrus.Warnf("Snapshot err = %v", err)
-				continue
-			}
+			// raft
+			// raftNode
+
+			// err := Snapshot()
+			// if err != nil {
+			// 	logrus.Warnf("Snapshot err = %v", err)
+			// 	continue
+			// }
 			// logrus.Debugf("epochObservation %d %s", epoch, raftNode.State())
+			continue
 			myPartions, err := GetMemberPartions(events.consistent, conf.Name)
 			if err != nil {
 				logrus.Warn(err)

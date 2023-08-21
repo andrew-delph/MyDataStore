@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"time"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/raft"
@@ -31,6 +30,24 @@ type FSM struct {
 
 var epochObserver = make(chan uint64, 1)
 
+func MakeRaftConf(localIp string) *raft.Config {
+	conf := raft.DefaultConfig()
+	conf.LocalID = raft.ServerID(fmt.Sprintf("%s:7000", localIp))
+	// conf.SnapshotInterval = time.Second * 1
+	// conf.SnapshotThreshold = 1
+
+	if !raftLogs {
+		raftLogger := hclog.New(&hclog.LoggerOptions{
+			Name:   "discard",
+			Output: io.Discard,
+			Level:  hclog.NoLevel,
+		})
+		conf.Logger = raftLogger
+		conf.LogLevel = "ERROR"
+	}
+	return conf
+}
+
 func (fsm *FSM) Apply(logEntry *raft.Log) interface{} {
 	applyLock.Lock()
 	defer applyLock.Unlock()
@@ -40,12 +57,16 @@ func (fsm *FSM) Apply(logEntry *raft.Log) interface{} {
 	logrus.Warnf("E = %d state = %s fsm.index = %d last = %d applied = %d name = %s", epoch, raftNode.State(), logEntry.Index, raftNode.LastIndex(), raftNode.AppliedIndex(), conf.Name)
 
 	epochObserver <- epoch
-	return nil
+	return epoch
 }
 
 func (fsm *FSM) Snapshot() (raft.FSMSnapshot, error) {
+	// logrus.Warnf("Snapshot start")
+	// defer logrus.Warnf("Snapshot done")
+
 	snapshotLock.Lock()
 	defer snapshotLock.Unlock()
+
 	return &FSMSnapshot{stateValue: fsm.Epoch}, nil
 }
 
@@ -57,7 +78,7 @@ func (fsm *FSM) Restore(serialized io.ReadCloser) error {
 
 	fsm.Epoch = snapshot.stateValue
 
-	return nil
+	return serialized.Close()
 }
 
 type FSMSnapshot struct {
@@ -65,6 +86,7 @@ type FSMSnapshot struct {
 }
 
 func (fsmSnapshot *FSMSnapshot) Persist(sink raft.SnapshotSink) error {
+	// logrus.Warn("Persist!!!!!!!!!!!!!!!!!!!!!!!!1")
 	err := func() error {
 		snapshotBytes, err := json.Marshal(fsmSnapshot)
 		if err != nil {
@@ -82,6 +104,7 @@ func (fsmSnapshot *FSMSnapshot) Persist(sink raft.SnapshotSink) error {
 		return nil
 	}()
 	if err != nil {
+		logrus.Warnf("Persist ERROR = %v", err)
 		sink.Cancel()
 		return err
 	}
@@ -149,20 +172,9 @@ func SetupRaft() {
 	}
 
 	// Create a configuration for raftNode1
-	raftConf = raft.DefaultConfig()
-	raftConf.LocalID = raft.ServerID(fmt.Sprintf("%s:7000", localIp))
+	raftConf = MakeRaftConf(localIp)
 
-	if !raftLogs {
-		raftLogger := hclog.New(&hclog.LoggerOptions{
-			Name:   "discard",
-			Output: io.Discard,
-			Level:  hclog.NoLevel,
-		})
-		raftConf.Logger = raftLogger
-		raftConf.LogLevel = "ERROR"
-	}
-
-	logrus.Warnf("raftConf.SnapshotInterval %v ... %v", raftConf.SnapshotInterval)
+	logrus.Warnf("raftConf.SnapshotInterval %v", raftConf.SnapshotInterval)
 
 	if trans != nil {
 		err = trans.Close()
@@ -170,7 +182,7 @@ func SetupRaft() {
 			logrus.Fatal(err)
 		}
 	}
-	trans, err = raft.NewTCPTransport(raftBindAddr, advertiseAddr, 3, 10*time.Second, os.Stderr)
+	trans, err = raft.NewTCPTransport(raftBindAddr, advertiseAddr, 20, 0, os.Stderr)
 	if err != nil {
 		logrus.Fatal(err)
 	}
@@ -183,6 +195,18 @@ func SetupRaft() {
 	if err != nil {
 		logrus.Fatal(err)
 	}
+
+	// updates := make(chan raft.Observation, 10) // Buffered channel
+	// // 2. Create a goroutine to listen to this channel
+	// go func() {
+	// 	for update := range updates {
+	// 		// Do something with the update
+	// 		// For now, just print it
+	// 		logrus.Warn("Received update:", update)
+	// 	}
+	// }()
+	// obs := raft.NewObserver(updates, true, nil)
+	// raftNode.RegisterObserver(obs)
 
 	logrus.Warnf("after SetupRaft state = %s", raftNode.State())
 }
@@ -242,7 +266,7 @@ func AddVoter(otherAddr string) error {
 	// 	addVoterFuture := raftNode.AddVoter(config2.LocalID, raft.ServerAddress(otherAddr), 0, time.Second)
 	// 	return addVoterFuture.Error()
 	// }
-	addVoterFuture := raftNode.AddVoter(raft.ServerID(otherRaftAddr), raft.ServerAddress(otherRaftAddr), 0, defaultTimeout)
+	addVoterFuture := raftNode.AddVoter(raft.ServerID(otherRaftAddr), raft.ServerAddress(otherRaftAddr), 0, 0)
 	return addVoterFuture.Error()
 }
 
@@ -267,7 +291,7 @@ func RemoveServer(otherAddr string) error {
 	// }
 
 	// raftNode.GetConfiguration().Index()
-	err = raftNode.RemoveServer(raft.ServerID(otherRaftAddr), 0, defaultTimeout).Error()
+	err = raftNode.RemoveServer(raft.ServerID(otherRaftAddr), 0, 0).Error()
 	if err != nil {
 		for i := 0; i < 100; i++ {
 			logrus.Warn("RemoveServer ", err)
@@ -301,13 +325,10 @@ func RemoveServer(otherAddr string) error {
 }
 
 func Snapshot() error {
-	if raftNode.LastIndex() != raftNode.AppliedIndex() {
-		for i := 0; i < 4; i++ {
-			logrus.Warnf("INDEX NOT EQUAL %d %d", raftNode.LastIndex(), raftNode.AppliedIndex())
-		}
-		return nil
-	}
-
+	// if raftNode.LastIndex() != raftNode.AppliedIndex() {
+	// 	logrus.Warnf("INDEX NOT EQUAL %d %d currEpoch = %d", raftNode.LastIndex(), raftNode.AppliedIndex(), currEpoch)
+	// 	return nil
+	// }
 	err := raftNode.Snapshot().Error()
 	if err != nil {
 		logrus.Error("Snapshot Error ", err)
