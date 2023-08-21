@@ -27,7 +27,7 @@ func TestGoCacheStoreMerkleTree(t *testing.T) {
 
 	startTime := time.Now()
 
-	tree1, err := PartitionMerkleTree(1, 1)
+	tree1, err := PartitionMerkleTree(0, 1, 1)
 	if err != nil {
 		t.Error(err)
 	}
@@ -37,7 +37,7 @@ func TestGoCacheStoreMerkleTree(t *testing.T) {
 		t.Error(err)
 	}
 
-	tree2, err := PartitionMerkleTree(1, 1)
+	tree2, err := PartitionMerkleTree(0, 1, 1)
 	if err != nil {
 		t.Error(err)
 	}
@@ -82,12 +82,12 @@ func TestLevelDbStoreMerkleTree(t *testing.T) {
 
 	startTime := time.Now()
 
-	tree1, err := PartitionMerkleTree(6, extraPartition)
+	tree1, err := PartitionMerkleTree(0, 6, extraPartition)
 	if err != nil {
 		t.Error(err)
 	}
 
-	tree2, err := PartitionMerkleTree(6, extraPartition)
+	tree2, err := PartitionMerkleTree(0, 6, extraPartition)
 	if err != nil {
 		t.Error(err)
 	}
@@ -102,7 +102,7 @@ func TestLevelDbStoreMerkleTree(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tree3, err := PartitionMerkleTree(6, extraPartition)
+	tree3, err := PartitionMerkleTree(0, 6, extraPartition)
 	if err != nil {
 		t.Error(err)
 	}

@@ -37,7 +37,7 @@ export let options = {
   },
 };
 
-options = { iterations: 1, vus: 1 };
+// options = { iterations: 1, vus: 1 };
 
 let address = "192.168.49.2:30033";
 address = "localhost:80";
@@ -123,27 +123,27 @@ export function remove() {
   return;
 }
 export default function () {
-  bootstrap();
-  // leader();
-  // follower()
-  return;
-  // panic();
-  bootstrap();
-  sleep(15);
+  // bootstrap();
+  // // leader();
+  // // follower()
+  // return;
+  // // panic();
+  // bootstrap();
+  // sleep(15);
 
-  epoch();
-  sleep(10);
-  epoch();
-  sleep(10);
+  // epoch();
+  // sleep(10);
+  // epoch();
+  // sleep(10);
 
-  follower();
-  sleep(10);
+  // follower();
+  // sleep(10);
 
-  epoch();
-  sleep(10);
-  epoch();
-  // sleep(20);
-  return;
+  // epoch();
+  // sleep(10);
+  // epoch();
+  // // sleep(20);
+  // return;
 
   // the key value to insert
   let key = randomString(15);

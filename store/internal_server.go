@@ -106,9 +106,10 @@ func (*internalServer) VerifyMerkleTree(stream pb.InternalNodeService_VerifyMerk
 		logrus.Error("SERVER ", err)
 		return err
 	}
-	epoch := rootNode.Epoch
+	lowerEpoch := rootNode.LowerEpoch
+	upperEpoch := rootNode.UpperEpoch
 	partitionId := rootNode.Partition
-	partitionTree, err := PartitionMerkleTree(uint64(epoch), int(partitionId))
+	partitionTree, err := PartitionMerkleTree(uint64(lowerEpoch), uint64(upperEpoch), int(partitionId))
 	if err != nil {
 		logrus.Error("SERVER ", err)
 		return err
@@ -189,10 +190,10 @@ func (*internalServer) VerifyMerkleTree(stream pb.InternalNodeService_VerifyMerk
 }
 
 func (s *internalServer) StreamBuckets(req *pb.StreamBucketsRequest, stream pb.InternalNodeService_StreamBucketsServer) error {
-	logrus.Debugf("SERVER StreamBuckets Buckets %v Epoch %v Partition %v", req.Buckets, req.Epoch, req.Partition)
+	logrus.Debugf("SERVER StreamBuckets Buckets %v LowerEpoch %v UpperEpoch %v Partition %v", req.Buckets, req.LowerEpoch, req.UpperEpoch, req.Partition)
 	streamPartions := []int{int(req.Partition)}
 	for _, bucket := range req.Buckets {
-		items := store.Items(streamPartions, int(bucket), 0, int(req.Epoch))
+		items := store.Items(streamPartions, int(bucket), int(req.LowerEpoch), int(req.UpperEpoch))
 
 		for _, value := range items {
 			err := stream.Send(value)

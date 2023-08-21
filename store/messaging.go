@@ -42,76 +42,6 @@ type MessageHolder struct {
 	Message      Message
 }
 
-type RequestPartitionInfo struct {
-	AckId       string
-	PartitionId int
-}
-
-func NewRequestPartitionInfo(ackID string, partitionId int) *RequestPartitionInfo {
-	return &RequestPartitionInfo{
-		AckId:       ackID,
-		PartitionId: partitionId,
-	}
-}
-
-func (m RequestPartitionInfo) Encode() ([]byte, error) {
-	return json.Marshal(m)
-}
-
-func (m *RequestPartitionInfo) Handle(messageHolder *MessageHolder) {
-	logrus.Debugf("Handling RequestPartitionInfo. sender=%s partitionId=%d ackId=%s", messageHolder.SenderName, m.PartitionId, m.AckId)
-
-	events.SendResponsePartitionInfo(m.AckId, messageHolder.SenderName, m.PartitionId)
-}
-
-func (m RequestPartitionInfo) GetType() string {
-	return "RequestPartitionInfo"
-}
-
-func (m *RequestPartitionInfo) Decode(data []byte) error {
-	return json.Unmarshal(data, m)
-}
-
-type ResponsePartitionInfo struct {
-	AckId       string
-	Hash        []byte
-	PartitionId int
-	Healthy     bool
-}
-
-func NewResponsePartitionInfo(ackID string, hash []byte, healthy bool, partitionId int) *ResponsePartitionInfo {
-	return &ResponsePartitionInfo{
-		AckId:       ackID,
-		Hash:        hash,
-		PartitionId: partitionId,
-		Healthy:     healthy,
-	}
-}
-
-func (m ResponsePartitionInfo) Encode() ([]byte, error) {
-	return json.Marshal(m)
-}
-
-func (m *ResponsePartitionInfo) Handle(messageHolder *MessageHolder) {
-	logrus.Debugf("Handling ResponsePartitionInfo. sender=%s partitionId=%d ackId=%s", messageHolder.SenderName, m.PartitionId, m.AckId)
-	ackChannel, exists := getAckChannel(m.AckId)
-
-	if !exists {
-		logrus.Debugf("ackChannel does not exist: %s", m.AckId)
-		return
-	}
-
-	ackChannel <- messageHolder
-}
-
-func (m ResponsePartitionInfo) GetType() string {
-	return "ResponsePartitionInfo"
-}
-
-func (m *ResponsePartitionInfo) Decode(data []byte) error {
-	return json.Unmarshal(data, m)
-}
-
 type AckMessage struct {
 	AckId   string
 	Success bool
@@ -183,20 +113,6 @@ func DecodeMessageHolder(data []byte) (*MessageHolder, Message, error) {
 		err := msg.Decode(holder.MessageBytes)
 		if err != nil {
 			return holder, nil, fmt.Errorf("failed to Decode AckMessage: %v", err)
-		}
-		return holder, msg, nil
-	case "RequestPartitionInfo":
-		msg := &RequestPartitionInfo{}
-		err := msg.Decode(holder.MessageBytes)
-		if err != nil {
-			return holder, nil, fmt.Errorf("failed to Decode RequestPartitionInfo: %v", err)
-		}
-		return holder, msg, nil
-	case "ResponsePartitionInfo":
-		msg := &ResponsePartitionInfo{}
-		err := msg.Decode(holder.MessageBytes)
-		if err != nil {
-			return holder, nil, fmt.Errorf("failed to Decode RequestPartitionInfo: %v", err)
 		}
 		return holder, msg, nil
 	}

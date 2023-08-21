@@ -223,9 +223,9 @@ func SyncPartition(addr string, hash []byte, epoch uint64, partitionId int) {
 	logrus.Debugf("CLIENT COMPLETED SYNC")
 }
 
-func VerifyMerkleTree(addr string, epoch uint64, partitionId int) (map[int32]struct{}, error) {
+func VerifyMerkleTree(addr string, lowerEpoch, upperEpoch uint64, partitionId int) (map[int32]struct{}, error) {
 	unsyncedBuckets := make(map[int32]struct{})
-	partitionTree, err := PartitionMerkleTree(epoch, partitionId)
+	partitionTree, err := PartitionMerkleTree(lowerEpoch, upperEpoch, partitionId)
 	if err != nil {
 		logrus.Error(err)
 		return nil, err
@@ -256,7 +256,7 @@ func VerifyMerkleTree(addr string, epoch uint64, partitionId int) (map[int32]str
 			return nil, fmt.Errorf("could not decode node")
 		}
 		nodesQueue.Remove(element)
-		nodeRequest := &pb.VerifyMerkleTreeNodeRequest{Epoch: int64(epoch), Partition: int32(partitionId), Hash: node.Hash}
+		nodeRequest := &pb.VerifyMerkleTreeNodeRequest{LowerEpoch: int64(lowerEpoch), UpperEpoch: int64(upperEpoch), Partition: int32(partitionId), Hash: node.Hash}
 		err = stream.Send(nodeRequest)
 		if err != nil {
 			logrus.Error("CLIENT ", err)
@@ -300,14 +300,14 @@ func VerifyMerkleTree(addr string, epoch uint64, partitionId int) (map[int32]str
 	return unsyncedBuckets, nil
 }
 
-func StreamBuckets(addr string, buckets []int32, epoch uint64, partitionId int) error {
+func StreamBuckets(addr string, buckets []int32, lowerEpoch, upperEpoch uint64, partitionId int) error {
 	conn, client, err := GetClient(addr)
 	if err != nil {
 		logrus.Errorf("CLIENT StreamBuckets err = %v", err)
 		return err
 	}
 	defer conn.Close()
-	bucketsReq := &pb.StreamBucketsRequest{Buckets: buckets, Epoch: int64(epoch), Partition: int32(partitionId)}
+	bucketsReq := &pb.StreamBucketsRequest{Buckets: buckets, LowerEpoch: int64(lowerEpoch), UpperEpoch: int64(upperEpoch), Partition: int32(partitionId)}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()

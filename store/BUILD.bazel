@@ -50,7 +50,7 @@ go_test(
         "store_test.go",
     ],
     embed = [":go_default_library"],
-    env = {"DATA_PATH": "/tmp/store/"},
+    env = {"DATA_PATH": "/tmp/test_store/"},
     deps = [
         # "//store/proto:go_default_library",
         "//store/proto:go_default_library",

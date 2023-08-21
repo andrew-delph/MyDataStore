@@ -93,7 +93,7 @@ func (content MerkleBucket) Equals(other merkletree.Content) (bool, error) {
 	return bytes.Equal(content.hash, otherTC.hash), nil
 }
 
-func PartitionMerkleTree(treeEpoch uint64, partitionId int) (*merkletree.MerkleTree, error) {
+func PartitionMerkleTree(lowerTreeEpoch, upperTreeEpoch uint64, partitionId int) (*merkletree.MerkleTree, error) {
 	partition, err := store.getPartition(partitionId)
 	if err != nil {
 		logrus.Error(err)
@@ -105,7 +105,7 @@ func PartitionMerkleTree(treeEpoch uint64, partitionId int) (*merkletree.MerkleT
 
 	for i := range bucketList {
 		bucket := MerkleBucket{contentList: []MerkleContent{}, bucketId: int32(i)}
-		itemsMap := partition.Items(i, 0, int(treeEpoch))
+		itemsMap := partition.Items(i, int(lowerTreeEpoch), int(upperTreeEpoch))
 		values := make([]*pb.Value, 0, len(itemsMap))
 		for _, v := range itemsMap {
 			values = append(values, v)
