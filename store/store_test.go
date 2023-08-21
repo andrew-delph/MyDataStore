@@ -267,7 +267,7 @@ func TestLevelDbIndex(t *testing.T) {
 	for bucket := 0; bucket < partitionBuckets; bucket++ {
 		// for bucket := 0; bucket < 1; bucket++ {
 		items := store.Items(partitions, bucket, 0, 3)
-		logrus.Infof("bucket = %d Number of items: %d", bucket, len(items))
+		// logrus.Infof("bucket = %d Number of items: %d", bucket, len(items))
 
 		for itemKey, itemValue := range items {
 			allItemsMap[itemKey] = itemValue
@@ -281,7 +281,7 @@ func TestLevelDbIndex(t *testing.T) {
 	for bucket := 0; bucket < partitionBuckets; bucket++ {
 		// for bucket := 0; bucket < 1; bucket++ {
 		items := store.Items(partitions, bucket, 5, 20)
-		logrus.Infof("bucket = %d Number of items: %d", bucket, len(items))
+		// logrus.Infof("bucket = %d Number of items: %d", bucket, len(items))
 
 		for itemKey, itemValue := range items {
 			allItemsMap[itemKey] = itemValue
