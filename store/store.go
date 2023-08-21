@@ -277,8 +277,8 @@ func (store GoCacheStore) SetValue(value *pb.Value) error {
 	if exists && existingValue.UnixTimestamp < value.UnixTimestamp {
 		return fmt.Errorf("cannot set value with a lower UnixTimestamp. set = %d existing = %d", value.UnixTimestamp, existingValue.UnixTimestamp)
 	}
-	partition.SetPartitionValue(value)
-	return nil
+
+	return partition.SetPartitionValue(value)
 }
 
 // Function to get a value from the global cache

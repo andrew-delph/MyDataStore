@@ -52,8 +52,8 @@ message SyncPartitionRequest{
 
 
 message VerifyMerkleTreeNodeRequest{
-  int64 lowerEpoch = 1;
-  int64 upperEpoch = 2;
+  int64 Epoch = 1;
+  bool global = 2;
   int32 partition = 3;
   bytes hash = 4;
 }
@@ -63,8 +63,8 @@ message VerifyMerkleTreeNodeResponse{
 }
 
 message StreamBucketsRequest{
-  int64 lowerEpoch = 1;
-  int64 upperEpoch = 2;
+  int64 Epoch = 1;
+  bool global = 2;
   int32 partition = 3;
   repeated int32 buckets =4;
 }

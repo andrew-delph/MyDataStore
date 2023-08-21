@@ -93,19 +93,32 @@ func (content MerkleBucket) Equals(other merkletree.Content) (bool, error) {
 	return bytes.Equal(content.hash, otherTC.hash), nil
 }
 
-func PartitionMerkleTree(lowerTreeEpoch, upperTreeEpoch uint64, partitionId int) (*merkletree.MerkleTree, error) {
+func AddBucket(epoch uint64, partitionId, bucket int, value string) {
+}
+
+func RemoveBucket(epoch uint64, partitionId, bucket int, value string) {
+}
+
+func PartitionMerkleTree(epoch uint64, globalEpoch bool, partitionId int) (*merkletree.MerkleTree, error) {
 	partition, err := store.getPartition(partitionId)
 	if err != nil {
 		logrus.Error(err)
 		return nil, err
 	}
+	var lowerEpoch int
+	if globalEpoch {
+		lowerEpoch = 0
+	} else {
+		lowerEpoch = int(epoch)
+	}
+	upperEpoch := int(epoch + 1)
 
 	// Build content list in sorted order of keys
 	bucketList := make([]MerkleBucket, partitionBuckets)
 
 	for i := range bucketList {
 		bucket := MerkleBucket{contentList: []MerkleContent{}, bucketId: int32(i)}
-		itemsMap := partition.Items(i, int(lowerTreeEpoch), int(upperTreeEpoch))
+		itemsMap := partition.Items(i, lowerEpoch, upperEpoch)
 		values := make([]*pb.Value, 0, len(itemsMap))
 		for _, v := range itemsMap {
 			values = append(values, v)

@@ -27,7 +27,7 @@ func TestGoCacheStoreMerkleTree(t *testing.T) {
 
 	startTime := time.Now()
 
-	tree1, err := PartitionMerkleTree(0, 1, 1)
+	tree1, err := PartitionMerkleTree(1, true, 1)
 	if err != nil {
 		t.Error(err)
 	}
@@ -37,7 +37,7 @@ func TestGoCacheStoreMerkleTree(t *testing.T) {
 		t.Error(err)
 	}
 
-	tree2, err := PartitionMerkleTree(0, 1, 1)
+	tree2, err := PartitionMerkleTree(1, true, 1)
 	if err != nil {
 		t.Error(err)
 	}
@@ -72,9 +72,10 @@ func TestLevelDbStoreMerkleTree(t *testing.T) {
 	defer store.Close()
 	extraKey := "Extra"
 	extraPartition := FindPartitionID(events.consistent, extraKey)
+	setEpoch := 5
 
 	for i := 0; i < 100; i++ {
-		err := store.SetValue(testValue(fmt.Sprintf("keyz%d", i), fmt.Sprintf("value%d", i), 1))
+		err := store.SetValue(testValue(fmt.Sprintf("keyz%d", i), fmt.Sprintf("value%d", i), setEpoch))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -82,15 +83,16 @@ func TestLevelDbStoreMerkleTree(t *testing.T) {
 
 	startTime := time.Now()
 
-	tree1, err := PartitionMerkleTree(0, 6, extraPartition)
+	tree1, err := PartitionMerkleTree(uint64(setEpoch), false, extraPartition)
 	if err != nil {
 		t.Error(err)
 	}
 
-	tree2, err := PartitionMerkleTree(0, 6, extraPartition)
+	tree2, err := PartitionMerkleTree(uint64(setEpoch), false, extraPartition)
 	if err != nil {
 		t.Error(err)
 	}
+	assert.EqualValues(t, tree1.Root.Hash, tree2.Root.Hash, "Tree hashes don't match")
 
 	// _, err = tree1.VerifyTree()
 	// if err != nil {
@@ -102,26 +104,46 @@ func TestLevelDbStoreMerkleTree(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tree3, err := PartitionMerkleTree(0, 6, extraPartition)
+	tree3, err := PartitionMerkleTree(uint64(setEpoch), true, extraPartition)
 	if err != nil {
 		t.Error(err)
 	}
 
-	// err = tree1.RebuildTree()
-	// if err != nil {
-	// 	t.Error(err)
-	// }
+	assert.NotEqual(t, tree1.Root.Hash, tree3.Root.Hash, "Tree hashes match")
+	assert.NotEqual(t, tree2.Root.Hash, tree3.Root.Hash, "Tree hashes match")
 
-	// err = tree2.RebuildTree()
+	// Test global
+	tree4, err := PartitionMerkleTree(2, true, extraPartition)
+	if err != nil {
+		t.Error(err)
+	}
+
+	tree5, err := PartitionMerkleTree(1, false, extraPartition)
+	if err != nil {
+		t.Error(err)
+	}
+
+	assert.EqualValues(t, tree4.Root.Hash, tree5.Root.Hash, "Tree hashes don't match")
+
+	tree6, err := PartitionMerkleTree(2, false, extraPartition)
+	if err != nil {
+		t.Error(err)
+	}
+
+	tree7, err := PartitionMerkleTree(1, false, extraPartition)
+	if err != nil {
+		t.Error(err)
+	}
+
+	assert.NotEqual(t, tree6.Root.Hash, tree7.Root.Hash, "Tree hashes don't match")
+
+	// tree6, err := PartitionMerkleTree(uint64(setEpoch), true, extraPartition)
 	// if err != nil {
 	// 	t.Error(err)
 	// }
 
 	logrus.Warnf("hash1 %s hash3 %s", tree1.Root.Hash, tree3.Root.Hash)
 
-	assert.EqualValues(t, tree1.Root.Hash, tree2.Root.Hash, "Tree hashes don't match")
-	assert.NotEqual(t, tree1.Root.Hash, tree3.Root.Hash, "Tree hashes match")
-	assert.NotEqual(t, tree2.Root.Hash, tree3.Root.Hash, "Tree hashes match")
 	elapsedTime := time.Since(startTime).Seconds()
 
 	fmt.Printf("LevelDb Elapsed Time: %.2f seconds\n", elapsedTime)

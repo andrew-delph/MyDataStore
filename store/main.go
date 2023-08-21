@@ -207,8 +207,7 @@ func main() {
 
 				for _, node := range nodes {
 					upperEpochRequest := currEpoch - 1
-					lowerEpochRequest := upperEpochRequest - 1
-					unsyncedBuckets, err := VerifyMerkleTree(node.String(), lowerEpochRequest, upperEpochRequest, partitionId)
+					unsyncedBuckets, err := VerifyMerkleTree(node.String(), upperEpochRequest, true, partitionId)
 					if err != nil && err == io.EOF {
 						logrus.Debugf("VerifyMerkleTree unsyncedBuckets = %v partitionId = %v err = %v ", unsyncedBuckets, partitionId, err)
 					} else if err != nil {
@@ -223,7 +222,7 @@ func main() {
 
 						logrus.Warnf("CLIENT requstBuckets: %v", requestBuckets)
 
-						err = StreamBuckets(node.String(), requestBuckets, lowerEpochRequest, upperEpochRequest, partitionId)
+						err = StreamBuckets(node.String(), requestBuckets, upperEpochRequest, true, partitionId)
 						if err != nil && err == io.EOF {
 							logrus.Debugf("StreamBuckets unsyncedBuckets = %v partitionId = %v err = %v ", unsyncedBuckets, partitionId, err)
 						} else if err != nil {
