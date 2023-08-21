@@ -108,11 +108,24 @@ func (*internalServer) VerifyMerkleTree(stream pb.InternalNodeService_VerifyMerk
 	}
 	epoch := rootNode.Epoch
 	global := rootNode.Global
-	partitionId := rootNode.Partition
-	partitionTree, _, err := RawPartitionMerkleTree(int64(epoch), global, int(partitionId))
-	if err != nil {
-		logrus.Error("SERVER ", err)
-		return err
+	partitionId := int(rootNode.Partition)
+
+	var partitionTree *merkletree.MerkleTree
+
+	if global {
+		partitionTree, err = CachePartitionMerkleTree(epoch, partitionId)
+		if err != nil {
+			err = fmt.Errorf("SERVER VerifyMerkleTree err = %v", err)
+			logrus.Error(err)
+			return err
+		}
+	} else {
+		partitionTree, err = GlobalPartitionMerkleTree(partitionId)
+		if err != nil {
+			err = fmt.Errorf("SERVER VerifyMerkleTree err = %v", err)
+			logrus.Error(err)
+			return err
+		}
 	}
 
 	isEqual := bytes.Equal(partitionTree.Root.Hash, rootNode.Hash)
@@ -166,9 +179,10 @@ func (*internalServer) VerifyMerkleTree(stream pb.InternalNodeService_VerifyMerk
 		if !isEqual {
 			if node.Left == nil && node.Right == nil {
 				logrus.Debugf("SERVER the node is a leaf!")
-				bucket, ok := node.C.(MerkleBucket)
+				hash, _ := node.C.CalculateHash()
+				bucket, ok := node.C.(*MerkleBucket)
 				if !ok {
-					logrus.Error("SERVER could not decode bucket")
+					logrus.Errorf("SERVER could not decode bucket = %v hash = %v", bucket, hash)
 					return errors.New("SERVER value is not of type MerkleContent")
 				}
 				logrus.Warnf("bucket bucketId = %v", bucket.bucketId)

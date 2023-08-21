@@ -53,6 +53,7 @@ func SendSetMessage(key, value string) error {
 
 	for _, node := range nodes {
 		go SendSetMessageNode(node.String(), setReqMsg, responseCh, errorCh)
+		break
 	}
 
 	timeout := time.After(defaultTimeout)
@@ -225,8 +226,27 @@ func SyncPartition(addr string, hash []byte, epoch int64, partitionId int) {
 
 func VerifyMerkleTree(addr string, epoch int64, globalEpoch bool, partitionId int) (map[int32]struct{}, error) {
 	unsyncedBuckets := make(map[int32]struct{})
-	partitionTree,_, err := RawPartitionMerkleTree(epoch, globalEpoch, partitionId)
+	var partitionTree *merkletree.MerkleTree
+	var err error
+
+	if globalEpoch {
+		partitionTree, err = CachePartitionMerkleTree(epoch, partitionId)
+		if err != nil {
+			err = fmt.Errorf("CLIENT VerifyMerkleTree err = %v", err)
+			logrus.Error(err)
+			return nil, err
+		}
+	} else {
+		partitionTree, err = GlobalPartitionMerkleTree(partitionId)
+		if err != nil {
+			err = fmt.Errorf("CLIENT VerifyMerkleTree err = %v", err)
+			logrus.Error(err)
+			return nil, fmt.Errorf("CLIENT VerifyMerkleTree err = %v", err)
+		}
+	}
+
 	if err != nil {
+		err = fmt.Errorf("CLIENT VerifyMerkleTree err = %v", err)
 		logrus.Error(err)
 		return nil, err
 	}
@@ -275,7 +295,7 @@ func VerifyMerkleTree(addr string, epoch int64, globalEpoch bool, partitionId in
 		if !nodeResponse.IsEqual {
 			if node.Left == nil && node.Right == nil {
 				logrus.Debugf("CLIENT the node is a leaf!")
-				bucket, ok := node.C.(MerkleBucket)
+				bucket, ok := node.C.(*MerkleBucket)
 				if !ok {
 					logrus.Error("CLIENT could not decode bucket")
 					return unsyncedBuckets, errors.New("CLIENT value is not of type MerkleContent")

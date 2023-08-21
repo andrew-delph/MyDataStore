@@ -43,5 +43,5 @@ services:
       # - zookeeper
       - nginx
     restart: always
-    # volumes:
-    #   - /tmp/store_data:/store
+    volumes:
+      - /tmp/store_data:/store

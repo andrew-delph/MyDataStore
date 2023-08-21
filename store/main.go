@@ -181,6 +181,11 @@ func main() {
 			message.Handle(messageHolder)
 
 		case currEpoch = <-epochObserver:
+			err := UpdateGlobalBucket(currEpoch)
+			if err != nil {
+				logrus.Error(fmt.Errorf("UpdateGlobalBucket err = %v", err))
+				continue
+			}
 			// continue
 
 			// raft
@@ -211,10 +216,15 @@ func main() {
 					if err != nil && err == io.EOF {
 						logrus.Debugf("VerifyMerkleTree unsyncedBuckets = %v partitionId = %v err = %v ", unsyncedBuckets, partitionId, err)
 					} else if err != nil {
-						logrus.Errorf("VerifyMerkleTree unsyncedBuckets = %v partitionId = %v err = %v ", unsyncedBuckets, partitionId, err)
+						logrus.Warnf("VerifyMerkleTree unsyncedBuckets = %v partitionId = %v err = %v ", unsyncedBuckets, partitionId, err)
+						continue
+					} else {
 					}
 
 					if len(unsyncedBuckets) > 0 {
+						logrus.Warnf("VerifyMerkleTree unsyncedBuckets = %v partitionId = %v ", unsyncedBuckets, partitionId)
+						continue
+
 						var requestBuckets []int32
 						for b := range unsyncedBuckets {
 							requestBuckets = append(requestBuckets, b)
