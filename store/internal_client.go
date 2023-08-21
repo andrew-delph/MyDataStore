@@ -230,14 +230,14 @@ func VerifyMerkleTree(addr string, epoch int64, globalEpoch bool, partitionId in
 	var err error
 
 	if globalEpoch {
-		partitionTree, err = CachePartitionMerkleTree(epoch, partitionId)
+		partitionTree, err = GlobalPartitionMerkleTree(partitionId)
 		if err != nil {
 			err = fmt.Errorf("CLIENT VerifyMerkleTree err = %v", err)
 			logrus.Error(err)
 			return nil, err
 		}
 	} else {
-		partitionTree, err = GlobalPartitionMerkleTree(partitionId)
+		partitionTree, err = CachePartitionMerkleTree(epoch, partitionId)
 		if err != nil {
 			err = fmt.Errorf("CLIENT VerifyMerkleTree err = %v", err)
 			logrus.Error(err)

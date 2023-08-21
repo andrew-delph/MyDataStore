@@ -113,14 +113,14 @@ func (*internalServer) VerifyMerkleTree(stream pb.InternalNodeService_VerifyMerk
 	var partitionTree *merkletree.MerkleTree
 
 	if global {
-		partitionTree, err = CachePartitionMerkleTree(epoch, partitionId)
+		partitionTree, err = GlobalPartitionMerkleTree(partitionId)
 		if err != nil {
 			err = fmt.Errorf("SERVER VerifyMerkleTree err = %v", err)
 			logrus.Error(err)
 			return err
 		}
 	} else {
-		partitionTree, err = GlobalPartitionMerkleTree(partitionId)
+		partitionTree, err = CachePartitionMerkleTree(epoch, partitionId)
 		if err != nil {
 			err = fmt.Errorf("SERVER VerifyMerkleTree err = %v", err)
 			logrus.Error(err)
