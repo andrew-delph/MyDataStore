@@ -274,7 +274,6 @@ func VerifyMerkleTree(addr string, epoch int64, globalEpoch bool, partitionId in
 
 			}
 		}
-
 	}
 
 	logrus.Debugf("CLIENT COMPLETED SYNC")
@@ -327,98 +326,4 @@ func GetClient(addr string) (*grpc.ClientConn, pb.InternalNodeServiceClient, err
 	internalClient := pb.NewInternalNodeServiceClient(conn)
 
 	return conn, internalClient, nil
-}
-
-func GlobalSync() error {
-	myPartions, err := GetMemberPartions(events.consistent, conf.Name)
-	if err != nil {
-		logrus.Warn(err)
-		return err
-	}
-	for _, partitionId := range myPartions {
-
-		nodes, err := GetClosestNForPartition(events.consistent, partitionId, N)
-		if err != nil {
-			logrus.Error(err)
-			return err
-		}
-
-		for _, node := range nodes {
-			upperEpochRequest := currEpoch - 1
-			unsyncedBuckets, err := VerifyMerkleTree(node.String(), upperEpochRequest, true, partitionId)
-			if err != nil && err == io.EOF {
-				logrus.Debugf("GlobalSync VerifyMerkleTree unsyncedBuckets = %v partitionId = %v err = %v ", unsyncedBuckets, partitionId, err)
-			} else if err != nil {
-				logrus.Warnf("GlobalSync VerifyMerkleTree unsyncedBuckets = %v partitionId = %v err = %v ", unsyncedBuckets, partitionId, err)
-				return err
-			} else {
-			}
-
-			if len(unsyncedBuckets) > 0 {
-				logrus.Warnf("GlobalSync VerifyMerkleTree unsyncedBuckets = %v partitionId = %v ", unsyncedBuckets, partitionId)
-
-				var requestBuckets []int32
-				for b := range unsyncedBuckets {
-					requestBuckets = append(requestBuckets, b)
-				}
-
-				logrus.Warnf("GlobalSync CLIENT requstBuckets: %v", requestBuckets)
-
-				err = StreamBuckets(node.String(), requestBuckets, 0, upperEpochRequest, partitionId)
-				if err != nil && err == io.EOF {
-					logrus.Debugf("GlobalSync StreamBuckets unsyncedBuckets = %v partitionId = %v err = %v ", unsyncedBuckets, partitionId, err)
-				} else if err != nil {
-					logrus.Errorf("GlobalSync StreamBuckets unsyncedBuckets = %v partitionId = %v err = %v ", unsyncedBuckets, partitionId, err)
-				}
-			}
-		}
-	}
-	return nil
-}
-
-func RecentEpochSync() error {
-	myPartions, err := GetMemberPartions(events.consistent, conf.Name)
-	if err != nil {
-		logrus.Warn(err)
-		return err
-	}
-	for _, partitionId := range myPartions {
-
-		nodes, err := GetClosestNForPartition(events.consistent, partitionId, N)
-		if err != nil {
-			logrus.Error(err)
-			continue
-		}
-
-		for _, node := range nodes {
-			lastEpoch := currEpoch - 1
-			unsyncedBuckets, err := VerifyMerkleTree(node.String(), lastEpoch, false, partitionId)
-			if err != nil && err == io.EOF {
-				logrus.Debugf("RecentEpochSync VerifyMerkleTree unsyncedBuckets = %v partitionId = %v err = %v ", unsyncedBuckets, partitionId, err)
-			} else if err != nil {
-				logrus.Warnf("RecentEpochSync VerifyMerkleTree unsyncedBuckets = %v partitionId = %v err = %v ", unsyncedBuckets, partitionId, err)
-				continue
-			} else {
-			}
-
-			if len(unsyncedBuckets) > 0 {
-				logrus.Warnf("RecentEpochSync VerifyMerkleTree unsyncedBuckets = %v partitionId = %v ", unsyncedBuckets, partitionId)
-
-				var requestBuckets []int32
-				for b := range unsyncedBuckets {
-					requestBuckets = append(requestBuckets, b)
-				}
-
-				logrus.Warnf("RecentEpochSync CLIENT requstBuckets: %v", requestBuckets)
-
-				err = StreamBuckets(node.String(), requestBuckets, lastEpoch-1, lastEpoch, partitionId)
-				if err != nil && err == io.EOF {
-					logrus.Debugf("RecentEpochSync StreamBuckets unsyncedBuckets = %v partitionId = %v err = %v ", unsyncedBuckets, partitionId, err)
-				} else if err != nil {
-					logrus.Errorf("RecentEpochSync StreamBuckets unsyncedBuckets = %v partitionId = %v err = %v ", unsyncedBuckets, partitionId, err)
-				}
-			}
-		}
-	}
-	return nil
 }
