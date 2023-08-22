@@ -179,15 +179,10 @@ func (*internalServer) VerifyMerkleTree(stream pb.InternalNodeService_VerifyMerk
 }
 
 func (s *internalServer) StreamBuckets(req *pb.StreamBucketsRequest, stream pb.InternalNodeService_StreamBucketsServer) error {
-	logrus.Debugf("SERVER StreamBuckets Buckets %v Epoch %v Global %v Partition %v", req.Buckets, req.Epoch, req.Global, req.Partition)
-	globalEpoch := req.Global
-	upperEpoch := int(req.Epoch) + 1
-	var lowerEpoch int
-	if globalEpoch {
-		lowerEpoch = 0
-	} else {
-		lowerEpoch = int(upperEpoch)
-	}
+	logrus.Debugf("SERVER StreamBuckets Buckets %v LowerEpoch %v UpperEpoch %v Partition %v", req.Buckets, req.LowerEpoch, req.UpperEpoch, req.Partition)
+	lowerEpoch := int(req.LowerEpoch)
+	upperEpoch := int(req.UpperEpoch)
+
 	streamPartions := []int{int(req.Partition)}
 	for _, bucket := range req.Buckets {
 		items := store.Items(streamPartions, int(bucket), lowerEpoch, upperEpoch)

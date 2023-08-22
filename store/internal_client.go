@@ -185,7 +185,6 @@ func SendGetMessage(key string) (string, error) {
 	return "", fmt.Errorf("value not found. expected = %d recievedCount= %d", R, len(resList))
 }
 
-
 func VerifyMerkleTree(addr string, epoch int64, globalEpoch bool, partitionId int) (map[int32]struct{}, error) {
 	unsyncedBuckets := make(map[int32]struct{})
 	var partitionTree *merkletree.MerkleTree
@@ -282,14 +281,14 @@ func VerifyMerkleTree(addr string, epoch int64, globalEpoch bool, partitionId in
 	return unsyncedBuckets, nil
 }
 
-func StreamBuckets(addr string, buckets []int32, epoch int64, globalEpoch bool, partitionId int) error {
+func StreamBuckets(addr string, buckets []int32, lowerEpoch, upperEpoch int64, partitionId int) error {
 	conn, client, err := GetClient(addr)
 	if err != nil {
 		logrus.Errorf("CLIENT StreamBuckets err = %v", err)
 		return err
 	}
 	defer conn.Close()
-	bucketsReq := &pb.StreamBucketsRequest{Buckets: buckets, Epoch: int64(epoch), Global: globalEpoch, Partition: int32(partitionId)}
+	bucketsReq := &pb.StreamBucketsRequest{Buckets: buckets, LowerEpoch: int64(lowerEpoch), UpperEpoch: int64(upperEpoch), Partition: int32(partitionId)}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
@@ -365,7 +364,7 @@ func GlobalSync() error {
 
 				logrus.Warnf("GlobalSync CLIENT requstBuckets: %v", requestBuckets)
 
-				err = StreamBuckets(node.String(), requestBuckets, upperEpochRequest, true, partitionId)
+				err = StreamBuckets(node.String(), requestBuckets, 0, upperEpochRequest, partitionId)
 				if err != nil && err == io.EOF {
 					logrus.Debugf("GlobalSync StreamBuckets unsyncedBuckets = %v partitionId = %v err = %v ", unsyncedBuckets, partitionId, err)
 				} else if err != nil {
@@ -412,7 +411,7 @@ func RecentEpochSync() error {
 
 				logrus.Warnf("RecentEpochSync CLIENT requstBuckets: %v", requestBuckets)
 
-				err = StreamBuckets(node.String(), requestBuckets, upperEpochRequest, false, partitionId)
+				err = StreamBuckets(node.String(), requestBuckets, upperEpochRequest-1, upperEpochRequest, partitionId)
 				if err != nil && err == io.EOF {
 					logrus.Debugf("RecentEpochSync StreamBuckets unsyncedBuckets = %v partitionId = %v err = %v ", unsyncedBuckets, partitionId, err)
 				} else if err != nil {

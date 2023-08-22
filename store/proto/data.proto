@@ -55,8 +55,8 @@ message VerifyMerkleTreeNodeResponse{
 }
 
 message StreamBucketsRequest{
-  int64 Epoch = 1;
-  bool global = 2;
+  int64 LowerEpoch = 1;
+  int64 UpperEpoch = 2;
   int32 partition = 3;
   repeated int32 buckets =4;
 }
