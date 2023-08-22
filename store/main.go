@@ -99,8 +99,6 @@ func main() {
 		logrus.Infof("Member: %s %s\n", member.Name, member.Addr)
 	}
 
-	go startHttpServer()
-
 	// verify partitions every x seconds
 
 	// go func() {
@@ -261,6 +259,13 @@ func main() {
 					succ = fmt.Sprintf("%s,%d", succ, i)
 				}
 				// }(node)
+			}
+		case validFSMUpdate := <-validFSMObserver:
+			logrus.Warnf("validFSMUpdate = %v", validFSMUpdate)
+			if validFSMUpdate {
+				go startHttpServer()
+			} else {
+				logrus.Panic("validFSMUpdate is false")
 			}
 		}
 	}

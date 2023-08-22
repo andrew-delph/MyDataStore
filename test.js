@@ -124,9 +124,9 @@ export function remove() {
 }
 export default function () {
   // bootstrap();
-  // // leader();
-  // // follower()
-  // return;
+  leader();
+  // follower()
+  return;
   // // panic();
   // bootstrap();
   // sleep(15);
@@ -159,7 +159,6 @@ export default function () {
     "Set: status was 200": (r) =>
       r.status === 200 || console.error(`Set Error: Status was ${r.status}`),
   });
-  return;
   sleep(10);
 
   // Get a value from the map
