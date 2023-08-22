@@ -75,29 +75,6 @@ func (s *internalServer) GetRequest(ctx context.Context, m *pb.GetRequestMessage
 	}
 }
 
-func (s *internalServer) SyncPartition(req *pb.SyncPartitionRequest, stream pb.InternalNodeService_SyncPartitionServer) error {
-	// TODO stream all contents of partition.
-	logrus.Warnf("Server SyncPartition")
-
-	partition, err := store.getPartition(int(req.Partition))
-	if err != nil {
-		logrus.Error(err)
-		return err
-	}
-
-	for i := 1; i <= partitionBuckets; i++ {
-		items := partition.Items(i, 0, int(req.Epoch))
-		for _, value := range items {
-			if err := stream.Send(value); err != nil {
-				logrus.Errorf("Sever send value. %v", err)
-				return err
-			}
-		}
-	}
-
-	return nil
-}
-
 func (*internalServer) VerifyMerkleTree(stream pb.InternalNodeService_VerifyMerkleTreeServer) error {
 	// defer logrus.Warn("server done.")
 	// logrus.Warn("server start.")

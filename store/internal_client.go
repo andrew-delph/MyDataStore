@@ -185,43 +185,6 @@ func SendGetMessage(key string) (string, error) {
 	return "", fmt.Errorf("value not found. expected = %d recievedCount= %d", R, len(resList))
 }
 
-func SyncPartition(addr string, hash []byte, epoch int64, partitionId int) {
-	syncPartReqMsg := &pb.SyncPartitionRequest{Epoch: int64(epoch), Partition: int32(partitionId), Hash: hash}
-
-	conn, client, err := GetClient(addr)
-	if err != nil {
-		return
-	}
-	defer conn.Close()
-
-	// ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	// defer cancel()
-	stream, err := client.SyncPartition(context.Background(), syncPartReqMsg)
-	if err != nil {
-		logrus.Warnf("CLIENT SyncPartition Failed to open stream: %v", err)
-		return
-	}
-
-	for {
-		value, err := stream.Recv()
-
-		if err == io.EOF {
-			logrus.Debug("Stream completed.")
-			break
-		}
-		if err != nil {
-			logrus.Errorf("CLIENT SyncPartition stream receive error: %v", err)
-			break
-		}
-
-		err = store.SetValue(value)
-		if err != nil {
-			logrus.Warnf("CLIENT SyncPartition stream error store.SetValue: %v", err)
-			continue
-		}
-	}
-	logrus.Debugf("CLIENT COMPLETED SYNC")
-}
 
 func VerifyMerkleTree(addr string, epoch int64, globalEpoch bool, partitionId int) (map[int32]struct{}, error) {
 	unsyncedBuckets := make(map[int32]struct{})

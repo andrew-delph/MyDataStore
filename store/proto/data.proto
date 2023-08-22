@@ -7,20 +7,19 @@ option go_package = "github.com/andrew-delph/my-key-store/proto";
 // The greeting service definition.
 service InternalNodeService {
 
-  rpc TestRequest (StandardResponse) returns (StandardResponse) {
-  }
+  rpc TestRequest (StandardResponse) returns (StandardResponse);
 
-    rpc SetRequest (Value) returns (StandardResponse) {
-    }
+  // set a value on another node
+  rpc SetRequest (Value) returns (StandardResponse);
 
-    rpc GetRequest (GetRequestMessage) returns (Value) {
-    }
+  // get a value from another node
+  rpc GetRequest (GetRequestMessage) returns (Value) ;
 
-    rpc SyncPartition(SyncPartitionRequest) returns (stream Value);
+  // request to verify a merkle tree. streamed responses to get out of sync buckets
+  rpc VerifyMerkleTree(stream VerifyMerkleTreeNodeRequest) returns (stream VerifyMerkleTreeNodeResponse);
 
-    rpc VerifyMerkleTree(stream VerifyMerkleTreeNodeRequest) returns (stream VerifyMerkleTreeNodeResponse);
-
-    rpc StreamBuckets(StreamBucketsRequest) returns (stream Value);
+  // request to stream buckets from a partition back to the client
+  rpc StreamBuckets(StreamBucketsRequest) returns (stream Value);
   
 }
 
@@ -28,7 +27,6 @@ message StandardResponse {
   bool error = 1;
   string message = 2;
 }
-
 
 
 message GetRequestMessage {
@@ -42,12 +40,6 @@ message Value{
   string value = 2;
   int64 unix_timestamp = 3;
   int64 epoch  =4;
-}
-
-message SyncPartitionRequest{
-  int64 epoch = 1;
-  int32 partition = 2;
-  bytes hash = 3;
 }
 
 
