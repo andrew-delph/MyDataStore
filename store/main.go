@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"strings"
 	"sync"
@@ -44,6 +43,8 @@ var (
 var store Store
 
 var currEpoch int64 = 0
+
+var validFSM = false
 
 func main() {
 	// time.Sleep(20 * time.Second)
@@ -184,61 +185,15 @@ func main() {
 				logrus.Error(fmt.Errorf("UpdateGlobalBucket err = %v", err))
 				continue
 			}
-			// continue
 
-			// raft
-			// raftNode
-
-			// err := Snapshot()
-			// if err != nil {
-			// 	logrus.Warnf("Snapshot err = %v", err)
-			// 	continue
-			// }
-			// logrus.Debugf("epochObservation %d %s", epoch, raftNode.State())
-			myPartions, err := GetMemberPartions(events.consistent, conf.Name)
-			if err != nil {
-				logrus.Warn(err)
-				continue
-			}
-			for _, partitionId := range myPartions {
-
-				nodes, err := GetClosestNForPartition(events.consistent, partitionId, N)
+			if validFSM {
+				err = RecentEpochSync()
 				if err != nil {
-					logrus.Error(err)
+					logrus.Error(fmt.Errorf("RecentEpochSync err = %v", err))
 					continue
 				}
-
-				for _, node := range nodes {
-					upperEpochRequest := currEpoch - 1
-					unsyncedBuckets, err := VerifyMerkleTree(node.String(), upperEpochRequest, true, partitionId)
-					if err != nil && err == io.EOF {
-						logrus.Debugf("VerifyMerkleTree unsyncedBuckets = %v partitionId = %v err = %v ", unsyncedBuckets, partitionId, err)
-					} else if err != nil {
-						logrus.Warnf("VerifyMerkleTree unsyncedBuckets = %v partitionId = %v err = %v ", unsyncedBuckets, partitionId, err)
-						continue
-					} else {
-					}
-
-					if len(unsyncedBuckets) > 0 {
-						logrus.Warnf("VerifyMerkleTree unsyncedBuckets = %v partitionId = %v ", unsyncedBuckets, partitionId)
-
-						var requestBuckets []int32
-						for b := range unsyncedBuckets {
-							requestBuckets = append(requestBuckets, b)
-						}
-
-						logrus.Warnf("CLIENT requstBuckets: %v", requestBuckets)
-
-						err = StreamBuckets(node.String(), requestBuckets, upperEpochRequest, true, partitionId)
-						if err != nil && err == io.EOF {
-							logrus.Debugf("StreamBuckets unsyncedBuckets = %v partitionId = %v err = %v ", unsyncedBuckets, partitionId, err)
-						} else if err != nil {
-							logrus.Errorf("StreamBuckets unsyncedBuckets = %v partitionId = %v err = %v ", unsyncedBuckets, partitionId, err)
-						}
-					}
-				}
-
 			}
+
 		case temp := <-raftNode.LeaderCh():
 
 			logrus.Warnf("leader change. %t %s %d", temp, raftNode.State(), currEpoch)
@@ -261,11 +216,21 @@ func main() {
 				// }(node)
 			}
 		case validFSMUpdate := <-validFSMObserver:
-			logrus.Warnf("validFSMUpdate = %v", validFSMUpdate)
 			if validFSMUpdate {
-				go startHttpServer()
+				err = GlobalSync()
+				if err != nil {
+					logrus.Panicf("GlobalSync: %v", err)
+				}
+				if !validFSM {
+					logrus.Warnf("Starting http server. validFSMUpdate = %v", validFSMUpdate)
+					go startHttpServer()
+				}
+				validFSM = true
 			} else {
-				logrus.Panic("validFSMUpdate is false")
+				if validFSM {
+					logrus.Panic("validFSM became false")
+				}
+				validFSM = false
 			}
 		}
 	}

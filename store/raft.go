@@ -27,10 +27,7 @@ type FSM struct {
 	Epoch int64
 }
 
-var (
-	validFSM         = false
-	validFSMObserver = make(chan bool, 1)
-)
+var validFSMObserver = make(chan bool, 1)
 
 var epochObserver = make(chan int64, 1)
 
@@ -64,14 +61,14 @@ func (fsm *FSM) Apply(logEntry *raft.Log) interface{} {
 
 	logrus.Warnf("E = %d state = %s fsm.index = %d last = %d applied = %d name = %s", epoch, raftNode.State(), logEntry.Index, raftNode.LastIndex(), raftNode.AppliedIndex(), conf.Name)
 
-	if logEntry.Index == raftNode.AppliedIndex() && !validFSM {
-		validFSM = true
-		validFSMObserver <- validFSM
-	} else if logEntry.Index != raftNode.AppliedIndex() && validFSM {
-		validFSM = true
-		validFSMObserver <- validFSM
+	if logEntry.Index == raftNode.AppliedIndex() {
+		validFSMObserver <- true
+	} else if logEntry.Index != raftNode.AppliedIndex() {
+		validFSMObserver <- false
 	}
+
 	epochObserver <- epoch
+
 	return epoch
 }
 

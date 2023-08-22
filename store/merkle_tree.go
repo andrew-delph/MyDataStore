@@ -127,12 +127,10 @@ func AddBucket(epoch int64, partitionId, bucket int, value *pb.Value) error {
 	}
 	currBucket, err := GetBucket(epoch, partitionId, bucket)
 	if err != nil {
-		logrus.Warnf("currBucket.AddValue GetBucket err = %v", err)
 		return NOT_EXIST_BUCKET_ERROR
 	}
 	err = currBucket.AddValue(value)
 	if err != nil {
-		logrus.Warnf("currBucket.AddValue err = %v", err)
 		return err
 	}
 	return nil

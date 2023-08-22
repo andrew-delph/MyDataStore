@@ -158,8 +158,9 @@ func (partition LevelDbPartition) SetPartitionValue(value *pb.Value) error {
 	}
 
 	err = AddBucket(value.Epoch, partition.GetPartitionId(), bucket, value)
-	if err != nil {
+	if err != nil && err == GLOBAL_BUCKET_ERROR {
 		logrus.Errorf("AddBucket Error: %v", err)
+		return err
 	}
 	return nil
 }

@@ -37,7 +37,7 @@ export let options = {
   },
 };
 
-options = { iterations: 1, vus: 1 };
+options = { iterations: 20, vus: 1 };
 
 let address = "192.168.49.2:30033";
 address = "localhost:80";
@@ -123,10 +123,6 @@ export function remove() {
   return;
 }
 export default function () {
-  // bootstrap();
-  leader();
-  // follower()
-  return;
   // // panic();
   // bootstrap();
   // sleep(15);
@@ -159,6 +155,7 @@ export default function () {
     "Set: status was 200": (r) =>
       r.status === 200 || console.error(`Set Error: Status was ${r.status}`),
   });
+  return;
   sleep(10);
 
   // Get a value from the map
