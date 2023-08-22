@@ -391,8 +391,8 @@ func RecentEpochSync() error {
 		}
 
 		for _, node := range nodes {
-			upperEpochRequest := currEpoch - 1
-			unsyncedBuckets, err := VerifyMerkleTree(node.String(), upperEpochRequest, false, partitionId)
+			lastEpoch := currEpoch - 1
+			unsyncedBuckets, err := VerifyMerkleTree(node.String(), lastEpoch, false, partitionId)
 			if err != nil && err == io.EOF {
 				logrus.Debugf("RecentEpochSync VerifyMerkleTree unsyncedBuckets = %v partitionId = %v err = %v ", unsyncedBuckets, partitionId, err)
 			} else if err != nil {
@@ -411,7 +411,7 @@ func RecentEpochSync() error {
 
 				logrus.Warnf("RecentEpochSync CLIENT requstBuckets: %v", requestBuckets)
 
-				err = StreamBuckets(node.String(), requestBuckets, upperEpochRequest-1, upperEpochRequest, partitionId)
+				err = StreamBuckets(node.String(), requestBuckets, lastEpoch-1, lastEpoch, partitionId)
 				if err != nil && err == io.EOF {
 					logrus.Debugf("RecentEpochSync StreamBuckets unsyncedBuckets = %v partitionId = %v err = %v ", unsyncedBuckets, partitionId, err)
 				} else if err != nil {
