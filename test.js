@@ -25,7 +25,7 @@ export let options = {
     arrival: {
       executor: "constant-arrival-rate",
       // How long the test lasts
-      duration: "20m",
+      duration: "4m",
       // How many iterations per timeUnit
       rate: 100,
       // Start `rate` iterations per second
@@ -36,8 +36,6 @@ export let options = {
     },
   },
 };
-
-options = { iterations: 20, vus: 1 };
 
 let address = "192.168.49.2:30033";
 address = "localhost:80";

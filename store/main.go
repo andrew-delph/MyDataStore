@@ -100,6 +100,7 @@ func main() {
 
 	epochTick := time.NewTicker(epochTime)
 
+	go startHttpServer()
 	// var count uint32
 
 	logrus.Warn("starting run.")
