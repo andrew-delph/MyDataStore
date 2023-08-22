@@ -13,6 +13,7 @@ go_library(
         "internal_client.go",
         "internal_server.go",
         "main.go",
+        "manager.go",
         "merkle_tree.go",
         "messaging.go",
         "raft.go",

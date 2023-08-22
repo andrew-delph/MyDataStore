@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"strings"
 	"sync"
@@ -44,9 +43,8 @@ var store Store
 
 var currEpoch int64 = 0
 
-var validFSM = false
-
 func main() {
+	managerInit()
 	// time.Sleep(20 * time.Second)
 
 	defer func() {
@@ -100,26 +98,6 @@ func main() {
 		logrus.Infof("Member: %s %s\n", member.Name, member.Addr)
 	}
 
-	// verify partitions every x seconds
-
-	// go func() {
-	// 	tick := time.NewTicker(3 * time.Second)
-	// 	for true {
-	// 		select {
-	// 		case <-tick.C:
-	// 			// logrus.Warnf("Apply E = %d state = %s last = %d applied = %d", currEpoch, raftNode.State(), raftNode.LastIndex(), raftNode.AppliedIndex())
-	// 			// if raftNode.State() != raft.Leader && raftNode.State() != raft.Follower {
-	// 			// logrus.Warnf("E = %d state = %s last = %d applied = %d", currEpoch, raftNode.State(), raftNode.LastIndex(), raftNode.AppliedIndex())
-	// 			// }
-
-	// 			if raftNode.Leader() == "" {
-	// 				logrus.Warnf("NO LEADER! state = %s  err = %v", raftNode.State(), RaftTryLead())
-	// 				// RaftBootstrap()
-	// 			}
-	// 		}
-	// 	}
-	// }()
-
 	epochTick := time.NewTicker(epochTime)
 
 	// var count uint32
@@ -130,107 +108,46 @@ func main() {
 	for run {
 		select {
 		case <-tick.C:
-			// logrus.Warnf("Apply E = %d state = %s last = %d applied = %d", currEpoch, raftNode.State(), raftNode.LastIndex(), raftNode.AppliedIndex())
-			// if raftNode.State() != raft.Leader && raftNode.State() != raft.Follower {
-			// logrus.Warnf("E = %d state = %s last = %d applied = %d", currEpoch, raftNode.State(), raftNode.LastIndex(), raftNode.AppliedIndex())
-			// }
-
 			if raftNode.Leader() == "" {
 				logrus.Warnf("NO LEADER! state = %s ME = %s err = %v", raftNode.State(), conf.Name, nil) // RaftTryLead()
 				RaftTryLead()
 			}
-
 			if raftNode.State() != raft.Leader && raftNode.State() != raft.Follower {
 				logrus.Warnf("BAD state = %s ME = %s", raftNode.State(), conf.Name)
-				// RaftBootstrap()
 			}
 
 		case <-epochTick.C:
-
 			if raftNode.State() != raft.Leader {
 				continue
 			}
-
 			verifyErr := raftNode.VerifyLeader().Error()
 			if verifyErr != nil {
 				logrus.Warnf("verifyErr = %v", verifyErr)
 				continue
 			}
-
-			// raftLock.Lock()
 			UpdateEpoch()
 
-			// if response, ok := (logEntry.Response()).(string); ok {
-			// 	logrus.Debugf("response = %s ? %s ", string(response), hostname)
-			// } else {
-			// 	logrus.Debugf("COULD NOT CAST. response = %s", string(response))
-			// }
-
-			// raftLock.Unlock()
-
-			// Snapshot()
-
 		case data := <-delegate.msgCh:
-
 			messageHolder, message, err := DecodeMessageHolder(data)
 			if err != nil {
 				logrus.Fatal(err)
 			}
-
 			message.Handle(messageHolder)
 
 		case currEpoch = <-epochObserver:
-			err := UpdateGlobalBucket(currEpoch)
-			if err != nil {
-				logrus.Error(fmt.Errorf("UpdateGlobalBucket err = %v", err))
+			handleEpochUpdate(currEpoch)
+
+		case isLeader := <-raftNode.LeaderCh():
+			logrus.Warnf("leader change. %t %s %d", isLeader, raftNode.State(), currEpoch)
+			if !isLeader {
 				continue
 			}
-
-			if validFSM {
-				err = RecentEpochSync()
-				if err != nil {
-					logrus.Error(fmt.Errorf("RecentEpochSync err = %v", err))
-					continue
-				}
-			}
-
-		case temp := <-raftNode.LeaderCh():
-
-			logrus.Warnf("leader change. %t %s %d", temp, raftNode.State(), currEpoch)
-
-			if !temp {
-				continue
-			}
-
-			succ := ""
-			for i, node := range clusterNodes.Members() {
-				// logrus.Warnf("node name = %s addr = %s", node.Name, node.Addr.String())
-				// go func(node *memberlist.Node) {
+			for _, node := range clusterNodes.Members() {
 				err := AddVoter(node.Name)
 				if err != nil {
 					logrus.Errorf("Testing AddVoter: %v", err)
 					break
-				} else {
-					succ = fmt.Sprintf("%s,%d", succ, i)
 				}
-				// }(node)
-			}
-		case validFSMUpdate := <-validFSMObserver:
-			if validFSMUpdate {
-				err = GlobalSync()
-				if err != nil {
-					logrus.Panicf("GlobalSync: %v", err)
-				}
-				if !validFSM {
-					logrus.Warnf("Starting http server. validFSMUpdate = %v", validFSMUpdate)
-					go startHttpServer()
-				}
-				validFSM = true
-			} else {
-				if validFSM {
-					logrus.Panic("validFSM became false")
-				}
-				validFSM = false
 			}
 		}
 	}
