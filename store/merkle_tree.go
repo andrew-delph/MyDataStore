@@ -60,9 +60,13 @@ func (h *CustomHash) Hash() int64 {
 
 var merkletreeStore *cache.Cache = cache.New(0*time.Minute, 1*time.Minute)
 
-type SerializedMerkleBucket struct {
-	hash     []byte
+type BaseMerkleBucket struct {
 	bucketId int32
+}
+
+type SerializedMerkleBucket struct {
+	BaseMerkleBucket
+	hash []byte
 }
 
 func (bucket SerializedMerkleBucket) CalculateHash() ([]byte, error) {
@@ -78,8 +82,8 @@ func (bucket SerializedMerkleBucket) Equals(other merkletree.Content) (bool, err
 }
 
 type RealMerkleBucket struct {
-	hasher   *CustomHash
-	bucketId int32
+	BaseMerkleBucket
+	hasher *CustomHash
 }
 
 func (bucket RealMerkleBucket) CalculateHash() ([]byte, error) {
