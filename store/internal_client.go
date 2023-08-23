@@ -152,12 +152,16 @@ func SendGetMessage(key string) (string, error) {
 			return
 		}
 		// logrus.Warnf("Read Repair value = %v", recentValue)
+		readRepairCount := 0
 		for _, res := range resList {
 			// logrus.Warnf("Read Repair addr = %s recentValue = %v value = %v", res.Addr, recentValue.Value, res.Value.Value)
 			if proto.Equal(res.Value, recentValue) == false {
-				logrus.Warnf("Read Repair addr = %s recentValue = %v value = %v", res.Addr, recentValue.Value, res.Value.Value)
+				readRepairCount++
 				go SendSetMessageNode(res.Addr, recentValue, make(chan *datap.StandardResponse), make(chan error))
 			}
+		}
+		if readRepairCount > 0 {
+			logrus.Warnf("Read Repair value = %v readRepairCount = %d", recentValue.Key)
 		}
 	}()
 
@@ -312,7 +316,7 @@ func StreamBuckets(addr string, buckets []int32, lowerEpoch, upperEpoch int64, p
 			logrus.Errorf("CLIENT StreamBuckets store.SetValue error: %v", err)
 			continue
 		} else {
-			logrus.Warnf("CLIENT StreamBuckets SetValue SUCCESS Key = %v Epoch = %v lowerEpoch = %v upperEpoch = %v", value.Key, value.Epoch, lowerEpoch, upperEpoch)
+			logrus.Debugf("CLIENT StreamBuckets SetValue SUCCESS Key = %v Epoch = %v lowerEpoch = %v upperEpoch = %v", value.Key, value.Epoch, lowerEpoch, upperEpoch)
 		}
 	}
 }

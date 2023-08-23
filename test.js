@@ -40,7 +40,7 @@ export let options = {
       // How long the test lasts
       duration: "10m",
       // How many iterations per timeUnit
-      rate: 100,
+      rate: 50,
       // Start `rate` iterations per second
       timeUnit: "1s",
       // Pre-allocate VUs
@@ -135,10 +135,10 @@ export function remove() {
   return;
 }
 
-options = { iterations: 1, vus: 1 };
+// options = { iterations: 1, vus: 1 };
 export default function () {
-  panic();
-  return;
+  // panic();
+  // return;
   // bootstrap();
   // sleep(15);
 

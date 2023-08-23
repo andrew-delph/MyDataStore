@@ -240,7 +240,7 @@ func verifyPartitionEpochTree(tree *merkletree.MerkleTree, partitionId int, epoc
 			} else if unsyncedBuckets == nil {
 				errorCh <- fmt.Errorf("unsyncedBuckets is nil")
 			} else {
-				logrus.Warn("unsyncedBuckets ", unsyncedBuckets)
+				logrus.Debug("unsyncedBuckets ", unsyncedBuckets)
 				unsyncedCh <- unsyncedBuckets
 			}
 		}(node.String())
