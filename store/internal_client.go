@@ -63,7 +63,6 @@ func SendSetMessage(key, value string) error {
 
 	for _, node := range nodes {
 		go SendSetMessageNode(node.String(), setReqMsg, responseCh, errorCh)
-		break
 	}
 
 	timeout := time.After(defaultTimeout)
@@ -313,7 +312,7 @@ func StreamBuckets(addr string, buckets []int32, lowerEpoch, upperEpoch int64, p
 			logrus.Errorf("CLIENT StreamBuckets store.SetValue error: %v", err)
 			continue
 		} else {
-			logrus.Warnf("CLIENT StreamBuckets SetValue SUCCESS key = %v", value.Key)
+			logrus.Warnf("CLIENT StreamBuckets SetValue SUCCESS Key = %v Epoch = %v lowerEpoch = %v upperEpoch = %v", value.Key, value.Epoch, lowerEpoch, upperEpoch)
 		}
 	}
 }

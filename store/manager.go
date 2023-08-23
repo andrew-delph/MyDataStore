@@ -169,11 +169,11 @@ func handlePartitionEpochItem() {
 	if (unsyncedBuckets != nil && len(unsyncedBuckets) > 0) || err != nil {
 		delayFailedItem()
 		logrus.Errorf("failed to sync partion = %d epoch = %d err = %v", item.partitionId, item.epoch, err)
-		// var requestBuckets []int32
-		// for _, buckedId := range unsyncedBuckets {
-		// 	requestBuckets = append(requestBuckets, buckedId)
-		// }
-		// syncPartition(item.partitionId, requestBuckets, item.epoch, item.epoch+1)
+		var requestBuckets []int32
+		for _, buckedId := range unsyncedBuckets {
+			requestBuckets = append(requestBuckets, buckedId)
+		}
+		syncPartition(item.partitionId, requestBuckets, item.epoch, item.epoch+1)
 
 	} else {
 		partition, err := store.getPartition(item.partitionId)
