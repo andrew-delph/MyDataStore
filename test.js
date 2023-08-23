@@ -38,7 +38,7 @@ export let options = {
     arrival: {
       executor: "constant-arrival-rate",
       // How long the test lasts
-      duration: "4m",
+      duration: "10m",
       // How many iterations per timeUnit
       rate: 100,
       // Start `rate` iterations per second
@@ -135,9 +135,10 @@ export function remove() {
   return;
 }
 
-// options = { duration: "20m", vus: 20 };
+options = { iterations: 1, vus: 1 };
 export default function () {
-  // // panic();
+  panic();
+  return;
   // bootstrap();
   // sleep(15);
 

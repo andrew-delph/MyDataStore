@@ -133,6 +133,7 @@ func QueueMyPartitionEpochItems() error {
 				partitionId: int(partition.GetPartitionId()),
 			})
 		} else {
+			logrus.Warnf("starting from Epoch = %v", paritionEpochObject.Epoch)
 			partitionEpochQueue.PushItem(&PartitionEpochItem{
 				epoch:       paritionEpochObject.Epoch + 1,
 				partitionId: int(paritionEpochObject.Partition),
@@ -147,10 +148,13 @@ func handlePartitionEpochItem() {
 	item := partitionEpochQueue.PopItem()
 	// logrus.Warnf("handling item partion = %d epoch = %d", item.partitionId, item.epoch)
 	// defer logrus.Warnf("DONE handling item partion = %d epoch = %d", item.partitionId, item.epoch)
-
 	delayFailedItem := func() {
 		go func() {
 			time.Sleep(10 * time.Second)
+			if item.attempts > 1 {
+				logrus.Warnf("handlePartitionEpochItem partition = %d epoch = %d attemps = %d", item.partitionId, item.epoch, item.attempts)
+			}
+			item.attempts++
 			partitionEpochQueue.PushItem(item)
 		}()
 	}
@@ -269,6 +273,7 @@ type PartitionEpochItem struct {
 	epoch       int64
 	partitionId int
 	index       int
+	attempts    int
 }
 
 // A PartitionEpochQueue implements heap.Interface and holds Items.
