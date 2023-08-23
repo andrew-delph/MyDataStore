@@ -12,6 +12,7 @@ go_library(
         "hashring.go",
         "internal_client.go",
         "internal_server.go",
+        "leveldb_store.go",
         "main.go",
         "manager.go",
         "merkle_tree.go",
@@ -46,6 +47,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "hashring_test.go",
+        "leveldb_store_test.go",
         "merkle_tree_test.go",
         "store_test.go",
     ],

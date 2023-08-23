@@ -61,4 +61,11 @@ message StreamBucketsRequest{
   repeated int32 buckets =4;
 }
 
+message ParitionEpochObject{
+  int32 partition = 1;
+  int64 epoch = 2;
+  bytes rootHash = 3;
+  repeated bytes buckets =4;
+}
+
 
