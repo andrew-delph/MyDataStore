@@ -3,8 +3,6 @@ package main
 import (
 	"bytes"
 	"errors"
-	"fmt"
-	"math"
 	"time"
 
 	"github.com/cbergoon/merkletree"
@@ -14,10 +12,6 @@ import (
 
 	datap "github.com/andrew-delph/my-key-store/datap"
 )
-
-var GLOBAL_BUCKET_ERROR = errors.New("Could not update global bucket.")
-
-var NOT_EXIST_BUCKET_ERROR = errors.New("Bucket does not exist.")
 
 var hashMod = int64(999999)
 
@@ -126,132 +120,6 @@ func (content RealMerkleBucket) Equals(other merkletree.Content) (bool, error) {
 		return false, errors.New("value is not of type MerkleContent")
 	}
 	return content.hasher.Hash() == otherTC.hasher.Hash(), nil
-}
-
-var (
-	bucketEpochLag        = 2
-	currGlobalBucketEpoch int64
-)
-
-// bucketsMap is  [epoch][partition][bucket]
-var (
-	bucketsMap   = make(map[int64]map[int][]*RealMerkleBucket)
-	globalBucket = NewBucketsHolder()
-)
-
-func AddBucket(epoch int64, partitionId, bucket int, value *datap.Value) error {
-	currBucket, err := GetBucket(epoch, partitionId, bucket)
-	if err != nil {
-		logrus.Errorf("NOT_EXIST_BUCKET_ERROR err = %v !!!!!!!!!!!!!!!!!!!!!!!!", err)
-		return NOT_EXIST_BUCKET_ERROR
-	}
-	err = currBucket.AddValue(value)
-	if err != nil {
-		logrus.Errorf("currBucket err = %v !!!!!!!!!!!!!!!!!!!!!!!!", err)
-		return err
-	}
-	if epoch > currGlobalBucketEpoch {
-	} else {
-		err := globalBucket[partitionId][bucket].AddValue(value)
-		if err != nil {
-			logrus.Errorf("GLOBAL_BUCKET_ERROR!!!!!!!!!!!!!!!!!!!!!!!!")
-			return GLOBAL_BUCKET_ERROR
-		}
-	}
-	logrus.Warnf("SET WITH NO ERROOR!!! epoch = %d", epoch)
-	return nil
-}
-
-func RemoveBucket(epoch int64, partitionId, bucket int, value *datap.Value) error {
-	currBucket, err := GetBucket(epoch, partitionId, bucket)
-	if err != nil {
-		return err
-	}
-	err = currBucket.RemoveValue(value)
-	if err != nil {
-		logrus.Warnf("currBucket.AddValue err = %v", err)
-	}
-	if epoch > currGlobalBucketEpoch {
-		//
-	} else {
-		err := globalBucket[partitionId][bucket].RemoveValue(value)
-		if err != nil {
-			return GLOBAL_BUCKET_ERROR
-		}
-	}
-	return nil
-}
-
-func GlobalMergeBuckets(epoch int64) error {
-	logrus.Debugf("Merger %d", epoch)
-	mergeBucketHolder, ok := bucketsMap[epoch]
-	if !ok {
-		for partitionId := 0; partitionId < partitionCount; partitionId++ {
-			_, contentList, err := RawPartitionMerkleTree(epoch+1, true, partitionId)
-			if err != nil {
-				logrus.Error("Could not create global MerkleTree partitionId = %d err = %v", partitionId, err)
-				return err
-			}
-			globalBucket[partitionId] = contentList
-		}
-	}
-	for partitionId := 0; partitionId < partitionCount; partitionId++ {
-
-		mergeBuckets := mergeBucketHolder[partitionId]
-		globalBuckets := globalBucket[partitionId]
-
-		for i := range mergeBuckets {
-			mergeBucket := mergeBuckets[i]
-			globalBucket := globalBuckets[i]
-			globalBucket.MergeBucket(mergeBucket)
-		}
-
-	}
-	return nil
-}
-
-func GetBucket(epoch int64, partitionId, bucket int) (*RealMerkleBucket, error) {
-	logrus.Warnf("Get Bucket %d", epoch)
-	if bucketHolder, ok := bucketsMap[epoch]; ok {
-		return bucketHolder[partitionId][bucket], nil
-	}
-	keys := make([]int64, bucketEpochLag)
-	for i := range bucketsMap {
-		keys = append(keys, i)
-	}
-	return nil, fmt.Errorf("Bucket does not exist epoch = %d partitionId = %d bucket = %d currGlobalBucketEpoch = %d len(bucketsMap) = %d keys = %v", epoch, partitionId, bucket, currGlobalBucketEpoch, len(bucketsMap), keys)
-}
-
-func UpdateGlobalBucket(newEpoch int64) error {
-	logrus.Debugf("UpdateGlobalBucket newEpoch = %d", newEpoch)
-	bucketsMap[newEpoch] = NewBucketsHolder()
-	for len(bucketsMap) > bucketEpochLag {
-		minBucket := int64(math.MaxInt64)
-		for bucket := range bucketsMap {
-			minBucket = min(minBucket, bucket)
-			min(minBucket, bucket)
-		}
-		logrus.Debugf("Delete Buckets on Epoch = %v", minBucket)
-		delete(bucketsMap, minBucket)
-	}
-	err := GlobalMergeBuckets(newEpoch - 1)
-	if err != nil {
-		logrus.Error("GlobalMergeBuckets err = %v", err)
-		return err
-	}
-	currGlobalBucketEpoch = newEpoch - 1
-	return err
-}
-
-func NewBucketsHolder() map[int][]*RealMerkleBucket {
-	bucketHolder := make(map[int][]*RealMerkleBucket, partitionCount)
-	for partitionId := 0; partitionId < partitionCount; partitionId++ {
-		bucketHolder[partitionId] = make([]*RealMerkleBucket, partitionBuckets)
-		for bucketId := 0; bucketId < partitionBuckets; bucketId++ {
-			bucketHolder[partitionId][bucketId] = &RealMerkleBucket{hasher: &CustomHash{}, BaseMerkleBucket: BaseMerkleBucket{bucketId: int32(bucketId)}}
-		}
-	}
-	return bucketHolder
 }
 
 func RawPartitionMerkleTree(epoch int64, globalEpoch bool, partitionId int) (*merkletree.MerkleTree, []*RealMerkleBucket, error) {
