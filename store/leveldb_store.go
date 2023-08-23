@@ -28,6 +28,10 @@ func IndexBucketEpoch(parition, bucket, epoch int, key string) []byte {
 	return []byte(fmt.Sprintf("%04d_%04d_%s_%s", parition, bucket, epochStr, key))
 }
 
+func IndexParitionEpochObject(parition, epoch int) []byte {
+	return []byte(fmt.Sprintf("epoch_object_%04d_%04d", parition, epoch))
+}
+
 func IndexKey(paritionint int, key string) []byte {
 	return []byte(fmt.Sprintf("real_%04d_%s", paritionint, key))
 }
@@ -67,19 +71,12 @@ func (partition LevelDbPartition) SetPartitionValue(value *pb.Value) error {
 	logrus.Debugf("SetValue bucket %v", bucket)
 	indexBytes := IndexBucketEpoch(partition.GetPartitionId(), bucket, int(value.Epoch), value.Key)
 
-	// logrus.Error("indexBytes ", string(indexBytes))
-
 	err = partition.db.Put(indexBytes, data, writeOpts)
 	if err != nil {
 		logrus.Errorf("Error: %v", err)
 		return err
 	}
 
-	err = AddBucket(value.Epoch, partition.GetPartitionId(), bucket, value)
-	if err != nil && err == GLOBAL_BUCKET_ERROR {
-		logrus.Errorf("AddBucket Error: %v", err)
-		return err
-	}
 	return nil
 }
 
@@ -249,4 +246,45 @@ func (store LevelDbStore) Clear() {
 	// 		logrus.Error("FAILED TO Clear PARTITION")
 	// 	}
 	// }
+}
+
+func (partition LevelDbPartition) GetParitionEpochObject(epoch int) (*pb.ParitionEpochObject, error) {
+	keyBytes := IndexParitionEpochObject(partition.GetPartitionId(), epoch)
+	valueBytes, err := partition.db.Get(keyBytes, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	paritionEpochObject := &pb.ParitionEpochObject{}
+	err = proto.Unmarshal(valueBytes, paritionEpochObject)
+	if err != nil {
+		logrus.Error("Error: ", err)
+		return nil, err
+	}
+
+	return paritionEpochObject, nil
+}
+
+func (partition LevelDbPartition) PutParitionEpochObject(paritionEpochObject *pb.ParitionEpochObject) error {
+	writeOpts := &opt.WriteOptions{}
+	writeOpts.Sync = true
+
+	key := IndexParitionEpochObject(partition.GetPartitionId(), int(paritionEpochObject.Epoch))
+	data, err := proto.Marshal(paritionEpochObject)
+	if err != nil {
+		logrus.Error("Error: ", err)
+		return err
+	}
+	err = partition.db.Put(key, data, writeOpts)
+	if err != nil {
+		logrus.Error("Error: ", err)
+		return err
+	}
+	return nil
+}
+
+func (partition LevelDbPartition) LastParitionEpochObject() (*pb.ParitionEpochObject, error) {
+	// index with first part of key...
+	// iter get the last value.
+	return nil, nil
 }

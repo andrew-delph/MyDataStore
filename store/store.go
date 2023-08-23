@@ -26,6 +26,9 @@ type Partition interface {
 	SetPartitionValue(value *pb.Value) error
 	Items(bucket, lowerEpoch, upperEpoch int) map[string]*pb.Value
 	GetPartitionId() int
+	GetParitionEpochObject(epoch int) (*pb.ParitionEpochObject, error)
+	PutParitionEpochObject(paritionEpochObject *pb.ParitionEpochObject) error
+	LastParitionEpochObject() (*pb.ParitionEpochObject, error)
 }
 
 type GoCacheStore struct {
@@ -222,4 +225,14 @@ func (store GoCacheStore) saveStore() {
 	}
 }
 
-// Define a global cache variable
+func (partition GoCachePartition) GetParitionEpochObject(epoch int) (*pb.ParitionEpochObject, error) {
+	return nil, nil
+}
+
+func (partition GoCachePartition) PutParitionEpochObject(paritionEpochObject *pb.ParitionEpochObject) error {
+	return nil
+}
+
+func (partition GoCachePartition) LastParitionEpochObject() (*pb.ParitionEpochObject, error) {
+	return nil, nil
+}

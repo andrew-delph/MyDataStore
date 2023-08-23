@@ -84,25 +84,15 @@ func (*internalServer) VerifyMerkleTree(stream pb.InternalNodeService_VerifyMerk
 		return err
 	}
 	epoch := rootNode.Epoch
-	global := rootNode.Global
 	partitionId := int(rootNode.Partition)
 
 	var partitionTree *merkletree.MerkleTree
 
-	if global {
-		partitionTree, err = GlobalPartitionMerkleTree(partitionId)
-		if err != nil {
-			err = fmt.Errorf("SERVER VerifyMerkleTree err = %v", err)
-			logrus.Error(err)
-			return err
-		}
-	} else {
-		partitionTree, err = CachePartitionMerkleTree(epoch, partitionId)
-		if err != nil {
-			err = fmt.Errorf("SERVER VerifyMerkleTree err = %v", err)
-			logrus.Error(err)
-			return err
-		}
+	partitionTree, _, err = RawPartitionMerkleTree(epoch, true, partitionId)
+	if err != nil {
+		err = fmt.Errorf("SERVER VerifyMerkleTree err = %v", err)
+		logrus.Error(err)
+		return err
 	}
 
 	isEqual := bytes.Equal(partitionTree.Root.Hash, rootNode.Hash)
