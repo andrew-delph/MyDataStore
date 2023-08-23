@@ -339,18 +339,11 @@ func DifferentMerkleTreeBucketsDFS(node1 *merkletree.Node, node2 *merkletree.Nod
 	if !bytes.Equal(node1.Hash, node2.Hash) {
 		if node1.Left == nil && node1.Right == nil {
 			var bucketId int32
-			realMerkleBucket, ok := node1.C.(*RealMerkleBucket)
-			if !ok {
-				logrus.Error("could not decode RealMerkleBucket")
-				serializedMerkleBucket, ok := node1.C.(*SerializedMerkleBucket)
-				if !ok {
-					logrus.Error("could not decode RealMerkleBucket")
-					logrus.Fatal("could not decode Bucket")
-				} else {
-					bucketId = serializedMerkleBucket.bucketId
-				}
-			} else {
-				bucketId = realMerkleBucket.bucketId
+			switch bucket := node1.C.(type) {
+			case *RealMerkleBucket:
+				bucketId = bucket.bucketId
+			case *SerializedMerkleBucket:
+				bucketId = bucket.bucketId
 			}
 			differences = append(differences, bucketId)
 		} else {
