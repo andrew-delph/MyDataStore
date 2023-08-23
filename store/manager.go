@@ -21,6 +21,7 @@ func managerInit() {
 	partitionEpochQueue = make(PartitionEpochQueue, 0)
 	heap.Init(&partitionEpochQueue)
 	logrus.Warn("managerInit")
+
 	run := true
 	go func() {
 		for run {
@@ -100,6 +101,31 @@ func handleEpochUpdate(currEpoch int64) error {
 	// 		logrus.Debugf("Success sync of epoch = %d", currEpoch-1)
 	// 	}
 	// }
+	return nil
+}
+
+func QueueMyPartitionEpochItems() error {
+	myPartions, err := GetMemberPartions(events.consistent, conf.Name)
+	if err != nil {
+		logrus.Error(err)
+		return err
+	}
+	for _, partId := range myPartions {
+		partition, err := store.getPartition(partId)
+		if err != nil {
+			logrus.Errorf("handlePartitionEpochItem err = %v", err)
+			return err
+		}
+		paritionEpochObject, err := partition.LastParitionEpochObject()
+		if err != nil {
+			logrus.Errorf("handlePartitionEpochItem err = %v", err)
+			return err
+		}
+		partitionEpochQueue.Push(&PartitionEpochItem{
+			epoch:       paritionEpochObject.Epoch + 1,
+			partitionId: int(paritionEpochObject.Partition),
+		})
+	}
 	return nil
 }
 

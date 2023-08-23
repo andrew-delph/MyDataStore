@@ -284,7 +284,18 @@ func (partition LevelDbPartition) PutParitionEpochObject(paritionEpochObject *da
 }
 
 func (partition LevelDbPartition) LastParitionEpochObject() (*datap.ParitionEpochObject, error) {
-	// index with first part of key...
-	// iter get the last value.
-	return nil, nil
+	keyBytes := IndexParitionEpochObject(partition.GetPartitionId(), 1)
+	valueBytes, err := partition.db.Get(keyBytes, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	paritionEpochObject := &datap.ParitionEpochObject{}
+	err = proto.Unmarshal(valueBytes, paritionEpochObject)
+	if err != nil {
+		logrus.Error("Error: ", err)
+		return nil, err
+	}
+
+	return paritionEpochObject, nil
 }
