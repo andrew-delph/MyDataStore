@@ -29,7 +29,11 @@ func IndexBucketEpoch(parition, bucket, epoch int, key string) []byte {
 }
 
 func IndexParitionEpochObject(parition, epoch int) []byte {
-	return []byte(fmt.Sprintf("epoch_object_%04d_%04d", parition, epoch))
+	return []byte(fmt.Sprintf("%s_%04d", IndexParitionEpochObject_Partition_Only(parition), epoch))
+}
+
+func IndexParitionEpochObject_Partition_Only(parition int) []byte {
+	return []byte(fmt.Sprintf("epoch_object_%04d", parition))
 }
 
 func IndexKey(paritionint int, key string) []byte {
@@ -284,16 +288,24 @@ func (partition LevelDbPartition) PutParitionEpochObject(paritionEpochObject *da
 }
 
 func (partition LevelDbPartition) LastParitionEpochObject() (*datap.ParitionEpochObject, error) {
-	keyBytes := IndexParitionEpochObject(partition.GetPartitionId(), 1)
-	valueBytes, err := partition.db.Get(keyBytes, nil)
-	if err != nil {
-		return nil, err
+	keyBytes := IndexParitionEpochObject_Partition_Only(partition.GetPartitionId())
+
+	rng := util.BytesPrefix(keyBytes)
+	readOpts := &opt.ReadOptions{}
+
+	iter := partition.db.NewIterator(rng, readOpts)
+
+	defer iter.Release()
+
+	if !iter.Last() {
+		// the iter has no values.
+		return nil, nil
 	}
 
+	valueBytes := iter.Value()
 	paritionEpochObject := &datap.ParitionEpochObject{}
-	err = proto.Unmarshal(valueBytes, paritionEpochObject)
+	err := proto.Unmarshal(valueBytes, paritionEpochObject)
 	if err != nil {
-		logrus.Error("Error: ", err)
 		return nil, err
 	}
 

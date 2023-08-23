@@ -217,3 +217,98 @@ func TestLevelDbIndex(t *testing.T) {
 
 	logrus.Infof("TestLevelDbIndex Elapsed Time: %.2f seconds\n", elapsedTime)
 }
+
+func TestLevelDbParitionEpochObject(t *testing.T) {
+	hostname = randomString(5)
+
+	conf, delegate, events = GetConf()
+
+	var err error
+	store, err = NewLevelDbStore()
+	if err != nil {
+		t.Error(fmt.Sprintf("NewLevelDbStore: %v", err))
+		return
+	}
+	defer store.Close()
+
+	partitionId := 5
+
+	// get partition
+	partition, err := store.getPartition(partitionId)
+	if err != nil {
+		logrus.Errorf("handlePartitionEpochItem err = %v", err)
+		t.Error(err)
+	}
+	// check if last ParitionEpochObject exists. verify it doesnt.
+	paritionEpochObject, err := partition.LastParitionEpochObject()
+	if paritionEpochObject != nil {
+		t.Errorf("should be nil: paritionEpochObject = %v err = %v", paritionEpochObject, err)
+	}
+	if err != nil {
+		t.Error(err)
+	}
+
+	// input new object
+	paritionEpochObject = &datap.ParitionEpochObject{
+		Epoch:     2,
+		Partition: int32(partitionId),
+	}
+	err = partition.PutParitionEpochObject(paritionEpochObject)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// check if last ParitionEpochObject exists. verify it exits.
+	paritionEpochObject, err = partition.LastParitionEpochObject()
+	if paritionEpochObject == nil {
+		t.Errorf("should be nil: paritionEpochObject = %v err = %v", paritionEpochObject, err)
+	}
+	if err != nil {
+		t.Error(err)
+	}
+	assert.EqualValues(t, partitionId, paritionEpochObject.Partition, "partition value was wrong.")
+	assert.EqualValues(t, 2, paritionEpochObject.Epoch, "epoch value was wrong.")
+
+	// input new higher object
+
+	paritionEpochObject = &datap.ParitionEpochObject{
+		Epoch:     4,
+		Partition: int32(partitionId),
+	}
+	err = partition.PutParitionEpochObject(paritionEpochObject)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// make sure last returned is correct
+	paritionEpochObject, err = partition.LastParitionEpochObject()
+	if paritionEpochObject == nil {
+		t.Errorf("should be nil: paritionEpochObject = %v err = %v", paritionEpochObject, err)
+	}
+	if err != nil {
+		t.Error(err)
+	}
+	assert.EqualValues(t, partitionId, paritionEpochObject.Partition, "partition value was wrong.")
+	assert.EqualValues(t, 4, paritionEpochObject.Epoch, "epoch value was wrong.")
+
+	// request first one specific and make sure it is returned
+	paritionEpochObject, err = partition.GetParitionEpochObject(2)
+	if paritionEpochObject == nil {
+		t.Errorf("should be nil: paritionEpochObject = %v err = %v", paritionEpochObject, err)
+	}
+	if err != nil {
+		t.Error(err)
+	}
+	assert.EqualValues(t, partitionId, paritionEpochObject.Partition, "partition value was wrong.")
+	assert.EqualValues(t, 2, paritionEpochObject.Epoch, "epoch value was wrong.")
+
+	paritionEpochObject, err = partition.GetParitionEpochObject(4)
+	if paritionEpochObject == nil {
+		t.Errorf("should be nil: paritionEpochObject = %v err = %v", paritionEpochObject, err)
+	}
+	if err != nil {
+		t.Error(err)
+	}
+	assert.EqualValues(t, partitionId, paritionEpochObject.Partition, "partition value was wrong.")
+	assert.EqualValues(t, 4, paritionEpochObject.Epoch, "epoch value was wrong.")
+}
