@@ -161,7 +161,7 @@ func SendGetMessage(key string) (string, error) {
 			}
 		}
 		if readRepairCount > 0 {
-			logrus.Warnf("Read Repair value = %v readRepairCount = %d", recentValue.Key, readRepairCount)
+			logrus.Debugf("Read Repair value = %v readRepairCount = %d", recentValue.Key, readRepairCount)
 		}
 	}()
 

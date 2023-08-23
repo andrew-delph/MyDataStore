@@ -3,6 +3,7 @@ package main
 import (
 	"container/heap"
 	"fmt"
+	"math"
 	"math/rand"
 	"sync"
 	"time"
@@ -39,16 +40,12 @@ func managerInit() {
 				if validFSMUpdate {
 					if !validFSM {
 						logrus.Warn("FSM is now valid.")
-						err := QueueMyPartitionEpochItems()
-						if err != nil {
-							logrus.Fatal(err)
-						}
 					}
 					validFSM = true
 
 				} else {
 					if validFSM {
-						logrus.Panic("validFSM became false")
+						logrus.Error("validFSM became false")
 					}
 					validFSM = false
 				}
@@ -87,35 +84,18 @@ func syncPartition(partitionId int, requestBuckets []int32, lowerEpoch, upperEpo
 // if out of sync. it will call appropiate sync functions
 func handleEpochUpdate(currEpoch int64) error {
 	logrus.Debugf("currEpoch %d", currEpoch)
-	// for partId := 0; partId > partitionCount; partId++ {
-	// 	tree, buckets, err := RawPartitionMerkleTree(currEpoch-2, false, partId)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	partition, err := store.getPartition(partId)
-	// 	if err != nil {
-	// 		return err
-	// 	}
 
-	// 	paritionEpochObject, err := MerkleTreeToParitionEpochObject(tree, buckets, currEpoch-2, partId)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	err = partition.PutParitionEpochObject(paritionEpochObject)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// }
-
-	return nil
-}
-
-func QueueMyPartitionEpochItems() error {
 	myPartions, err := GetMemberPartions(events.consistent, conf.Name)
 	if err != nil {
 		logrus.Error(err)
 		return err
 	}
+	lag := math.MaxInt32
+	defer func() {
+		if lag > 4 {
+			logrus.Warnf("currently lagging. lag = %d currEpoch = %d", lag, currEpoch)
+		}
+	}()
 	for _, partId := range myPartions {
 		partition, err := store.getPartition(partId)
 		if err != nil {
@@ -127,19 +107,18 @@ func QueueMyPartitionEpochItems() error {
 			logrus.Errorf("handlePartitionEpochItem err = %v", err)
 			return err
 		}
-		if paritionEpochObject == nil {
+		lowerEpoch := int64(0)
+		if paritionEpochObject != nil {
+			lowerEpoch = paritionEpochObject.Epoch
+		}
+		lag = min(lag, int(currEpoch-lowerEpoch))
+
+		for i := lowerEpoch; i < currEpoch-1; i++ {
 			partitionEpochQueue.PushItem(&PartitionEpochItem{
-				epoch:       0,
-				partitionId: int(partition.GetPartitionId()),
-			})
-		} else {
-			logrus.Warnf("starting from Epoch = %v", paritionEpochObject.Epoch)
-			partitionEpochQueue.PushItem(&PartitionEpochItem{
-				epoch:       paritionEpochObject.Epoch + 1,
-				partitionId: int(paritionEpochObject.Partition),
+				epoch:       i,
+				partitionId: int(partId),
 			})
 		}
-
 	}
 	return nil
 }
@@ -148,33 +127,31 @@ func handlePartitionEpochItem() {
 	item := partitionEpochQueue.PopItem()
 	// logrus.Warnf("handling item partion = %d epoch = %d", item.partitionId, item.epoch)
 	// defer logrus.Warnf("DONE handling item partion = %d epoch = %d", item.partitionId, item.epoch)
-	delayFailedItem := func() {
-		go func() {
-			time.Sleep(10 * time.Second)
-			if item.attempts > 1 {
-				logrus.Warnf("handlePartitionEpochItem partition = %d epoch = %d attemps = %d", item.partitionId, item.epoch, item.attempts)
-			}
-			item.attempts++
-			partitionEpochQueue.PushItem(item)
-		}()
-	}
+
 	if item == nil {
 		logrus.Panic("ITEM IS NIL")
 	}
 	if item.epoch > currEpoch-2 {
-		delayFailedItem()
+		return
+	}
+
+	partition, err := store.getPartition(item.partitionId)
+	if err != nil {
+		logrus.Errorf("handlePartitionEpochItem err = %v", err)
+		return
+	}
+	paritionEpochObject, err := partition.GetParitionEpochObject(int(item.epoch))
+	if paritionEpochObject != nil && paritionEpochObject.Valid {
 		return
 	}
 
 	tree, bucketList, err := RawPartitionMerkleTree(item.epoch, false, item.partitionId)
 	if err != nil {
 		logrus.Errorf("handlePartitionEpochItem err = %v", err)
-		delayFailedItem()
 		return
 	}
 	unsyncedBuckets, err := verifyPartitionEpochTree(tree, item.partitionId, item.epoch)
 	if (unsyncedBuckets != nil && len(unsyncedBuckets) > 0) || err != nil {
-		delayFailedItem()
 		logrus.Debugf("failed to sync partion = %d epoch = %d err = %v", item.partitionId, item.epoch, err)
 		var requestBuckets []int32
 		for _, buckedId := range unsyncedBuckets {
@@ -186,28 +163,22 @@ func handlePartitionEpochItem() {
 		partition, err := store.getPartition(item.partitionId)
 		if err != nil {
 			logrus.Errorf("handlePartitionEpochItem err = %v", err)
-			delayFailedItem()
 			return
 		}
 
 		paritionEpochObject, err := MerkleTreeToParitionEpochObject(tree, bucketList, item.epoch, item.partitionId)
 		if err != nil {
 			logrus.Errorf("handlePartitionEpochItem err = %v", err)
-			delayFailedItem()
 			return
 		}
+		paritionEpochObject.Valid = true
 		err = partition.PutParitionEpochObject(paritionEpochObject)
 		if err != nil {
 			logrus.Errorf("handlePartitionEpochItem err = %v", err)
-			delayFailedItem()
 			return
 		}
 
 		logrus.Debugf("Success sync of epoch = %d", currEpoch-1)
-		partitionEpochQueue.PushItem(&PartitionEpochItem{
-			epoch:       item.epoch + 1,
-			partitionId: item.partitionId,
-		})
 	}
 }
 
@@ -273,7 +244,6 @@ type PartitionEpochItem struct {
 	epoch       int64
 	partitionId int
 	index       int
-	attempts    int
 }
 
 // A PartitionEpochQueue implements heap.Interface and holds Items.
@@ -282,9 +252,9 @@ type PartitionEpochQueue []*PartitionEpochItem
 func (pq PartitionEpochQueue) Len() int { return len(pq) }
 
 func (pq PartitionEpochQueue) Less(i, j int) bool {
-	// if pq[i] == nil || pq[j] == nil {
-	// 	return false // or handle this in some other appropriate way
-	// }
+	if pq[i] == nil || pq[j] == nil {
+		return false // or handle this in some other appropriate way
+	}
 	// order by epoch in asc order
 	return pq[i].epoch < pq[j].epoch
 }
@@ -310,13 +280,23 @@ func (pq *PartitionEpochQueue) Pop() any {
 	return item
 }
 
+var queueLock sync.Mutex
+
 func (pq *PartitionEpochQueue) PushItem(item *PartitionEpochItem) {
+	queueLock.Lock()
+	defer queueLock.Unlock()
 	heap.Push(pq, item)
 }
 
 func (pq *PartitionEpochQueue) PopItem() *PartitionEpochItem {
+	queueLock.Lock()
+	defer queueLock.Unlock()
 	if len(*pq) == 0 {
 		return nil
 	}
-	return heap.Pop(pq).(*PartitionEpochItem)
+	popVal, ok := heap.Pop(pq).(*PartitionEpochItem)
+	if !ok {
+		logrus.Fatal("FAILED TO DECODE POP.")
+	}
+	return popVal
 }

@@ -68,6 +68,7 @@ message ParitionEpochObject{
   int64 epoch = 2;
   bytes rootHash = 3;
   repeated bytes buckets =4;
+  bool valid =5;
 }
 
 

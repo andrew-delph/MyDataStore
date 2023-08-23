@@ -46,11 +46,6 @@ var currEpoch int64 = 0
 func main() {
 	// time.Sleep(20 * time.Second)
 
-	defer func() {
-		if r := recover(); r != nil {
-			logrus.Warn("Recovered from panic:", r)
-		}
-	}()
 	go StartInterGrpcServer()
 	logrus.SetLevel(logrus.WarnLevel)
 	// logrus.SetFormatter(&logrus.JSONFormatter{})
@@ -98,11 +93,10 @@ func main() {
 	}
 
 	epochTick := time.NewTicker(epochTime)
+	managerInit()
 
 	go startHttpServer()
 	// var count uint32
-
-	managerInit()
 
 	logrus.Warn("starting run.")
 	tick := time.NewTicker(3 * time.Second)
