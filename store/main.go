@@ -44,7 +44,6 @@ var store Store
 var currEpoch int64 = 0
 
 func main() {
-	managerInit()
 	// time.Sleep(20 * time.Second)
 
 	defer func() {
@@ -102,6 +101,8 @@ func main() {
 
 	go startHttpServer()
 	// var count uint32
+
+	managerInit()
 
 	logrus.Warn("starting run.")
 	tick := time.NewTicker(3 * time.Second)

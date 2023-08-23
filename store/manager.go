@@ -22,16 +22,30 @@ func managerInit() {
 	heap.Init(&partitionEpochQueue)
 	logrus.Warn("managerInit")
 
+	for {
+		if len(events.nodes) > N {
+			logrus.Warnf("Manger Ready.")
+			break
+		}
+		logrus.Warnf("Manger not Ready. Sleeping...")
+		time.Sleep(time.Second * 5)
+	}
+
 	run := true
 	go func() {
 		for run {
 			select {
 			case validFSMUpdate := <-validFSMObserver:
 				if validFSMUpdate {
-					validFSM = true
 					if !validFSM {
 						logrus.Warn("FSM is now valid.")
+						err := QueueMyPartitionEpochItems()
+						if err != nil {
+							logrus.Fatal(err)
+						}
 					}
+					validFSM = true
+
 				} else {
 					if validFSM {
 						logrus.Panic("validFSM became false")
@@ -121,16 +135,34 @@ func QueueMyPartitionEpochItems() error {
 			logrus.Errorf("handlePartitionEpochItem err = %v", err)
 			return err
 		}
-		partitionEpochQueue.Push(&PartitionEpochItem{
-			epoch:       paritionEpochObject.Epoch + 1,
-			partitionId: int(paritionEpochObject.Partition),
-		})
+		if paritionEpochObject == nil {
+			partitionEpochQueue.Push(&PartitionEpochItem{
+				epoch:       0,
+				partitionId: int(partition.GetPartitionId()),
+			})
+		} else {
+			partitionEpochQueue.Push(&PartitionEpochItem{
+				epoch:       paritionEpochObject.Epoch + 1,
+				partitionId: int(paritionEpochObject.Partition),
+			})
+		}
+
 	}
 	return nil
 }
 
 func handlePartitionEpochItem() {
 	item := heap.Pop(&partitionEpochQueue).(*PartitionEpochItem)
+	// logrus.Warnf("handling item partion = %d epoch = %d", item.partitionId, item.epoch)
+	// defer logrus.Warnf("DONE handling item partion = %d epoch = %d", item.partitionId, item.epoch)
+	if currEpoch == item.epoch {
+		go func() {
+			time.Sleep(10 * time.Second)
+			partitionEpochQueue.Push(item)
+		}()
+		return
+	}
+
 	tree, bucketList, err := RawPartitionMerkleTree(item.epoch, false, item.partitionId)
 	if err != nil {
 		logrus.Errorf("handlePartitionEpochItem err = %v", err)
@@ -140,7 +172,7 @@ func handlePartitionEpochItem() {
 	unsyncedBuckets, err := verifyPartitionEpochTree(tree, item.partitionId, item.epoch)
 	if (unsyncedBuckets != nil && len(unsyncedBuckets) > 0) || err != nil {
 		partitionEpochQueue.Push(item)
-		logrus.Error("failed to sync partion = %d epoch = %d err = %v", item.partitionId, item.epoch, err)
+		logrus.Errorf("failed to sync partion = %d epoch = %d err = %v", item.partitionId, item.epoch, err)
 		var requestBuckets []int32
 		for _, buckedId := range unsyncedBuckets {
 			requestBuckets = append(requestBuckets, buckedId)
@@ -168,7 +200,7 @@ func handlePartitionEpochItem() {
 			return
 		}
 
-		logrus.Warnf("Success sync of epoch = %d", currEpoch-1)
+		logrus.Debugf("Success sync of epoch = %d", currEpoch-1)
 		partitionEpochQueue.Push(&PartitionEpochItem{
 			epoch:       item.epoch + 1,
 			partitionId: item.partitionId,
@@ -198,7 +230,7 @@ func verifyPartitionEpochTree(tree *merkletree.MerkleTree, partitionId int, epoc
 			}
 			unsyncedBuckets := DifferentMerkleTreeBuckets(tree, otherTree)
 			if unsyncedBuckets == nil {
-				errorCh <- fmt.Errorf("unsyncedBuckets is nil")
+				unsyncedCh <- []int32{}
 			} else {
 				unsyncedCh <- unsyncedBuckets
 			}
@@ -213,9 +245,8 @@ func verifyPartitionEpochTree(tree *merkletree.MerkleTree, partitionId int, epoc
 		case temp := <-unsyncedCh:
 			if len(temp) > 0 {
 				unsyncedBuckets = temp
-			} else {
-				responseCount++
 			}
+			responseCount++
 		case err := <-errorCh:
 			logrus.Errorf("errorCh: %v", err)
 			_ = err // Handle error if necessary
