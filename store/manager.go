@@ -8,9 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cbergoon/merkletree"
 	"github.com/sirupsen/logrus"
-
-	"github.com/andrew-delph/my-key-store/datap"
 )
 
 var (
@@ -163,73 +162,78 @@ func handleEpochUpdate(currEpoch int64) error {
 
 func handlePartitionEpochItem() {
 	item := heap.Pop(&partitionEpochQueue).(*PartitionEpochItem)
-	tree, buckets, err := RawPartitionMerkleTree(item.epoch, false, item.partitionId)
+	tree, _, err := RawPartitionMerkleTree(item.epoch, false, item.partitionId)
 	if err != nil {
 		logrus.Errorf("handlePartitionEpochItem err = %v", err)
 		partitionEpochQueue.Push(item)
 		return
 	}
-	paritionEpochObject, err := MerkleTreeToParitionEpochObject(tree, buckets, item.epoch, item.partitionId)
-	verifyPartition(paritionEpochObject)
-	// if (unsyncedBuckets != nil && len(*unsyncedBuckets) > 0) || err != nil {
-	// 	partitionEpochQueue.Push(item)
-	// 	logrus.Error("failed to sync partion = %d epoch = %d err = %v", item.partitionId, item.epoch, err)
-	// 	var requestBuckets []int32
-	// 	for b := range *unsyncedBuckets {
-	// 		requestBuckets = append(requestBuckets, b)
-	// 	}
-	// 	syncPartition(item.partitionId, requestBuckets, item.epoch-1, item.epoch)
+	unsyncedBuckets, err := verifyPartitionEpochTree(tree, item.partitionId, item.epoch)
+	if (unsyncedBuckets != nil && len(unsyncedBuckets) > 0) || err != nil {
+		partitionEpochQueue.Push(item)
+		logrus.Error("failed to sync partion = %d epoch = %d err = %v", item.partitionId, item.epoch, err)
+		var requestBuckets []int32
+		for _, buckedId := range unsyncedBuckets {
+			requestBuckets = append(requestBuckets, buckedId)
+		}
+		syncPartition(item.partitionId, requestBuckets, item.epoch-1, item.epoch)
 
-	// } else {
-	// 	logrus.Debugf("Success sync of epoch = %d", currEpoch-1)
-	// }
+	} else {
+		logrus.Warnf("Success sync of epoch = %d", currEpoch-1)
+	}
 }
 
-func verifyPartition(paritionEpochObject *datap.ParitionEpochObject) (*map[int32]struct{}, error) {
-	return nil, nil
-	// nodes, err := GetClosestNForPartition(events.consistent, partitionId, N)
-	// if err != nil {
-	// 	logrus.Error(err)
-	// 	return nil, err
-	// }
-	// unsyncedCh := make(chan *map[int32]struct{}, len(nodes))
-	// errorCh := make(chan error, len(nodes))
-	// for _, node := range nodes {
-	// 	go func(addr string) {
-	// 		unsyncedBuckets, err := VerifyMerkleTree(addr, epoch, global, partitionId)
+func verifyPartitionEpochTree(tree *merkletree.MerkleTree, partitionId int, epoch int64) ([]int32, error) {
+	nodes, err := GetClosestNForPartition(events.consistent, int(partitionId), N)
+	if err != nil {
+		logrus.Error(err)
+		return nil, err
+	}
+	unsyncedCh := make(chan []int32, len(nodes))
+	errorCh := make(chan error, len(nodes))
+	for _, node := range nodes {
+		go func(addr string) {
+			otherParitionEpochObject, err := GetParitionEpochObject(addr, epoch, partitionId)
+			if err != nil {
+				logrus.Error(err)
+				errorCh <- err
+			}
+			otherTree, err := ParitionEpochObjectToMerkleTree(otherParitionEpochObject)
+			if err != nil {
+				logrus.Error(err)
+				errorCh <- err
+			}
+			unsyncedBuckets := DifferentMerkleTreeBuckets(tree, otherTree)
+			if unsyncedBuckets == nil {
+				errorCh <- fmt.Errorf("unsyncedBuckets is nil")
+			} else {
+				unsyncedCh <- unsyncedBuckets
+			}
+		}(node.String())
+	}
 
-	// 		if err != nil && err != io.EOF {
-	// 			logrus.Errorf("RecentEpochSync VerifyMerkleTree unsyncedBuckets = %v partitionId = %v err = %v ", unsyncedBuckets, partitionId, err)
-	// 			errorCh <- err
-	// 		} else {
-	// 			logrus.Debugf("RecentEpochSync VerifyMerkleTree unsyncedBuckets = %v ", unsyncedBuckets)
-	// 			unsyncedCh <- &unsyncedBuckets
-	// 		}
-	// 	}(node.String())
-	// }
-
-	// timeout := time.After(time.Second * 40)
-	// responseCount := 0
-	// var unsyncedBuckets *map[int32]struct{}
-	// for i := 0; i < len(nodes); i++ {
-	// 	select {
-	// 	case temp := <-unsyncedCh:
-	// 		if temp != nil && len(*temp) > 0 {
-	// 			unsyncedBuckets = temp
-	// 		} else {
-	// 			responseCount++
-	// 		}
-	// 	case err := <-errorCh:
-	// 		logrus.Errorf("errorCh: %v", err)
-	// 		_ = err // Handle error if necessary
-	// 	case <-timeout:
-	// 		return unsyncedBuckets, fmt.Errorf("timed out waiting for responses")
-	// 	}
-	// 	if responseCount >= R {
-	// 		return nil, nil
-	// 	}
-	// }
-	// return unsyncedBuckets, fmt.Errorf("not enough nodes verifyied.")
+	timeout := time.After(time.Second * 40)
+	responseCount := 0
+	var unsyncedBuckets []int32
+	for i := 0; i < len(nodes); i++ {
+		select {
+		case temp := <-unsyncedCh:
+			if len(temp) > 0 {
+				unsyncedBuckets = temp
+			} else {
+				responseCount++
+			}
+		case err := <-errorCh:
+			logrus.Errorf("errorCh: %v", err)
+			_ = err // Handle error if necessary
+		case <-timeout:
+			return unsyncedBuckets, fmt.Errorf("timed out waiting for responses")
+		}
+		if responseCount >= R {
+			return nil, nil
+		}
+	}
+	return unsyncedBuckets, fmt.Errorf("not enough nodes verifyied.")
 }
 
 // An PartitionEpochItem is something we manage in a priority queue.
