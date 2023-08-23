@@ -67,7 +67,7 @@ func syncPartition(partitionId int, requestBuckets []int32, lowerEpoch, upperEpo
 		logrus.Error(err)
 		return err
 	}
-	logrus.Warnf("StreamBuckets partitionId = %d lowerEpoch = %d upperEpoch = %d bucketsnum = %d", partitionId, lowerEpoch, upperEpoch, len(requestBuckets))
+	logrus.Debugf("StreamBuckets partitionId = %d lowerEpoch = %d upperEpoch = %d bucketsnum = %d", partitionId, lowerEpoch, upperEpoch, len(requestBuckets))
 	var wg sync.WaitGroup
 
 	for i := 0; i < len(nodes); i++ {
@@ -175,7 +175,7 @@ func handlePartitionEpochItem() {
 	unsyncedBuckets, err := verifyPartitionEpochTree(tree, item.partitionId, item.epoch)
 	if (unsyncedBuckets != nil && len(unsyncedBuckets) > 0) || err != nil {
 		delayFailedItem()
-		logrus.Errorf("failed to sync partion = %d epoch = %d err = %v", item.partitionId, item.epoch, err)
+		logrus.Debugf("failed to sync partion = %d epoch = %d err = %v", item.partitionId, item.epoch, err)
 		var requestBuckets []int32
 		for _, buckedId := range unsyncedBuckets {
 			requestBuckets = append(requestBuckets, buckedId)
