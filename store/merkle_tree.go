@@ -198,7 +198,7 @@ func DifferentMerkleTreeBuckets(tree1 *merkletree.MerkleTree, tree2 *merkletree.
 }
 
 func DifferentMerkleTreeBucketsDFS(node1 *merkletree.Node, node2 *merkletree.Node) []int32 {
-	var differences []int32
+	differences := []int32{}
 
 	if node1 == nil && node2 == nil {
 		return differences
