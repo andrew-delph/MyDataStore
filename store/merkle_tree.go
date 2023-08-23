@@ -61,7 +61,8 @@ func (h *CustomHash) Hash() int64 {
 var merkletreeStore *cache.Cache = cache.New(0*time.Minute, 1*time.Minute)
 
 type SerializedMerkleBucket struct {
-	hash []byte
+	hash     []byte
+	bucketId int32
 }
 
 func (bucket SerializedMerkleBucket) CalculateHash() ([]byte, error) {
@@ -310,8 +311,8 @@ func MerkleTreeToParitionEpochObject(tree *merkletree.MerkleTree, bucketList []*
 
 func ParitionEpochObjectToMerkleTree(paritionEpochObject *pb.ParitionEpochObject) (*merkletree.MerkleTree, error) {
 	contentList := make([]merkletree.Content, 0, partitionBuckets)
-	for _, bucketHash := range paritionEpochObject.Buckets {
-		contentList = append(contentList, SerializedMerkleBucket{hash: bucketHash})
+	for i, bucketHash := range paritionEpochObject.Buckets {
+		contentList = append(contentList, SerializedMerkleBucket{hash: bucketHash, bucketId: int32(i)})
 	}
 	return merkletree.NewTree(contentList)
 }
