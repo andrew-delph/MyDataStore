@@ -219,6 +219,8 @@ func TestLevelDbStoreCacheMerkleTree(t *testing.T) {
 	assert.EqualValues(t, 1, len(DifferentMerkleTreeBuckets(tree1, tree2)), "Tree diff is wrong")
 	assert.EqualValues(t, 1, len(DifferentMerkleTreeBuckets(tree1, serializeTree)), "Tree diff is wrong")
 	assert.EqualValues(t, 0, len(DifferentMerkleTreeBuckets(tree2, serializeTree)), "Tree diff is wrong")
+
+	assert.EqualValues(t, DifferentMerkleTreeBuckets(tree1, tree2), DifferentMerkleTreeBuckets(tree1, serializeTree), "Dif values are not equal")
 }
 
 func BFS(root *merkletree.Node) []*merkletree.Node {
