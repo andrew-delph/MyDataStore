@@ -191,6 +191,13 @@ func (s *internalServer) StreamBuckets(req *pb.StreamBucketsRequest, stream pb.I
 
 func (s *internalServer) GetParitionEpochObject(ctx context.Context, req *pb.ParitionEpochObject) (*pb.ParitionEpochObject, error) {
 	logrus.Debugf("Handling GetParitionEpochObject: Partition=%d Epoch=%d", req.Partition, req.Epoch)
-
-	return nil, nil
+	tree, buckets, err := RawPartitionMerkleTree(req.Epoch, false, int(req.Partition))
+	if err != nil {
+		return nil, err
+	}
+	paritionEpochObject, err := MerkleTreeToParitionEpochObject(tree, buckets, req.Epoch, int(req.Partition))
+	if err != nil {
+		return nil, err
+	}
+	return paritionEpochObject, nil
 }
