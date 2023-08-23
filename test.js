@@ -121,7 +121,7 @@ export function remove() {
   return;
 }
 
-options = { iterations: 1, vus: 1 };
+options = { iterations: 1000, vus: 20 };
 export default function () {
   // // panic();
   // bootstrap();
@@ -155,8 +155,8 @@ export default function () {
     "Set: status was 200": (r) =>
       r.status === 200 || console.error(`Set Error: Status was ${r.status}`),
   });
-  return;
   sleep(10);
+  return;
 
   // Get a value from the map
   let getRes = http.get(`http://${address}/get?key=${key}`);

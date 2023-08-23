@@ -154,6 +154,9 @@ func handlePartitionEpochItem() {
 			partitionEpochQueue.Push(item)
 		}()
 	}
+	if item == nil {
+		logrus.Panic("ITEM IS NIL")
+	}
 	if item.epoch > currEpoch-2 {
 		delayFailedItem()
 		return
@@ -265,6 +268,7 @@ func verifyPartitionEpochTree(tree *merkletree.MerkleTree, partitionId int, epoc
 type PartitionEpochItem struct {
 	epoch       int64
 	partitionId int
+	index       int
 }
 
 // A PartitionEpochQueue implements heap.Interface and holds Items.
@@ -282,7 +286,9 @@ func (pq PartitionEpochQueue) Swap(i, j int) {
 }
 
 func (pq *PartitionEpochQueue) Push(x any) {
+	n := len(*pq)
 	item := x.(*PartitionEpochItem)
+	item.index = n
 	*pq = append(*pq, item)
 }
 
@@ -290,7 +296,16 @@ func (pq *PartitionEpochQueue) Pop() any {
 	old := *pq
 	n := len(old)
 	item := old[n-1]
-	old[n-1] = nil // avoid memory leak
+	old[n-1] = nil  // avoid memory leak
+	item.index = -1 // for safety
 	*pq = old[0 : n-1]
 	return item
+}
+
+func (pq *PartitionEpochQueue) PushItem(item *PartitionEpochItem) {
+	heap.Push(pq, item)
+}
+
+func (pq *PartitionEpochQueue) PopItem() *PartitionEpochItem {
+	return heap.Pop(pq).(*PartitionEpochItem)
 }

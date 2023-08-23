@@ -11,38 +11,41 @@ import (
 func TestPartitionVerifyQueue(t *testing.T) {
 	// Some items and their priorities.
 	items := map[int]int{
-		1: 3, 2: 2, 3: 1,
+		1: 3, 2: 4, 3: 2,
 	}
 
 	// Create a priority queue, put the items in it, and
 	// establish the priority queue (heap) invariants.
-	pq := make(PartitionEpochQueue, len(items))
-	i := 0
+	pq := &PartitionEpochQueue{}
+	heap.Init(pq)
 	for partitionId, epoch := range items {
-		pq[i] = &PartitionEpochItem{
+		pq.PushItem(&PartitionEpochItem{
 			epoch:       int64(epoch),
 			partitionId: partitionId,
-		}
-		i++
+		})
 	}
-	heap.Init(&pq)
 
 	// Insert a new item and then modify its priority.
 	item := &PartitionEpochItem{
-		epoch:       6,
-		partitionId: 6,
+		epoch:       1,
+		partitionId: 7,
 	}
-	pq.Push(item)
-	// heap.Push(&pq, item)
+	pq.PushItem(item)
 
-	popped := heap.Pop(&pq).(*PartitionEpochItem)
+	item = &PartitionEpochItem{
+		epoch:       6,
+		partitionId: 22,
+	}
+	pq.PushItem(item)
+
+	popped := pq.PopItem()
 
 	assert.EqualValues(t, 1, popped.epoch, "popped.epoch wrong value")
-	assert.EqualValues(t, 3, popped.partitionId, "popped.partitionId wrong value")
+	assert.EqualValues(t, 7, popped.partitionId, "popped.partitionId wrong value")
 
 	// Take the items out; they arrive in decreasing priority order.
 	for pq.Len() > 0 {
-		item := heap.Pop(&pq).(*PartitionEpochItem)
+		item := pq.PopItem()
 		logrus.Infof("partitionId = %d epoch = %d", item.partitionId, item.epoch)
 	}
 }
