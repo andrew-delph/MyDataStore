@@ -18,6 +18,10 @@ func TestPartitionVerifyQueue(t *testing.T) {
 	// establish the priority queue (heap) invariants.
 	pq := &PartitionEpochQueue{}
 	heap.Init(pq)
+
+	var nilValue *PartitionEpochItem
+	assert.Equal(t, nilValue, pq.PopItem(), "Should be nil")
+
 	for partitionId, epoch := range items {
 		pq.PushItem(&PartitionEpochItem{
 			epoch:       int64(epoch),

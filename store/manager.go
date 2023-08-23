@@ -144,14 +144,14 @@ func QueueMyPartitionEpochItems() error {
 }
 
 func handlePartitionEpochItem() {
-	item := heap.Pop(&partitionEpochQueue).(*PartitionEpochItem)
+	item := partitionEpochQueue.PopItem()
 	// logrus.Warnf("handling item partion = %d epoch = %d", item.partitionId, item.epoch)
 	// defer logrus.Warnf("DONE handling item partion = %d epoch = %d", item.partitionId, item.epoch)
 
 	delayFailedItem := func() {
 		go func() {
 			time.Sleep(10 * time.Second)
-			partitionEpochQueue.Push(item)
+			partitionEpochQueue.PushItem(item)
 		}()
 	}
 	if item == nil {
@@ -200,7 +200,7 @@ func handlePartitionEpochItem() {
 		}
 
 		logrus.Debugf("Success sync of epoch = %d", currEpoch-1)
-		partitionEpochQueue.Push(&PartitionEpochItem{
+		partitionEpochQueue.PushItem(&PartitionEpochItem{
 			epoch:       item.epoch + 1,
 			partitionId: item.partitionId,
 		})
@@ -307,5 +307,8 @@ func (pq *PartitionEpochQueue) PushItem(item *PartitionEpochItem) {
 }
 
 func (pq *PartitionEpochQueue) PopItem() *PartitionEpochItem {
+	if len(*pq) == 0 {
+		return nil
+	}
 	return heap.Pop(pq).(*PartitionEpochItem)
 }
