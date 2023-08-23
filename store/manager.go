@@ -150,3 +150,43 @@ func handleEpochUpdate(currEpoch int64) error {
 	}
 	return nil
 }
+
+// An PartitionEpochItem is something we manage in a priority queue.
+type PartitionEpochItem struct {
+	index       int
+	epoch       int64
+	partitionId int
+}
+
+// A PartitionEpochQueue implements heap.Interface and holds Items.
+type PartitionEpochQueue []*PartitionEpochItem
+
+func (pq PartitionEpochQueue) Len() int { return len(pq) }
+
+func (pq PartitionEpochQueue) Less(i, j int) bool {
+	// order by epoch in asc order
+	return pq[i].epoch < pq[j].epoch
+}
+
+func (pq PartitionEpochQueue) Swap(i, j int) {
+	pq[i], pq[j] = pq[j], pq[i]
+	pq[i].index = i
+	pq[j].index = j
+}
+
+func (pq *PartitionEpochQueue) Push(x any) {
+	n := len(*pq)
+	item := x.(*PartitionEpochItem)
+	item.index = n
+	*pq = append(*pq, item)
+}
+
+func (pq *PartitionEpochQueue) Pop() any {
+	old := *pq
+	n := len(old)
+	item := old[n-1]
+	old[n-1] = nil  // avoid memory leak
+	item.index = -1 // for safety
+	*pq = old[0 : n-1]
+	return item
+}

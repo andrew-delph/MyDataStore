@@ -48,6 +48,7 @@ go_test(
     srcs = [
         "hashring_test.go",
         "leveldb_store_test.go",
+        "manager_test.go",
         "merkle_tree_test.go",
         "store_test.go",
     ],
