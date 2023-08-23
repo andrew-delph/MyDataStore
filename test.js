@@ -9,17 +9,30 @@ export let options = {
   // iterations: 20,
   // vus: 5,
   scenarios: {
-    // disrupt: {
+    // bootstrap: {
     //   executor: "shared-iterations",
     //   iterations: 1,
     //   vus: 1,
-    //   exec: "disrupt",
-    //   startTime: "5s",
+    //   exec: "bootstrap",
+    //   startTime: "0s",
+    // },
+    // epoch: {
+    //   executor: "constant-arrival-rate",
+    //   exec: "epoch",
+    //   // How long the test lasts
+    //   duration: "4m",
+    //   // How many iterations per timeUnit
+    //   rate: 1,
+    //   // Start `rate` iterations per second
+    //   timeUnit: "10s",
+    //   // Pre-allocate VUs
+    //   preAllocatedVUs: 1,
+    //   maxVUs: 1,
     // },
     // load: {
     //   executor: "constant-vus",
     //   vus: 5,
-    //   duration: "30s",
+    //   duration: "10m",
     //   exec: "default",
     // },
     arrival: {
@@ -92,8 +105,9 @@ export function bootstrap() {
 
   let baseRes = http.get(addr);
   check(baseRes, {
-    "Bootstrap: status was 200": (r) =>
-      r.status === 200 || console.error(`Base Error: Status was ${r.status}`),
+    "bootstrap: status was 200": (r) =>
+      r.status === 200 ||
+      console.error(`bootstrap Error: Status was ${r.status}`),
   });
 
   return;
@@ -104,8 +118,8 @@ export function epoch() {
 
   let baseRes = http.get(addr);
   check(baseRes, {
-    "Epoch: status was 200": (r) =>
-      r.status === 200 || console.error(`Base Error: Status was ${r.status}`),
+    "epoch: status was 200": (r) =>
+      r.status === 200 || console.error(`epoch Error: Status was ${r.status}`),
   });
   return;
 }
@@ -115,13 +129,13 @@ export function remove() {
 
   let baseRes = http.get(addr);
   check(baseRes, {
-    "Epoch: status was 200": (r) =>
-      r.status === 200 || console.error(`Base Error: Status was ${r.status}`),
+    "remove: status was 200": (r) =>
+      r.status === 200 || console.error(`remove Error: Status was ${r.status}`),
   });
   return;
 }
 
-options = { iterations: 1000, vus: 20 };
+// options = { duration: "20m", vus: 20 };
 export default function () {
   // // panic();
   // bootstrap();
@@ -156,7 +170,6 @@ export default function () {
       r.status === 200 || console.error(`Set Error: Status was ${r.status}`),
   });
   sleep(10);
-  return;
 
   // Get a value from the map
   let getRes = http.get(`http://${address}/get?key=${key}`);

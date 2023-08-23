@@ -15,11 +15,11 @@ var (
 	partitionEpochSynced = make([]int64, partitionBuckets)
 	validFSM             = false
 )
-var partitionEpochQueue PartitionEpochQueue
+var partitionEpochQueue *PartitionEpochQueue
 
 func managerInit() {
-	partitionEpochQueue = make(PartitionEpochQueue, 0)
-	heap.Init(&partitionEpochQueue)
+	partitionEpochQueue = &PartitionEpochQueue{}
+	heap.Init(partitionEpochQueue)
 	logrus.Warn("managerInit")
 
 	for {
@@ -277,6 +277,9 @@ type PartitionEpochQueue []*PartitionEpochItem
 func (pq PartitionEpochQueue) Len() int { return len(pq) }
 
 func (pq PartitionEpochQueue) Less(i, j int) bool {
+	// if pq[i] == nil || pq[j] == nil {
+	// 	return false // or handle this in some other appropriate way
+	// }
 	// order by epoch in asc order
 	return pq[i].epoch < pq[j].epoch
 }

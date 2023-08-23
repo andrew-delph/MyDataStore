@@ -112,7 +112,9 @@ func main() {
 		case <-tick.C:
 			if raftNode.Leader() == "" {
 				logrus.Warnf("NO LEADER! state = %s ME = %s err = %v", raftNode.State(), conf.Name, nil) // RaftTryLead()
-				RaftTryLead()
+				if autoBootStrap {
+					RaftTryLead()
+				}
 			}
 			if raftNode.State() != raft.Leader && raftNode.State() != raft.Follower {
 				logrus.Warnf("BAD state = %s ME = %s", raftNode.State(), conf.Name)

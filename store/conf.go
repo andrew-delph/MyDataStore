@@ -21,6 +21,7 @@ var (
 	epochTime        time.Duration = 5 * time.Second
 	dataPath         string        = "/store"
 	raftLogs         bool          = false
+	autoBootStrap    bool          = true
 )
 
 func GetConf() (*memberlist.Config, *MyDelegate, *MyEventDelegate) {
