@@ -188,3 +188,9 @@ func (s *internalServer) StreamBuckets(req *pb.StreamBucketsRequest, stream pb.I
 
 	return nil
 }
+
+func (s *internalServer) GetParitionEpochObject(ctx context.Context, req *pb.ParitionEpochObject) (*pb.ParitionEpochObject, error) {
+	logrus.Debugf("Handling GetParitionEpochObject: Partition=%d Epoch=%d", req.Partition, req.Epoch)
+
+	return nil, nil
+}

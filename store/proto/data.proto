@@ -20,6 +20,8 @@ service InternalNodeService {
 
   // request to stream buckets from a partition back to the client
   rpc StreamBuckets(StreamBucketsRequest) returns (stream Value);
+
+  rpc GetParitionEpochObject(ParitionEpochObject) returns (ParitionEpochObject);
   
 }
 

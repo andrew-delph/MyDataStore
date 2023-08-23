@@ -17,6 +17,16 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+func GetClient(addr string) (*grpc.ClientConn, pb.InternalNodeServiceClient, error) {
+	conn, err := grpc.Dial(fmt.Sprintf("%s:%d", addr, port), grpc.WithInsecure(), grpc.WithBlock())
+	if err != nil {
+		return nil, nil, err
+	}
+	internalClient := pb.NewInternalNodeServiceClient(conn)
+
+	return conn, internalClient, nil
+}
+
 func SendSetMessageNode(addr string, setReqMsg *pb.Value, responseCh chan *pb.StandardResponse, errorCh chan error) {
 	conn, client, err := GetClient(addr)
 	if err != nil {
@@ -86,8 +96,6 @@ func SendGetMessage(key string) (string, error) {
 		Value *pb.Value
 		Addr  string
 	}
-	test := Res{}
-	logrus.Info(test)
 
 	resCh := make(chan *Res, len(nodes))
 	errorCh := make(chan error, len(nodes))
@@ -310,12 +318,23 @@ func StreamBuckets(addr string, buckets []int32, lowerEpoch, upperEpoch int64, p
 	}
 }
 
-func GetClient(addr string) (*grpc.ClientConn, pb.InternalNodeServiceClient, error) {
-	conn, err := grpc.Dial(fmt.Sprintf("%s:%d", addr, port), grpc.WithInsecure(), grpc.WithBlock())
+func GetParitionEpochObject(addr string, epoch int64, partitionId int) (*pb.ParitionEpochObject, error) {
+	conn, client, err := GetClient(addr)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	internalClient := pb.NewInternalNodeServiceClient(conn)
+	defer conn.Close()
 
-	return conn, internalClient, nil
+	// Create a new context for the goroutine
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	req := &pb.ParitionEpochObject{Epoch: epoch, Partition: int32(partitionId)}
+
+	res, err := client.GetParitionEpochObject(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
