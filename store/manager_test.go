@@ -22,7 +22,6 @@ func TestPartitionVerifyQueue(t *testing.T) {
 		pq[i] = &PartitionEpochItem{
 			epoch:       int64(epoch),
 			partitionId: partitionId,
-			index:       i,
 		}
 		i++
 	}
