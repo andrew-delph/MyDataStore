@@ -10,7 +10,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"google.golang.org/protobuf/proto"
 
-	pb "github.com/andrew-delph/my-key-store/datap"
+	datap "github.com/andrew-delph/my-key-store/datap"
 )
 
 type LevelDbStore struct {
@@ -51,7 +51,7 @@ func NewLevelDbStore() (*LevelDbStore, error) {
 	return &LevelDbStore{db: db}, nil
 }
 
-func (partition LevelDbPartition) SetPartitionValue(value *pb.Value) error {
+func (partition LevelDbPartition) SetPartitionValue(value *datap.Value) error {
 	writeOpts := &opt.WriteOptions{}
 	writeOpts.Sync = true
 
@@ -80,7 +80,7 @@ func (partition LevelDbPartition) SetPartitionValue(value *pb.Value) error {
 	return nil
 }
 
-func (partition LevelDbPartition) GetPartitionValue(key string) (*pb.Value, bool, error) {
+func (partition LevelDbPartition) GetPartitionValue(key string) (*datap.Value, bool, error) {
 	keyBytes := IndexKey(partition.GetPartitionId(), key)
 	valueBytes, err := partition.db.Get(keyBytes, nil)
 
@@ -92,7 +92,7 @@ func (partition LevelDbPartition) GetPartitionValue(key string) (*pb.Value, bool
 		return nil, false, err
 	}
 
-	value := &pb.Value{}
+	value := &datap.Value{}
 	err = proto.Unmarshal(valueBytes, value)
 	if err != nil {
 		logrus.Error("Error: ", err)
@@ -102,8 +102,8 @@ func (partition LevelDbPartition) GetPartitionValue(key string) (*pb.Value, bool
 	return value, true, nil
 }
 
-func (partition LevelDbPartition) Items(bucket, lowerEpoch, upperEpoch int) map[string]*pb.Value {
-	itemsMap := make(map[string]*pb.Value)
+func (partition LevelDbPartition) Items(bucket, lowerEpoch, upperEpoch int) map[string]*datap.Value {
+	itemsMap := make(map[string]*datap.Value)
 
 	startRange, endRange := IndexBucketEpoch(partition.GetPartitionId(), bucket, lowerEpoch, ""), IndexBucketEpoch(partition.GetPartitionId(), bucket, upperEpoch, "")
 
@@ -123,7 +123,7 @@ func (partition LevelDbPartition) Items(bucket, lowerEpoch, upperEpoch int) map[
 		key := string(iter.Key())
 		valueBytes := iter.Value()
 		logrus.Debugf("Items key: %s", key)
-		value := &pb.Value{}
+		value := &datap.Value{}
 		err := proto.Unmarshal(valueBytes, value)
 		if err != nil {
 			logrus.Error("LevelDbPartition Items Unmarshal: ", err)
@@ -135,8 +135,8 @@ func (partition LevelDbPartition) Items(bucket, lowerEpoch, upperEpoch int) map[
 	return itemsMap
 }
 
-func (store LevelDbStore) Items(partions []int, bucket, lowerEpoch, upperEpoch int) map[string]*pb.Value {
-	itemsMap := make(map[string]*pb.Value)
+func (store LevelDbStore) Items(partions []int, bucket, lowerEpoch, upperEpoch int) map[string]*datap.Value {
+	itemsMap := make(map[string]*datap.Value)
 
 	for _, partitionId := range partions {
 
@@ -154,7 +154,7 @@ func (store LevelDbStore) Items(partions []int, bucket, lowerEpoch, upperEpoch i
 }
 
 // Function to set a value in the global cache
-func (store LevelDbStore) SetValue(value *pb.Value) error {
+func (store LevelDbStore) SetValue(value *datap.Value) error {
 	key := value.Key
 	partitionId := FindPartitionID(events.consistent, key)
 
@@ -178,7 +178,7 @@ func (store LevelDbStore) SetValue(value *pb.Value) error {
 }
 
 // Function to get a value from the global cache
-func (store LevelDbStore) GetValue(key string) (*pb.Value, bool, error) {
+func (store LevelDbStore) GetValue(key string) (*datap.Value, bool, error) {
 	partitionId := FindPartitionID(events.consistent, key)
 
 	partition, err := store.getPartition(partitionId)
@@ -248,14 +248,14 @@ func (store LevelDbStore) Clear() {
 	// }
 }
 
-func (partition LevelDbPartition) GetParitionEpochObject(epoch int) (*pb.ParitionEpochObject, error) {
+func (partition LevelDbPartition) GetParitionEpochObject(epoch int) (*datap.ParitionEpochObject, error) {
 	keyBytes := IndexParitionEpochObject(partition.GetPartitionId(), epoch)
 	valueBytes, err := partition.db.Get(keyBytes, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	paritionEpochObject := &pb.ParitionEpochObject{}
+	paritionEpochObject := &datap.ParitionEpochObject{}
 	err = proto.Unmarshal(valueBytes, paritionEpochObject)
 	if err != nil {
 		logrus.Error("Error: ", err)
@@ -265,7 +265,7 @@ func (partition LevelDbPartition) GetParitionEpochObject(epoch int) (*pb.Paritio
 	return paritionEpochObject, nil
 }
 
-func (partition LevelDbPartition) PutParitionEpochObject(paritionEpochObject *pb.ParitionEpochObject) error {
+func (partition LevelDbPartition) PutParitionEpochObject(paritionEpochObject *datap.ParitionEpochObject) error {
 	writeOpts := &opt.WriteOptions{}
 	writeOpts.Sync = true
 
@@ -283,7 +283,7 @@ func (partition LevelDbPartition) PutParitionEpochObject(paritionEpochObject *pb
 	return nil
 }
 
-func (partition LevelDbPartition) LastParitionEpochObject() (*pb.ParitionEpochObject, error) {
+func (partition LevelDbPartition) LastParitionEpochObject() (*datap.ParitionEpochObject, error) {
 	// index with first part of key...
 	// iter get the last value.
 	return nil, nil

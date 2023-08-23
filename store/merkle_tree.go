@@ -12,7 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 
-	pb "github.com/andrew-delph/my-key-store/datap"
+	datap "github.com/andrew-delph/my-key-store/datap"
 )
 
 var GLOBAL_BUCKET_ERROR = errors.New("Could not update global bucket.")
@@ -95,7 +95,7 @@ func (bucket RealMerkleBucket) CalculateHash() ([]byte, error) {
 	return hash, nil
 }
 
-func (bucket RealMerkleBucket) AddValue(value *pb.Value) error {
+func (bucket RealMerkleBucket) AddValue(value *datap.Value) error {
 	data, err := proto.Marshal(value)
 	if err != nil {
 		logrus.Error("Error: ", err)
@@ -105,7 +105,7 @@ func (bucket RealMerkleBucket) AddValue(value *pb.Value) error {
 	return nil
 }
 
-func (bucket RealMerkleBucket) RemoveValue(value *pb.Value) error {
+func (bucket RealMerkleBucket) RemoveValue(value *datap.Value) error {
 	data, err := proto.Marshal(value)
 	if err != nil {
 		logrus.Error("Error: ", err)
@@ -139,7 +139,7 @@ var (
 	globalBucket = NewBucketsHolder()
 )
 
-func AddBucket(epoch int64, partitionId, bucket int, value *pb.Value) error {
+func AddBucket(epoch int64, partitionId, bucket int, value *datap.Value) error {
 	currBucket, err := GetBucket(epoch, partitionId, bucket)
 	if err != nil {
 		logrus.Errorf("NOT_EXIST_BUCKET_ERROR err = %v !!!!!!!!!!!!!!!!!!!!!!!!", err)
@@ -162,7 +162,7 @@ func AddBucket(epoch int64, partitionId, bucket int, value *pb.Value) error {
 	return nil
 }
 
-func RemoveBucket(epoch int64, partitionId, bucket int, value *pb.Value) error {
+func RemoveBucket(epoch int64, partitionId, bucket int, value *datap.Value) error {
 	currBucket, err := GetBucket(epoch, partitionId, bucket)
 	if err != nil {
 		return err
@@ -296,7 +296,7 @@ func RawPartitionMerkleTree(epoch int64, globalEpoch bool, partitionId int) (*me
 	return tree, bucketList, nil
 }
 
-func MerkleTreeToParitionEpochObject(tree *merkletree.MerkleTree, bucketList []*RealMerkleBucket, epoch int64, partitionId int) (*pb.ParitionEpochObject, error) {
+func MerkleTreeToParitionEpochObject(tree *merkletree.MerkleTree, bucketList []*RealMerkleBucket, epoch int64, partitionId int) (*datap.ParitionEpochObject, error) {
 	bucketHashes := make([][]byte, 0, partitionBuckets)
 	for i, bucket := range bucketList {
 		hash, err := bucket.CalculateHash()
@@ -308,12 +308,12 @@ func MerkleTreeToParitionEpochObject(tree *merkletree.MerkleTree, bucketList []*
 		bucketHashes = append(bucketHashes, hash)
 	}
 
-	bucketsReq := &pb.ParitionEpochObject{RootHash: tree.MerkleRoot(), Epoch: epoch, Partition: int32(partitionId), Buckets: bucketHashes}
+	bucketsReq := &datap.ParitionEpochObject{RootHash: tree.MerkleRoot(), Epoch: epoch, Partition: int32(partitionId), Buckets: bucketHashes}
 
 	return bucketsReq, nil
 }
 
-func ParitionEpochObjectToMerkleTree(paritionEpochObject *pb.ParitionEpochObject) (*merkletree.MerkleTree, error) {
+func ParitionEpochObjectToMerkleTree(paritionEpochObject *datap.ParitionEpochObject) (*merkletree.MerkleTree, error) {
 	contentList := make([]merkletree.Content, 0, partitionBuckets)
 	for i, bucketHash := range paritionEpochObject.Buckets {
 		contentList = append(contentList, SerializedMerkleBucket{hash: bucketHash, BaseMerkleBucket: BaseMerkleBucket{bucketId: int32(i)}})

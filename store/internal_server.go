@@ -11,7 +11,7 @@ import (
 
 	"github.com/cbergoon/merkletree"
 
-	pb "github.com/andrew-delph/my-key-store/datap"
+	datap "github.com/andrew-delph/my-key-store/datap"
 
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -20,7 +20,7 @@ import (
 var port = 7070
 
 type internalServer struct {
-	pb.InternalNodeServiceServer
+	datap.InternalNodeServiceServer
 }
 
 func StartInterGrpcServer() {
@@ -36,7 +36,7 @@ func StartInterGrpcServer() {
 		logrus.Fatalf("failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
-	pb.RegisterInternalNodeServiceServer(s, &internalServer{})
+	datap.RegisterInternalNodeServiceServer(s, &internalServer{})
 
 	logrus.Warnf("server listening at %v", lis.Addr())
 
@@ -45,12 +45,12 @@ func StartInterGrpcServer() {
 	}
 }
 
-func (s *internalServer) TestRequest(ctx context.Context, in *pb.StandardResponse) (*pb.StandardResponse, error) {
+func (s *internalServer) TestRequest(ctx context.Context, in *datap.StandardResponse) (*datap.StandardResponse, error) {
 	logrus.Warnf("Received: %v", in.Message)
-	return &pb.StandardResponse{Message: "This is the server."}, nil
+	return &datap.StandardResponse{Message: "This is the server."}, nil
 }
 
-func (s *internalServer) SetRequest(ctx context.Context, m *pb.Value) (*pb.StandardResponse, error) {
+func (s *internalServer) SetRequest(ctx context.Context, m *datap.Value) (*datap.StandardResponse, error) {
 	logrus.Errorf("Handling SetRequest: key=%s value=%s epoch=%d", m.Key, m.Value, m.Epoch)
 
 	err := store.SetValue(m)
@@ -58,24 +58,24 @@ func (s *internalServer) SetRequest(ctx context.Context, m *pb.Value) (*pb.Stand
 		logrus.Errorf("failed to set %s : %s error= %v", m.Key, m.Value, err)
 		return nil, err
 	} else {
-		return &pb.StandardResponse{Message: "Value set."}, nil
+		return &datap.StandardResponse{Message: "Value set."}, nil
 	}
 }
 
-func (s *internalServer) GetRequest(ctx context.Context, m *pb.GetRequestMessage) (*pb.Value, error) {
+func (s *internalServer) GetRequest(ctx context.Context, m *datap.GetRequestMessage) (*datap.Value, error) {
 	logrus.Debugf("Handling GetRequest: key=%s ", m.Key)
 	value, exists, err := store.GetValue(m.Key)
 
 	if exists {
 		return value, nil
 	} else if err == nil {
-		return &pb.Value{}, nil
+		return &datap.Value{}, nil
 	} else {
 		return nil, err
 	}
 }
 
-func (*internalServer) VerifyMerkleTree(stream pb.InternalNodeService_VerifyMerkleTreeServer) error {
+func (*internalServer) VerifyMerkleTree(stream datap.InternalNodeService_VerifyMerkleTreeServer) error {
 	// defer logrus.Warn("server done.")
 	// logrus.Warn("server start.")
 	rootNode, err := stream.Recv()
@@ -96,7 +96,7 @@ func (*internalServer) VerifyMerkleTree(stream pb.InternalNodeService_VerifyMerk
 	}
 
 	isEqual := bytes.Equal(partitionTree.Root.Hash, rootNode.Hash)
-	nodeResponse := &pb.VerifyMerkleTreeNodeResponse{IsEqual: isEqual}
+	nodeResponse := &datap.VerifyMerkleTreeNodeResponse{IsEqual: isEqual}
 
 	err = stream.Send(nodeResponse)
 	if err != nil {
@@ -135,7 +135,7 @@ func (*internalServer) VerifyMerkleTree(stream pb.InternalNodeService_VerifyMerk
 		isEqual := bytes.Equal(node.Hash, nodeRequest.Hash)
 		logrus.Debugf("server isEqual %t", isEqual)
 
-		nodeResponse := &pb.VerifyMerkleTreeNodeResponse{IsEqual: isEqual}
+		nodeResponse := &datap.VerifyMerkleTreeNodeResponse{IsEqual: isEqual}
 
 		err = stream.Send(nodeResponse)
 		if err != nil {
@@ -168,7 +168,7 @@ func (*internalServer) VerifyMerkleTree(stream pb.InternalNodeService_VerifyMerk
 	return io.EOF
 }
 
-func (s *internalServer) StreamBuckets(req *pb.StreamBucketsRequest, stream pb.InternalNodeService_StreamBucketsServer) error {
+func (s *internalServer) StreamBuckets(req *datap.StreamBucketsRequest, stream datap.InternalNodeService_StreamBucketsServer) error {
 	logrus.Debugf("SERVER StreamBuckets Buckets %v LowerEpoch %v UpperEpoch %v Partition %v", req.Buckets, req.LowerEpoch, req.UpperEpoch, req.Partition)
 	lowerEpoch := int(req.LowerEpoch)
 	upperEpoch := int(req.UpperEpoch)
@@ -189,7 +189,7 @@ func (s *internalServer) StreamBuckets(req *pb.StreamBucketsRequest, stream pb.I
 	return nil
 }
 
-func (s *internalServer) GetParitionEpochObject(ctx context.Context, req *pb.ParitionEpochObject) (*pb.ParitionEpochObject, error) {
+func (s *internalServer) GetParitionEpochObject(ctx context.Context, req *datap.ParitionEpochObject) (*datap.ParitionEpochObject, error) {
 	logrus.Debugf("Handling GetParitionEpochObject: Partition=%d Epoch=%d", req.Partition, req.Epoch)
 	tree, buckets, err := RawPartitionMerkleTree(req.Epoch, false, int(req.Partition))
 	if err != nil {

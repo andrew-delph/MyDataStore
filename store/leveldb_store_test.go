@@ -10,7 +10,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
 
-	pb "github.com/andrew-delph/my-key-store/datap"
+	datap "github.com/andrew-delph/my-key-store/datap"
 )
 
 func TestExampleLevelDbIndex(t *testing.T) {
@@ -185,7 +185,7 @@ func TestLevelDbIndex(t *testing.T) {
 
 	startTime := time.Now()
 
-	allItemsMap := make(map[string]*pb.Value)
+	allItemsMap := make(map[string]*datap.Value)
 
 	for bucket := 0; bucket < partitionBuckets; bucket++ {
 		// for bucket := 0; bucket < 1; bucket++ {
@@ -199,7 +199,7 @@ func TestLevelDbIndex(t *testing.T) {
 
 	assert.Equal(t, testInsertNum, len(allItemsMap), "allItemsMap does not have correct amount")
 
-	allItemsMap = make(map[string]*pb.Value)
+	allItemsMap = make(map[string]*datap.Value)
 
 	for bucket := 0; bucket < partitionBuckets; bucket++ {
 		// for bucket := 0; bucket < 1; bucket++ {

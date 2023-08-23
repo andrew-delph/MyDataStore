@@ -8,27 +8,27 @@ import (
 	"github.com/patrickmn/go-cache"
 	"github.com/sirupsen/logrus"
 
-	pb "github.com/andrew-delph/my-key-store/datap"
+	datap "github.com/andrew-delph/my-key-store/datap"
 )
 
 type Store interface {
 	InitStore()
-	SetValue(value *pb.Value) error
-	GetValue(key string) (*pb.Value, bool, error)
+	SetValue(value *datap.Value) error
+	GetValue(key string) (*datap.Value, bool, error)
 	getPartition(partitionId int) (Partition, error)
 	LoadPartitions(partitions []int)
-	Items(partions []int, bucket, lowerEpoch, upperEpoch int) map[string]*pb.Value
+	Items(partions []int, bucket, lowerEpoch, upperEpoch int) map[string]*datap.Value
 	Close() error
 	Clear()
 }
 type Partition interface {
-	GetPartitionValue(key string) (*pb.Value, bool, error)
-	SetPartitionValue(value *pb.Value) error
-	Items(bucket, lowerEpoch, upperEpoch int) map[string]*pb.Value
+	GetPartitionValue(key string) (*datap.Value, bool, error)
+	SetPartitionValue(value *datap.Value) error
+	Items(bucket, lowerEpoch, upperEpoch int) map[string]*datap.Value
 	GetPartitionId() int
-	GetParitionEpochObject(epoch int) (*pb.ParitionEpochObject, error)
-	PutParitionEpochObject(paritionEpochObject *pb.ParitionEpochObject) error
-	LastParitionEpochObject() (*pb.ParitionEpochObject, error)
+	GetParitionEpochObject(epoch int) (*datap.ParitionEpochObject, error)
+	PutParitionEpochObject(paritionEpochObject *datap.ParitionEpochObject) error
+	LastParitionEpochObject() (*datap.ParitionEpochObject, error)
 }
 
 type GoCacheStore struct {
@@ -60,10 +60,10 @@ func NewGoCachePartition(partitionId int) Partition {
 	return partition
 }
 
-func (partition GoCachePartition) GetPartitionValue(key string) (*pb.Value, bool, error) {
+func (partition GoCachePartition) GetPartitionValue(key string) (*datap.Value, bool, error) {
 	valueObj, exists := partition.store.Get(key)
 	if exists {
-		value, ok := valueObj.(*pb.Value)
+		value, ok := valueObj.(*datap.Value)
 		if ok {
 			return value, true, nil
 		}
@@ -71,19 +71,19 @@ func (partition GoCachePartition) GetPartitionValue(key string) (*pb.Value, bool
 	return nil, false, nil
 }
 
-func (partition GoCachePartition) SetPartitionValue(value *pb.Value) error {
+func (partition GoCachePartition) SetPartitionValue(value *datap.Value) error {
 	partition.store.Set(value.Key, value, 0)
 	return nil
 }
 
-func (partition GoCachePartition) Items(bucket, lowerEpoch, upperEpoch int) map[string]*pb.Value {
-	// Create a new map of type map[string]*pb.Value
-	itemsMap := make(map[string]*pb.Value)
+func (partition GoCachePartition) Items(bucket, lowerEpoch, upperEpoch int) map[string]*datap.Value {
+	// Create a new map of type map[string]*datap.Value
+	itemsMap := make(map[string]*datap.Value)
 
 	// Iterate over the original map and perform the conversion
 	for key, item := range partition.store.Items() {
 
-		value, ok := item.Object.(*pb.Value)
+		value, ok := item.Object.(*datap.Value)
 
 		if !ok {
 			continue
@@ -102,15 +102,15 @@ func (store GoCacheStore) Close() error {
 func (store GoCacheStore) Clear() {
 }
 
-func (store GoCacheStore) Items(partions []int, bucket, lowerEpoch, upperEpoch int) map[string]*pb.Value {
+func (store GoCacheStore) Items(partions []int, bucket, lowerEpoch, upperEpoch int) map[string]*datap.Value {
 	logrus.Fatal("not implemented.")
-	// Create a new map of type map[string]*pb.Value
-	itemsMap := make(map[string]*pb.Value)
+	// Create a new map of type map[string]*datap.Value
+	itemsMap := make(map[string]*datap.Value)
 
 	// // Iterate over the original map and perform the conversion
 	// for key, item := range partition.store.Items() {
 
-	// 	value, ok := item.Object.(*pb.Value)
+	// 	value, ok := item.Object.(*datap.Value)
 
 	// 	if !ok {
 	// 		continue
@@ -121,7 +121,7 @@ func (store GoCacheStore) Items(partions []int, bucket, lowerEpoch, upperEpoch i
 }
 
 // Function to set a value in the global cache
-func (store GoCacheStore) SetValue(value *pb.Value) error {
+func (store GoCacheStore) SetValue(value *datap.Value) error {
 	key := value.Key
 	partitionId := FindPartitionID(events.consistent, key)
 	partition, err := store.getPartition(partitionId)
@@ -142,7 +142,7 @@ func (store GoCacheStore) SetValue(value *pb.Value) error {
 }
 
 // Function to get a value from the global cache
-func (store GoCacheStore) GetValue(key string) (*pb.Value, bool, error) {
+func (store GoCacheStore) GetValue(key string) (*datap.Value, bool, error) {
 	partitionId := FindPartitionID(events.consistent, key)
 
 	partition, err := store.getPartition(partitionId)
@@ -225,14 +225,14 @@ func (store GoCacheStore) saveStore() {
 	}
 }
 
-func (partition GoCachePartition) GetParitionEpochObject(epoch int) (*pb.ParitionEpochObject, error) {
+func (partition GoCachePartition) GetParitionEpochObject(epoch int) (*datap.ParitionEpochObject, error) {
 	return nil, nil
 }
 
-func (partition GoCachePartition) PutParitionEpochObject(paritionEpochObject *pb.ParitionEpochObject) error {
+func (partition GoCachePartition) PutParitionEpochObject(paritionEpochObject *datap.ParitionEpochObject) error {
 	return nil
 }
 
-func (partition GoCachePartition) LastParitionEpochObject() (*pb.ParitionEpochObject, error) {
+func (partition GoCachePartition) LastParitionEpochObject() (*datap.ParitionEpochObject, error) {
 	return nil, nil
 }

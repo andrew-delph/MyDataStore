@@ -10,24 +10,24 @@ import (
 
 	"github.com/cbergoon/merkletree"
 
-	pb "github.com/andrew-delph/my-key-store/datap"
+	datap "github.com/andrew-delph/my-key-store/datap"
 
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 )
 
-func GetClient(addr string) (*grpc.ClientConn, pb.InternalNodeServiceClient, error) {
+func GetClient(addr string) (*grpc.ClientConn, datap.InternalNodeServiceClient, error) {
 	conn, err := grpc.Dial(fmt.Sprintf("%s:%d", addr, port), grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		return nil, nil, err
 	}
-	internalClient := pb.NewInternalNodeServiceClient(conn)
+	internalClient := datap.NewInternalNodeServiceClient(conn)
 
 	return conn, internalClient, nil
 }
 
-func SendSetMessageNode(addr string, setReqMsg *pb.Value, responseCh chan *pb.StandardResponse, errorCh chan error) {
+func SendSetMessageNode(addr string, setReqMsg *datap.Value, responseCh chan *datap.StandardResponse, errorCh chan error) {
 	conn, client, err := GetClient(addr)
 	if err != nil {
 		logrus.Errorf("GetClient for node %s", addr)
@@ -51,14 +51,14 @@ func SendSetMessageNode(addr string, setReqMsg *pb.Value, responseCh chan *pb.St
 
 func SendSetMessage(key, value string) error {
 	unixTimestamp := time.Now().Unix()
-	setReqMsg := &pb.Value{Key: key, Value: value, Epoch: int64(currEpoch), UnixTimestamp: unixTimestamp}
+	setReqMsg := &datap.Value{Key: key, Value: value, Epoch: int64(currEpoch), UnixTimestamp: unixTimestamp}
 
 	nodes, err := GetClosestN(events.consistent, key, N)
 	if err != nil {
 		return err
 	}
 
-	responseCh := make(chan *pb.StandardResponse, N)
+	responseCh := make(chan *datap.StandardResponse, N)
 	errorCh := make(chan error, N)
 
 	for _, node := range nodes {
@@ -85,7 +85,7 @@ func SendSetMessage(key, value string) error {
 }
 
 func SendGetMessage(key string) (string, error) {
-	getReqMsg := &pb.GetRequestMessage{Key: key}
+	getReqMsg := &datap.GetRequestMessage{Key: key}
 
 	nodes, err := GetClosestN(events.consistent, key, N)
 	if err != nil {
@@ -93,7 +93,7 @@ func SendGetMessage(key string) (string, error) {
 	}
 
 	type Res struct {
-		Value *pb.Value
+		Value *datap.Value
 		Addr  string
 	}
 
@@ -123,7 +123,7 @@ func SendGetMessage(key string) (string, error) {
 
 	timeout := time.After(defaultTimeout)
 
-	var recentValue *pb.Value
+	var recentValue *datap.Value
 
 	var resList []*Res
 
@@ -157,7 +157,7 @@ func SendGetMessage(key string) (string, error) {
 			// logrus.Warnf("Read Repair addr = %s recentValue = %v value = %v", res.Addr, recentValue.Value, res.Value.Value)
 			if proto.Equal(res.Value, recentValue) == false {
 				logrus.Warnf("Read Repair addr = %s recentValue = %v value = %v", res.Addr, recentValue.Value, res.Value.Value)
-				go SendSetMessageNode(res.Addr, recentValue, make(chan *pb.StandardResponse), make(chan error))
+				go SendSetMessageNode(res.Addr, recentValue, make(chan *datap.StandardResponse), make(chan error))
 			}
 		}
 	}()
@@ -237,7 +237,7 @@ func VerifyMerkleTree(addr string, epoch int64, globalEpoch bool, partitionId in
 			return nil, fmt.Errorf("could not decode node")
 		}
 		nodesQueue.Remove(element)
-		nodeRequest := &pb.VerifyMerkleTreeNodeRequest{Epoch: int64(epoch), Global: globalEpoch, Partition: int32(partitionId), Hash: node.Hash}
+		nodeRequest := &datap.VerifyMerkleTreeNodeRequest{Epoch: int64(epoch), Global: globalEpoch, Partition: int32(partitionId), Hash: node.Hash}
 		err = stream.Send(nodeRequest)
 		if err != nil {
 			logrus.Error("CLIENT ", err)
@@ -287,7 +287,7 @@ func StreamBuckets(addr string, buckets []int32, lowerEpoch, upperEpoch int64, p
 		return err
 	}
 	defer conn.Close()
-	bucketsReq := &pb.StreamBucketsRequest{Buckets: buckets, LowerEpoch: int64(lowerEpoch), UpperEpoch: int64(upperEpoch), Partition: int32(partitionId)}
+	bucketsReq := &datap.StreamBucketsRequest{Buckets: buckets, LowerEpoch: int64(lowerEpoch), UpperEpoch: int64(upperEpoch), Partition: int32(partitionId)}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
@@ -318,7 +318,7 @@ func StreamBuckets(addr string, buckets []int32, lowerEpoch, upperEpoch int64, p
 	}
 }
 
-func GetParitionEpochObject(addr string, epoch int64, partitionId int) (*pb.ParitionEpochObject, error) {
+func GetParitionEpochObject(addr string, epoch int64, partitionId int) (*datap.ParitionEpochObject, error) {
 	conn, client, err := GetClient(addr)
 	if err != nil {
 		return nil, err
@@ -329,7 +329,7 @@ func GetParitionEpochObject(addr string, epoch int64, partitionId int) (*pb.Pari
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	req := &pb.ParitionEpochObject{Epoch: epoch, Partition: int32(partitionId)}
+	req := &datap.ParitionEpochObject{Epoch: epoch, Partition: int32(partitionId)}
 
 	res, err := client.GetParitionEpochObject(ctx, req)
 	if err != nil {

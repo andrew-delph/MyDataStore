@@ -10,12 +10,12 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
-	pb "github.com/andrew-delph/my-key-store/datap"
+	datap "github.com/andrew-delph/my-key-store/datap"
 )
 
-func testValue(key, value string, epoch int) *pb.Value {
+func testValue(key, value string, epoch int) *datap.Value {
 	unixTimestamp := int64(0)
-	setReqMsg := &pb.Value{Key: key, Value: value, Epoch: int64(epoch), UnixTimestamp: unixTimestamp}
+	setReqMsg := &datap.Value{Key: key, Value: value, Epoch: int64(epoch), UnixTimestamp: unixTimestamp}
 	return setReqMsg
 }
 
