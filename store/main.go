@@ -146,7 +146,7 @@ func main() {
 			for _, node := range clusterNodes.Members() {
 				err := AddVoter(node.Name)
 				if err != nil {
-					logrus.Errorf("Testing AddVoter: %v", err)
+					logrus.Errorf("LeaderCh AddVoter: %v", err)
 					break
 				}
 			}

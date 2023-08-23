@@ -107,7 +107,7 @@ func (content MerkleBucket) Equals(other merkletree.Content) (bool, error) {
 }
 
 var (
-	bucketEpochLag        = 3
+	bucketEpochLag        = 2
 	currGlobalBucketEpoch int64
 )
 
@@ -118,33 +118,29 @@ var (
 )
 
 func AddBucket(epoch int64, partitionId, bucket int, value *pb.Value) error {
-	if epoch > currGlobalBucketEpoch {
-	} else {
-		err := globalBucket[partitionId][bucket].AddValue(value)
-		if err != nil {
-			return GLOBAL_BUCKET_ERROR
-		}
-	}
 	currBucket, err := GetBucket(epoch, partitionId, bucket)
 	if err != nil {
+		logrus.Errorf("NOT_EXIST_BUCKET_ERROR err = %v !!!!!!!!!!!!!!!!!!!!!!!!", err)
 		return NOT_EXIST_BUCKET_ERROR
 	}
 	err = currBucket.AddValue(value)
 	if err != nil {
+		logrus.Errorf("currBucket err = %v !!!!!!!!!!!!!!!!!!!!!!!!", err)
 		return err
 	}
+	if epoch > currGlobalBucketEpoch {
+	} else {
+		err := globalBucket[partitionId][bucket].AddValue(value)
+		if err != nil {
+			logrus.Errorf("GLOBAL_BUCKET_ERROR!!!!!!!!!!!!!!!!!!!!!!!!")
+			return GLOBAL_BUCKET_ERROR
+		}
+	}
+	logrus.Warnf("SET WITH NO ERROOR!!! epoch = %d", epoch)
 	return nil
 }
 
 func RemoveBucket(epoch int64, partitionId, bucket int, value *pb.Value) error {
-	if epoch > currGlobalBucketEpoch {
-		//
-	} else {
-		err := globalBucket[partitionId][bucket].RemoveValue(value)
-		if err != nil {
-			return GLOBAL_BUCKET_ERROR
-		}
-	}
 	currBucket, err := GetBucket(epoch, partitionId, bucket)
 	if err != nil {
 		return err
@@ -153,14 +149,23 @@ func RemoveBucket(epoch int64, partitionId, bucket int, value *pb.Value) error {
 	if err != nil {
 		logrus.Warnf("currBucket.AddValue err = %v", err)
 	}
+	if epoch > currGlobalBucketEpoch {
+		//
+	} else {
+		err := globalBucket[partitionId][bucket].RemoveValue(value)
+		if err != nil {
+			return GLOBAL_BUCKET_ERROR
+		}
+	}
 	return nil
 }
 
 func GlobalMergeBuckets(epoch int64) error {
+	logrus.Warnf("Merger %d", epoch)
 	mergeBucketHolder, ok := bucketsMap[epoch]
 	if !ok {
 		for partitionId := 0; partitionId < partitionCount; partitionId++ {
-			_, contentList, err := RawPartitionMerkleTree(epoch, true, partitionId)
+			_, contentList, err := RawPartitionMerkleTree(epoch+1, true, partitionId)
 			if err != nil {
 				logrus.Error("Could not create global MerkleTree partitionId = %d err = %v", partitionId, err)
 				return err
@@ -184,6 +189,7 @@ func GlobalMergeBuckets(epoch int64) error {
 }
 
 func GetBucket(epoch int64, partitionId, bucket int) (*MerkleBucket, error) {
+	logrus.Warnf("Get Bucket %d", epoch)
 	if bucketHolder, ok := bucketsMap[epoch]; ok {
 		return bucketHolder[partitionId][bucket], nil
 	}
@@ -208,6 +214,7 @@ func UpdateGlobalBucket(newEpoch int64) error {
 	}
 	err := GlobalMergeBuckets(newEpoch - 1)
 	if err != nil {
+		logrus.Error("GlobalMergeBuckets err = %v", err)
 		return err
 	}
 	currGlobalBucketEpoch = newEpoch - 1

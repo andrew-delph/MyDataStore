@@ -51,7 +51,7 @@ func (s *internalServer) TestRequest(ctx context.Context, in *pb.StandardRespons
 }
 
 func (s *internalServer) SetRequest(ctx context.Context, m *pb.Value) (*pb.StandardResponse, error) {
-	logrus.Debugf("Handling SetRequest: key=%s value=%s ", m.Key, m.Value)
+	logrus.Errorf("Handling SetRequest: key=%s value=%s epoch=%d", m.Key, m.Value, m.Epoch)
 
 	err := store.SetValue(m)
 	if err != nil {
@@ -162,7 +162,7 @@ func (*internalServer) VerifyMerkleTree(stream pb.InternalNodeService_VerifyMerk
 					logrus.Errorf("SERVER could not decode bucket = %v hash = %v", bucket, hash)
 					return errors.New("SERVER value is not of type MerkleContent")
 				}
-				logrus.Warnf("bucket bucketId = %v", bucket.bucketId)
+				logrus.Debugf("SERVER unsynced bucketId = %v", bucket.bucketId)
 
 			} else {
 				if node.Left != nil {

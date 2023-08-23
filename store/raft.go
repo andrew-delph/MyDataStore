@@ -247,7 +247,7 @@ func RaftTryLead() error {
 		// go func(node *memberlist.Node) {
 		err := AddVoter(node.Name)
 		if err != nil {
-			logrus.Errorf("Testing AddVoter: %v", err)
+			logrus.Errorf("RaftTryLead AddVoter: %v", err)
 			return nil
 		} else {
 			succ = fmt.Sprintf("%s,%d", succ, i)
@@ -269,7 +269,7 @@ func AddVoter(otherAddr string) error {
 	// defer raftLock.Unlock() // Ensure the lock is released once the function completes
 
 	otherRaftAddr := fmt.Sprintf("%s:7000", otherAddr)
-	logrus.Warn("AddVoter otherRaftAddr ", otherRaftAddr)
+	logrus.Debugf("AddVoter otherRaftAddr %s", otherRaftAddr)
 
 	// if raftNode.AppliedIndex() > 20 {
 	// 	addVoterFuture := raftNode.AddVoter(config2.LocalID, raft.ServerAddress(otherAddr), raftNode.AppliedIndex(), time.Second)
