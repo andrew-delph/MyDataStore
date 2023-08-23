@@ -128,12 +128,12 @@ func QueueMyPartitionEpochItems() error {
 			return err
 		}
 		if paritionEpochObject == nil {
-			partitionEpochQueue.Push(&PartitionEpochItem{
+			partitionEpochQueue.PushItem(&PartitionEpochItem{
 				epoch:       0,
 				partitionId: int(partition.GetPartitionId()),
 			})
 		} else {
-			partitionEpochQueue.Push(&PartitionEpochItem{
+			partitionEpochQueue.PushItem(&PartitionEpochItem{
 				epoch:       paritionEpochObject.Epoch + 1,
 				partitionId: int(paritionEpochObject.Partition),
 			})
