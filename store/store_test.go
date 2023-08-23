@@ -10,7 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
-	pb "github.com/andrew-delph/my-key-store/proto"
+	pb "github.com/andrew-delph/my-key-store/datap"
 )
 
 func testValue(key, value string, epoch int) *pb.Value {

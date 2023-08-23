@@ -24,7 +24,7 @@ go_library(
     importpath = "github.com/andrew-delph/my-key-store/store",
     visibility = ["//visibility:private"],
     deps = [
-        "//store/proto:go_default_library",
+        "//store/datap:go_default_library",
         "@com_github_buraksezer_consistent//:go_default_library",
         "@com_github_cbergoon_merkletree//:go_default_library",
         "@com_github_cespare_xxhash//:go_default_library",
@@ -55,8 +55,7 @@ go_test(
     embed = [":go_default_library"],
     env = {"DATA_PATH": "/tmp/test_store/"},
     deps = [
-        # "//store/proto:go_default_library",
-        "//store/proto:go_default_library",
+        "//store/datap:go_default_library",
         "@com_github_cbergoon_merkletree//:go_default_library",
         "@com_github_hashicorp_raft//:go_default_library",
         "@com_github_serialx_hashring//:go_default_library",

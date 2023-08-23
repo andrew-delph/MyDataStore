@@ -11,7 +11,7 @@ import (
 
 	"github.com/cbergoon/merkletree"
 
-	pb "github.com/andrew-delph/my-key-store/proto"
+	pb "github.com/andrew-delph/my-key-store/datap"
 
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"

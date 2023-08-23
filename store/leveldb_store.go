@@ -10,7 +10,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"google.golang.org/protobuf/proto"
 
-	pb "github.com/andrew-delph/my-key-store/proto"
+	pb "github.com/andrew-delph/my-key-store/datap"
 )
 
 type LevelDbStore struct {

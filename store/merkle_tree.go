@@ -12,7 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 
-	pb "github.com/andrew-delph/my-key-store/proto"
+	pb "github.com/andrew-delph/my-key-store/datap"
 )
 
 var GLOBAL_BUCKET_ERROR = errors.New("Could not update global bucket.")

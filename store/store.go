@@ -8,7 +8,7 @@ import (
 	"github.com/patrickmn/go-cache"
 	"github.com/sirupsen/logrus"
 
-	pb "github.com/andrew-delph/my-key-store/proto"
+	pb "github.com/andrew-delph/my-key-store/datap"
 )
 
 type Store interface {
