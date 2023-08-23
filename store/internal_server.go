@@ -147,7 +147,7 @@ func (*internalServer) VerifyMerkleTree(stream pb.InternalNodeService_VerifyMerk
 			if node.Left == nil && node.Right == nil {
 				logrus.Debugf("SERVER the node is a leaf!")
 				hash, _ := node.C.CalculateHash()
-				bucket, ok := node.C.(*MerkleBucket)
+				bucket, ok := node.C.(*RealMerkleBucket)
 				if !ok {
 					logrus.Errorf("SERVER could not decode bucket = %v hash = %v", bucket, hash)
 					return errors.New("SERVER value is not of type MerkleContent")

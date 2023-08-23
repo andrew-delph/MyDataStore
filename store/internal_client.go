@@ -248,7 +248,7 @@ func VerifyMerkleTree(addr string, epoch int64, globalEpoch bool, partitionId in
 		if !nodeResponse.IsEqual {
 			if node.Left == nil && node.Right == nil {
 				logrus.Debugf("CLIENT the node is a leaf!")
-				bucket, ok := node.C.(*MerkleBucket)
+				bucket, ok := node.C.(*RealMerkleBucket)
 				if !ok {
 					logrus.Error("CLIENT could not decode bucket")
 					return unsyncedBuckets, errors.New("CLIENT value is not of type MerkleContent")

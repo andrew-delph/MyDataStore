@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"math"
@@ -59,12 +60,28 @@ func (h *CustomHash) Hash() int64 {
 
 var merkletreeStore *cache.Cache = cache.New(0*time.Minute, 1*time.Minute)
 
-type MerkleBucket struct {
+type SerializedMerkleBucket struct {
+	hash []byte
+}
+
+func (bucket SerializedMerkleBucket) CalculateHash() ([]byte, error) {
+	return bucket.hash, nil
+}
+
+func (bucket SerializedMerkleBucket) Equals(other merkletree.Content) (bool, error) {
+	otherTC, ok := other.(SerializedMerkleBucket)
+	if !ok {
+		return false, errors.New("value is not of type MerkleContent")
+	}
+	return bytes.Equal(bucket.hash, otherTC.hash), nil
+}
+
+type RealMerkleBucket struct {
 	hasher   *CustomHash
 	bucketId int32
 }
 
-func (bucket MerkleBucket) CalculateHash() ([]byte, error) {
+func (bucket RealMerkleBucket) CalculateHash() ([]byte, error) {
 	hash, err := EncodeInt64ToBytes(bucket.hasher.Hash())
 	if err != nil {
 		logrus.Errorf("MerkleBucket CalculateHash err = %v", err)
@@ -73,7 +90,7 @@ func (bucket MerkleBucket) CalculateHash() ([]byte, error) {
 	return hash, nil
 }
 
-func (bucket MerkleBucket) AddValue(value *pb.Value) error {
+func (bucket RealMerkleBucket) AddValue(value *pb.Value) error {
 	data, err := proto.Marshal(value)
 	if err != nil {
 		logrus.Error("Error: ", err)
@@ -83,7 +100,7 @@ func (bucket MerkleBucket) AddValue(value *pb.Value) error {
 	return nil
 }
 
-func (bucket MerkleBucket) RemoveValue(value *pb.Value) error {
+func (bucket RealMerkleBucket) RemoveValue(value *pb.Value) error {
 	data, err := proto.Marshal(value)
 	if err != nil {
 		logrus.Error("Error: ", err)
@@ -93,13 +110,13 @@ func (bucket MerkleBucket) RemoveValue(value *pb.Value) error {
 	return nil
 }
 
-func (bucket MerkleBucket) MergeBucket(other *MerkleBucket) error {
+func (bucket RealMerkleBucket) MergeBucket(other *RealMerkleBucket) error {
 	bucket.hasher.Merge(other.hasher)
 	return nil
 }
 
-func (content MerkleBucket) Equals(other merkletree.Content) (bool, error) {
-	otherTC, ok := other.(MerkleBucket)
+func (content RealMerkleBucket) Equals(other merkletree.Content) (bool, error) {
+	otherTC, ok := other.(RealMerkleBucket)
 	if !ok {
 		return false, errors.New("value is not of type MerkleContent")
 	}
@@ -113,7 +130,7 @@ var (
 
 // bucketsMap is  [epoch][partition][bucket]
 var (
-	bucketsMap   = make(map[int64]map[int][]*MerkleBucket)
+	bucketsMap   = make(map[int64]map[int][]*RealMerkleBucket)
 	globalBucket = NewBucketsHolder()
 )
 
@@ -161,7 +178,7 @@ func RemoveBucket(epoch int64, partitionId, bucket int, value *pb.Value) error {
 }
 
 func GlobalMergeBuckets(epoch int64) error {
-	logrus.Warnf("Merger %d", epoch)
+	logrus.Debugf("Merger %d", epoch)
 	mergeBucketHolder, ok := bucketsMap[epoch]
 	if !ok {
 		for partitionId := 0; partitionId < partitionCount; partitionId++ {
@@ -188,7 +205,7 @@ func GlobalMergeBuckets(epoch int64) error {
 	return nil
 }
 
-func GetBucket(epoch int64, partitionId, bucket int) (*MerkleBucket, error) {
+func GetBucket(epoch int64, partitionId, bucket int) (*RealMerkleBucket, error) {
 	logrus.Warnf("Get Bucket %d", epoch)
 	if bucketHolder, ok := bucketsMap[epoch]; ok {
 		return bucketHolder[partitionId][bucket], nil
@@ -221,18 +238,18 @@ func UpdateGlobalBucket(newEpoch int64) error {
 	return err
 }
 
-func NewBucketsHolder() map[int][]*MerkleBucket {
-	bucketHolder := make(map[int][]*MerkleBucket, partitionCount)
+func NewBucketsHolder() map[int][]*RealMerkleBucket {
+	bucketHolder := make(map[int][]*RealMerkleBucket, partitionCount)
 	for partitionId := 0; partitionId < partitionCount; partitionId++ {
-		bucketHolder[partitionId] = make([]*MerkleBucket, partitionBuckets)
+		bucketHolder[partitionId] = make([]*RealMerkleBucket, partitionBuckets)
 		for bucketId := 0; bucketId < partitionBuckets; bucketId++ {
-			bucketHolder[partitionId][bucketId] = &MerkleBucket{hasher: &CustomHash{}, bucketId: int32(bucketId)}
+			bucketHolder[partitionId][bucketId] = &RealMerkleBucket{hasher: &CustomHash{}, bucketId: int32(bucketId)}
 		}
 	}
 	return bucketHolder
 }
 
-func RawPartitionMerkleTree(epoch int64, globalEpoch bool, partitionId int) (*merkletree.MerkleTree, []*MerkleBucket, error) {
+func RawPartitionMerkleTree(epoch int64, globalEpoch bool, partitionId int) (*merkletree.MerkleTree, []*RealMerkleBucket, error) {
 	partition, err := store.getPartition(partitionId)
 	if err != nil {
 		logrus.Error(err)
@@ -247,10 +264,10 @@ func RawPartitionMerkleTree(epoch int64, globalEpoch bool, partitionId int) (*me
 	upperEpoch := int(epoch + 1)
 
 	// Build content list in sorted order of keys
-	bucketList := make([]*MerkleBucket, partitionBuckets)
+	bucketList := make([]*RealMerkleBucket, partitionBuckets)
 
 	for i := range bucketList {
-		bucket := MerkleBucket{hasher: &CustomHash{}, bucketId: int32(i)}
+		bucket := RealMerkleBucket{hasher: &CustomHash{}, bucketId: int32(i)}
 		itemsMap := partition.Items(i, lowerEpoch, upperEpoch)
 		for _, v := range itemsMap {
 			bucket.AddValue(v)
@@ -272,4 +289,29 @@ func RawPartitionMerkleTree(epoch int64, globalEpoch bool, partitionId int) (*me
 	// merkletreeStore.Add(fmt.Sprintf("%d-%d", partitionEpoch, epoch), tree, 0)
 
 	return tree, bucketList, nil
+}
+
+func MerkleTreeToParitionEpochObject(tree *merkletree.MerkleTree, bucketList []*RealMerkleBucket, epoch int64, partitionId int) (*pb.ParitionEpochObject, error) {
+	bucketHashes := make([][]byte, 0, partitionBuckets)
+	for i, bucket := range bucketList {
+		hash, err := bucket.CalculateHash()
+		if err != nil {
+			logrus.Errorf("bucket.CalculateHash err = %v", err)
+			return nil, err
+		}
+		logrus.Debugf(">>> i = %d bucket = %d hash %v", i, bucket.bucketId, hash)
+		bucketHashes = append(bucketHashes, hash)
+	}
+
+	bucketsReq := &pb.ParitionEpochObject{RootHash: tree.MerkleRoot(), Epoch: epoch, Partition: int32(partitionId), Buckets: bucketHashes}
+
+	return bucketsReq, nil
+}
+
+func ParitionEpochObjectToMerkleTree(paritionEpochObject *pb.ParitionEpochObject) (*merkletree.MerkleTree, error) {
+	contentList := make([]merkletree.Content, 0, partitionBuckets)
+	for _, bucketHash := range paritionEpochObject.Buckets {
+		contentList = append(contentList, SerializedMerkleBucket{hash: bucketHash})
+	}
+	return merkletree.NewTree(contentList)
 }

@@ -198,16 +198,23 @@ func TestLevelDbStoreCacheMerkleTree(t *testing.T) {
 	}
 	assert.EqualValues(t, tree2.Root.Hash, tree4.Root.Hash, "Tree hashes don't match")
 
-	tree5, _, err := RawPartitionMerkleTree(int64(setEpoch+1), true, extraPartition)
+	tree5, tree5Content, err := RawPartitionMerkleTree(int64(setEpoch+1), true, extraPartition)
 	if err != nil {
 		t.Error(err)
 	}
 	assert.EqualValues(t, tree2.Root.Hash, tree5.Root.Hash, "Tree hashes don't match")
 
-	err = UpdateGlobalBucket(int64(setEpoch + 1))
+	assert.EqualValues(t, partitionBuckets, len(tree5Content), "Content length doesn't match")
+	paritionEpochObject, err := MerkleTreeToParitionEpochObject(tree5, tree5Content, int64(1), 2)
 	if err != nil {
 		t.Error(err)
 	}
+	serializeTree, err := ParitionEpochObjectToMerkleTree(paritionEpochObject)
+	if err != nil {
+		t.Error(err)
+	}
+
+	assert.EqualValues(t, tree2.MerkleRoot(), serializeTree.MerkleRoot(), "Tree hashes don't match")
 }
 
 func BFS(root *merkletree.Node) []*merkletree.Node {
