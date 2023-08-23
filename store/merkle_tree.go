@@ -320,3 +320,45 @@ func ParitionEpochObjectToMerkleTree(paritionEpochObject *pb.ParitionEpochObject
 	}
 	return merkletree.NewTree(contentList)
 }
+
+func DifferentMerkleTreeBuckets(tree1 *merkletree.MerkleTree, tree2 *merkletree.MerkleTree) []int32 {
+	if tree1 == nil && tree2 == nil {
+		return nil
+	}
+
+	return DifferentMerkleTreeBucketsDFS(tree1.Root, tree2.Root)
+}
+
+func DifferentMerkleTreeBucketsDFS(node1 *merkletree.Node, node2 *merkletree.Node) []int32 {
+	var differences []int32
+
+	if node1 == nil && node2 == nil {
+		return differences
+	}
+
+	if !bytes.Equal(node1.Hash, node2.Hash) {
+		if node1.Left == nil && node1.Right == nil {
+			var bucketId int32
+			realMerkleBucket, ok := node1.C.(*RealMerkleBucket)
+			if !ok {
+				logrus.Error("could not decode RealMerkleBucket")
+				serializedMerkleBucket, ok := node1.C.(*SerializedMerkleBucket)
+				if !ok {
+					logrus.Error("could not decode RealMerkleBucket")
+					logrus.Fatal("could not decode Bucket")
+				} else {
+					bucketId = serializedMerkleBucket.bucketId
+				}
+			} else {
+				bucketId = realMerkleBucket.bucketId
+			}
+			differences = append(differences, bucketId)
+		} else {
+			// Recurse into child nodes
+			differences = append(differences, DifferentMerkleTreeBucketsDFS(node1.Left, node2.Left)...)
+			differences = append(differences, DifferentMerkleTreeBucketsDFS(node1.Right, node2.Right)...)
+		}
+	}
+
+	return differences
+}
