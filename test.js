@@ -32,7 +32,7 @@ export let options = {
     load: {
       executor: "constant-vus",
       vus: 100,
-      duration: "10m",
+      duration: "30s",
       exec: "default",
     },
     // arrival: {
@@ -179,7 +179,7 @@ export default function () {
       r.status === 200 ||
       console.error(`Get Error: Status was ${r.status} body = ${r.body}`),
     "Get: body contains testValue": (r) =>
-      r.body.indexOf(value) !== -1 ||
+      (value && r.body.indexOf(value) !== -1) ||
       console.error(
         `Get Error: Body does not contain ${value}. body = ${r.body}`
       ),

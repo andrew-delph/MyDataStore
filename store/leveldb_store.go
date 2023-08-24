@@ -57,7 +57,7 @@ func NewLevelDbStore() (*LevelDbStore, error) {
 
 func (partition LevelDbPartition) SetPartitionValue(value *datap.Value) error {
 	writeOpts := &opt.WriteOptions{}
-	writeOpts.Sync = true
+	writeOpts.Sync = false
 
 	key := IndexKey(partition.GetPartitionId(), value.Key)
 	data, err := proto.Marshal(value)
