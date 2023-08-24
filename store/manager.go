@@ -98,12 +98,12 @@ func handleEpochUpdate(currEpoch int64) error {
 		}
 	}()
 	for _, partId := range myPartions {
-		partition, err := store.getPartition(partId)
-		if err != nil {
-			logrus.Errorf("handlePartitionEpochItem getPartition err = %v", err)
-			return err
-		}
 		if currEpoch-2 >= 0 {
+			partition, err := store.getPartition(partId)
+			if err != nil {
+				logrus.Errorf("handlePartitionEpochItem getPartition err = %v", err)
+				return err
+			}
 			tree, buckets, err := RawPartitionMerkleTree(currEpoch-2, false, partId)
 			if err != nil {
 				logrus.Errorf("handlePartitionEpochItem RawPartitionMerkleTree err = %v", err)
@@ -117,41 +117,53 @@ func handleEpochUpdate(currEpoch int64) error {
 
 			paritionEpochObject.Valid = false
 			partition.PutParitionEpochObject(paritionEpochObject)
-		}
+			lastValidParitionEpochObject, err := partition.LastParitionEpochObject()
+			if err != nil && err != STORE_NOT_FOUND {
+				logrus.Errorf("handlePartitionEpochItem LastParitionEpochObject err = %v", err)
+				return err
+			}
 
-		lastValidParitionEpochObject, err := partition.LastParitionEpochObject()
-		if err != nil && err != STORE_NOT_FOUND {
-			logrus.Errorf("handlePartitionEpochItem LastParitionEpochObject err = %v", err)
-			return err
-		}
-
-		lowerEpoch := int64(0)
-		if lastValidParitionEpochObject != nil {
-			lowerEpoch = lastValidParitionEpochObject.Epoch
-		}
-		lag = min(lag, int(lowerEpoch))
-
-		for i := lowerEpoch; i <= currEpoch-2; i++ {
+			lowerEpoch := int64(0)
+			if lastValidParitionEpochObject != nil {
+				lowerEpoch = lastValidParitionEpochObject.Epoch
+			}
+			lag = min(lag, int(lowerEpoch))
 			partitionEpochQueue.PushItem(&PartitionEpochItem{
-				epoch:       i,
+				epoch:       currEpoch - 2,
 				partitionId: int(partId),
 			})
 		}
+
+		// for i := lowerEpoch; i <= currEpoch-2; i++ {
+		// 	partitionEpochQueue.PushItem(&PartitionEpochItem{
+		// 		epoch:       i,
+		// 		partitionId: int(partId),
+		// 	})
+		// }
 	}
 	return nil
 }
 
 func handlePartitionEpochItem() {
-	item := partitionEpochQueue.PopItem()
+	item := partitionEpochQueue.NextItem()
 	// logrus.Warnf("handling item partion = %d epoch = %d", item.partitionId, item.epoch)
 	// defer logrus.Warnf("DONE handling item partion = %d epoch = %d", item.partitionId, item.epoch)
 
 	if item == nil {
-		logrus.Panic("ITEM IS NIL")
+		return
 	}
+	// defer func() {
+	// 	if item.attempts > 2 && !item.completed {
+	// 		logrus.Warnf("handle item e = %d currEpoch = %d attemps = %d", item.epoch, currEpoch, item.attempts)
+	// 	}
+	// }()
 	if item.epoch > currEpoch-2 {
 		return
 	}
+
+	// Time 1 second from now
+	item.attempts++
+	item.nextAttempt = time.Now().Add(10 * time.Second)
 
 	partition, err := store.getPartition(item.partitionId)
 	if err != nil {
@@ -160,6 +172,10 @@ func handlePartitionEpochItem() {
 	}
 	paritionEpochObject, err := partition.GetParitionEpochObject(int(item.epoch))
 	if paritionEpochObject != nil && paritionEpochObject.Valid {
+		return
+	}
+	if paritionEpochObject == nil {
+		logrus.Warnf("paritionEpochObject is nil. err = %v", err)
 		return
 	}
 
@@ -199,6 +215,8 @@ func handlePartitionEpochItem() {
 			logrus.Errorf("handlePartitionEpochItem err = %v", err)
 			return
 		}
+
+		item.completed = true
 
 		logrus.Debugf("Success sync of epoch = %d", currEpoch-1)
 	}
@@ -272,6 +290,8 @@ type PartitionEpochItem struct {
 	partitionId int
 	index       int
 	completed   bool
+	attempts    int
+	nextAttempt time.Time
 }
 
 // A PartitionEpochQueue implements heap.Interface and holds Items.
@@ -282,10 +302,10 @@ func (pq PartitionEpochQueue) Len() int {
 }
 
 func (pq PartitionEpochQueue) Less(i, j int) bool {
-	if pq[i] == nil || pq[j] == nil {
-		return false // or handle this in some other appropriate way
-	}
 	// order by epoch in asc order
+	if pq[i].epoch == pq[j].epoch {
+		return pq[i].nextAttempt.Before(pq[j].nextAttempt)
+	}
 	return pq[i].epoch < pq[j].epoch
 }
 
