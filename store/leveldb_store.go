@@ -297,17 +297,17 @@ func (partition LevelDbPartition) LastParitionEpochObject() (*datap.ParitionEpoc
 
 	defer iter.Release()
 
-	if !iter.Last() {
-		// the iter has no values.
-		return nil, nil
-	}
+	for ok := iter.Last(); ok; ok = iter.Prev() {
+		valueBytes := iter.Value()
+		paritionEpochObject := &datap.ParitionEpochObject{}
+		err := proto.Unmarshal(valueBytes, paritionEpochObject)
+		if err != nil {
+			return nil, err
+		}
+		if paritionEpochObject.Valid {
+			return paritionEpochObject, nil
+		}
 
-	valueBytes := iter.Value()
-	paritionEpochObject := &datap.ParitionEpochObject{}
-	err := proto.Unmarshal(valueBytes, paritionEpochObject)
-	if err != nil {
-		return nil, err
 	}
-
-	return paritionEpochObject, nil
+	return nil, nil
 }
