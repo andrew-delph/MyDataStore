@@ -42,6 +42,10 @@ func TestPartitionVerifyQueue(t *testing.T) {
 	}
 	pq.PushItem(item)
 
+	peeked := pq.PeekItem()
+	assert.EqualValues(t, 1, peeked.epoch, "peeked.epoch wrong value")
+	assert.EqualValues(t, 7, peeked.partitionId, "peeked.partitionId wrong value")
+
 	popped := pq.PopItem()
 
 	assert.EqualValues(t, 1, popped.epoch, "popped.epoch wrong value")

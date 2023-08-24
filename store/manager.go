@@ -131,7 +131,7 @@ func handleEpochUpdate(currEpoch int64) error {
 		}
 		lag = min(lag, int(lowerEpoch))
 
-		for i := lowerEpoch; i <= currEpoch-3; i++ {
+		for i := lowerEpoch; i <= currEpoch-2; i++ {
 			partitionEpochQueue.PushItem(&PartitionEpochItem{
 				epoch:       i,
 				partitionId: int(partId),
@@ -163,11 +163,6 @@ func handlePartitionEpochItem() {
 		return
 	}
 
-	// tree, bucketList, err := RawPartitionMerkleTree(item.epoch, false, item.partitionId)
-	// if err != nil {
-	// 	logrus.Errorf("handlePartitionEpochItem err = %v", err)
-	// 	return
-	// }
 	unsyncedBuckets, err := verifyPartitionEpochTree(paritionEpochObject)
 	if (unsyncedBuckets != nil && len(unsyncedBuckets) > 0) || err != nil {
 		logrus.Debugf("failed to sync partion = %d epoch = %d err = %v", item.partitionId, item.epoch, err)
@@ -331,4 +326,14 @@ func (pq *PartitionEpochQueue) PopItem() *PartitionEpochItem {
 		logrus.Fatal("FAILED TO DECODE POP.")
 	}
 	return popVal
+}
+
+func (pq *PartitionEpochQueue) PeekItem() *PartitionEpochItem {
+	queueLock.Lock()
+	defer queueLock.Unlock()
+
+	if len(*pq) == 0 {
+		return nil
+	}
+	return (*pq)[0]
 }
