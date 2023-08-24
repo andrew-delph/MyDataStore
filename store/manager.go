@@ -19,6 +19,8 @@ var (
 )
 var partitionEpochQueue *PartitionEpochQueue
 
+var checkQueueTick = make(chan struct{}, 1)
+
 func managerInit() {
 	partitionEpochQueue = &PartitionEpochQueue{}
 	heap.Init(partitionEpochQueue)
@@ -32,6 +34,8 @@ func managerInit() {
 		logrus.Warnf("Manger not Ready. Sleeping...")
 		time.Sleep(time.Second * 5)
 	}
+
+	checkQueueTick <- struct{}{}
 
 	run := true
 	go func() {
@@ -50,10 +54,26 @@ func managerInit() {
 					}
 					validFSM = false
 				}
-			default:
+			// case <-time.After(time.Now().Add(time.Second).Sub(time.Now())):
+			// 	logrus.Warn("Tick!")
+			// 	checkQueueTick <- struct{}{}
+			case <-checkQueueTick:
 				if partitionEpochQueue.Len() > 0 {
 					handlePartitionEpochItem()
+
+					// sleep for the next item.
+					item := partitionEpochQueue.PeekItem()
+					if item != nil {
+						go func() {
+							select {
+							case <-time.After(item.nextAttempt.Sub(time.Now())):
+								checkQueueTick <- struct{}{}
+							}
+						}()
+					}
+
 				}
+
 			}
 		}
 	}()
@@ -84,6 +104,7 @@ func syncPartition(partitionId int, requestBuckets []int32, lowerEpoch, upperEpo
 // verify merkle trees are in sync with R nodes. (recent cache and global)
 // if out of sync. it will call appropiate sync functions
 func handleEpochUpdate(currEpoch int64) error {
+	defer func() { checkQueueTick <- struct{}{} }()
 	logrus.Debugf("currEpoch %d", currEpoch)
 	if currEpoch-2 < 0 {
 		return nil
@@ -97,7 +118,7 @@ func handleEpochUpdate(currEpoch int64) error {
 	lag := math.MaxInt32
 	defer func() {
 		if int(currEpoch)-lag > 3 {
-			logrus.Warnf("currently lagging. diff = %d lag = %d currEpoch = %d", int(currEpoch)-lag, lag, currEpoch)
+			logrus.Warnf("currently lagging. diff = %d currEpoch = %d lag = %d", int(currEpoch)-lag, currEpoch, lag)
 		}
 	}()
 	for _, partId := range myPartions {
@@ -134,6 +155,7 @@ func handleEpochUpdate(currEpoch int64) error {
 		partitionEpochQueue.PushItem(&PartitionEpochItem{
 			epoch:       currEpoch - 2,
 			partitionId: int(partId),
+			nextAttempt: time.Now().Add(5 * time.Second),
 		})
 
 		// for i := lowerEpoch; i <= currEpoch-2; i++ {
@@ -154,14 +176,15 @@ func handlePartitionEpochItem() {
 	if item == nil {
 		return
 	}
-	// defer func() {
-	// 	if item.attempts > 2 && !item.completed {
-	// 		logrus.Warnf("handle item e = %d currEpoch = %d attemps = %d", item.epoch, currEpoch, item.attempts)
-	// 	}
-	// }()
+	defer func() {
+		if item.attempts > 2 && !item.completed {
+			logrus.Warnf("handle item e = %d currEpoch = %d attemps = %d", item.epoch, currEpoch, item.attempts)
+		}
+	}()
 
 	item.attempts++
-	item.nextAttempt = time.Now().Add(10 * time.Second)
+	item.nextAttempt = time.Now().Add(5 * time.Second)
+	partitionEpochQueue.Fix(item)
 
 	partition, err := store.getPartition(item.partitionId)
 	if err != nil {
@@ -179,7 +202,7 @@ func handlePartitionEpochItem() {
 
 	unsyncedBuckets, err := verifyPartitionEpochTree(paritionEpochObject)
 	if (unsyncedBuckets != nil && len(unsyncedBuckets) > 0) || err != nil {
-		logrus.Debugf("failed to sync partion = %d epoch = %d err = %v", item.partitionId, item.epoch, err)
+		logrus.Errorf("failed to sync partion = %d epoch = %d err = %v", item.partitionId, item.epoch, err)
 		var requestBuckets []int32
 		for _, buckedId := range unsyncedBuckets {
 			requestBuckets = append(requestBuckets, buckedId)
