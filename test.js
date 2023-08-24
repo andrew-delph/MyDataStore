@@ -134,7 +134,7 @@ export function remove() {
   return;
 }
 
-// options = { iterations: 1, vus: 1 };
+options = { iterations: 1, vus: 1 };
 export default function () {
   // panic();
   // return;
@@ -169,6 +169,7 @@ export default function () {
     "Set: status was 200": (r) =>
       r.status === 200 || console.error(`Set Error: Status was ${r.status}`),
   });
+  return;
   // sleep(10);
 
   // Get a value from the map

@@ -72,7 +72,7 @@ func (partition LevelDbPartition) SetPartitionValue(value *datap.Value) error {
 	}
 	bucketHash := CalculateHash(value.Key)
 	bucket := bucketHash % partitionBuckets
-	logrus.Debugf("SetValue bucket %v", bucket)
+	logrus.Debugf("SetValue p = %v b = %v", partition.GetPartitionId(), bucket)
 	indexBytes := IndexBucketEpoch(partition.GetPartitionId(), bucket, int(value.Epoch), value.Key)
 
 	err = partition.db.Put(indexBytes, data, writeOpts)

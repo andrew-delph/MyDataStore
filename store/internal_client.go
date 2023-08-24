@@ -193,19 +193,19 @@ func SendGetMessage(key string) (string, error) {
 	return "", fmt.Errorf("value not found. expected = %d recievedCount= %d", R, len(resList))
 }
 
-func StreamBuckets(addr string, buckets []int32, lowerEpoch, upperEpoch int64, partitionId int) error {
+func StreamBuckets(addr string, buckets *[]int32, lowerEpoch, upperEpoch int64, partitionId int) error {
 	conn, client, err := GetClient(addr)
 	if err != nil {
 		logrus.Errorf("CLIENT StreamBuckets err = %v", err)
 		return err
 	}
 	defer conn.Close()
-	bucketsReq := &datap.StreamBucketsRequest{Buckets: buckets, LowerEpoch: int64(lowerEpoch), UpperEpoch: int64(upperEpoch), Partition: int32(partitionId)}
+	req := &datap.StreamBucketsRequest{Buckets: *buckets, LowerEpoch: int64(lowerEpoch), UpperEpoch: int64(upperEpoch), Partition: int32(partitionId)}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	stream, err := client.StreamBuckets(ctx, bucketsReq)
+	stream, err := client.StreamBuckets(ctx, req)
 	if err != nil {
 		logrus.Errorf("CLIENT StreamBuckets err = %v", err)
 		return err

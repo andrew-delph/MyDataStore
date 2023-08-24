@@ -109,3 +109,15 @@ func abs(x int) int {
 	}
 	return x
 }
+
+func compare2dBytes(a, b [][]byte) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if !bytes.Equal(a[i], b[i]) {
+			return false
+		}
+	}
+	return true
+}
