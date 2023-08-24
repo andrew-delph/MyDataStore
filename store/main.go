@@ -41,7 +41,7 @@ var (
 
 var store Store
 
-var currEpoch int64 = 0
+var globalEpoch int64 = 0
 
 func main() {
 	// time.Sleep(20 * time.Second)
@@ -133,7 +133,7 @@ func main() {
 			message.Handle(messageHolder)
 
 		case isLeader := <-raftNode.LeaderCh():
-			logrus.Warnf("leader change. %t %s %d", isLeader, raftNode.State(), currEpoch)
+			logrus.Warnf("leader change. %t %s %d", isLeader, raftNode.State(), globalEpoch)
 			if !isLeader {
 				continue
 			}

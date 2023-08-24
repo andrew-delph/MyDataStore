@@ -349,9 +349,9 @@ func Snapshot() error {
 }
 
 func UpdateEpoch() error {
-	logrus.Infof("Leader Update Epoch. Epoch = %d", currEpoch+1)
+	logrus.Infof("Leader Update Epoch. Epoch = %d", globalEpoch+1)
 
-	epochBytes, err := EncodeInt64ToBytes(currEpoch + 1)
+	epochBytes, err := EncodeInt64ToBytes(globalEpoch + 1)
 	if err != nil {
 		logrus.Errorf("EncodeInt64ToBytes Err= %v", err)
 		return err

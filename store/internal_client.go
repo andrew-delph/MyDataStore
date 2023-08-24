@@ -47,7 +47,7 @@ func SendSetMessageNode(addr string, setReqMsg *datap.Value, responseCh chan *da
 
 func SendSetMessage(key, value string) error {
 	unixTimestamp := time.Now().Unix()
-	setReqMsg := &datap.Value{Key: key, Value: value, Epoch: int64(currEpoch), UnixTimestamp: unixTimestamp}
+	setReqMsg := &datap.Value{Key: key, Value: value, Epoch: int64(globalEpoch), UnixTimestamp: unixTimestamp}
 
 	nodes, err := GetClosestN(events.consistent, key, N)
 	if err != nil {
@@ -59,6 +59,7 @@ func SendSetMessage(key, value string) error {
 
 	for _, node := range nodes {
 		go SendSetMessageNode(node.String(), setReqMsg, responseCh, errorCh)
+		// break
 	}
 
 	timeout := time.After(defaultTimeout)

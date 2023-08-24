@@ -72,11 +72,13 @@ func managerInit() {
 					}
 
 				}
-			case currEpoch = <-epochObserver:
-				err := handleEpochUpdate(currEpoch)
-				if err != nil {
-					logrus.Errorf("handleEpochUpdate err = %v", err)
-				}
+			case globalEpoch = <-epochObserver:
+				go func(currEpoch int64) {
+					err := handleEpochUpdate(currEpoch)
+					if err != nil {
+						logrus.Errorf("handleEpochUpdate err = %v", err)
+					}
+				}(globalEpoch)
 			}
 		}
 	}()
@@ -87,7 +89,7 @@ func managerInit() {
 // if out of sync. it will call appropiate sync functions
 func handleEpochUpdate(currEpoch int64) error {
 	defer func() { checkQueueTick <- struct{}{} }()
-	logrus.Debugf("currEpoch %d", currEpoch)
+	logrus.Warnf("currEpoch %d", currEpoch)
 	if currEpoch-2 < 0 {
 		return nil
 	}
@@ -154,7 +156,7 @@ func handlePartitionEpochItem() {
 	}
 	defer func() {
 		if item.attempts > 2 && !item.completed {
-			logrus.Warnf("Attempts Warning: e = %d p =  %d currEpoch = %d attemps = %d", item.epoch, item.partitionId, currEpoch, item.attempts)
+			logrus.Warnf("Attempts Warning: e = %d p =  %d currEpoch = %d attemps = %d", item.epoch, item.partitionId, globalEpoch, item.attempts)
 		}
 	}()
 
@@ -232,7 +234,7 @@ func handlePartitionEpochItem() {
 
 		item.completed = true
 
-		logrus.Debugf("Success sync of epoch = %d", currEpoch-1)
+		logrus.Debugf("Success sync of epoch = %d", item.epoch)
 	}
 }
 
