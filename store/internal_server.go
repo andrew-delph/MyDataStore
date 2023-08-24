@@ -48,7 +48,9 @@ func (s *internalServer) SetRequest(ctx context.Context, m *datap.Value) (*datap
 	logrus.Debugf("Handling SetRequest: key=%s value=%s epoch=%d", m.Key, m.Value, m.Epoch)
 
 	if m.Epoch > globalEpoch+1 || m.Epoch < globalEpoch-1 {
-		return nil, fmt.Errorf("Epoch out of sync. currEpoch = %d requested = %d", globalEpoch, m.Epoch)
+		err := fmt.Errorf("Epoch out of sync. currEpoch = %d requested = %d", globalEpoch, m.Epoch)
+		logrus.Error(err)
+		return nil, err
 	}
 
 	err := store.SetValue(m)

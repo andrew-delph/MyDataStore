@@ -59,7 +59,7 @@ func SendSetMessage(key, value string) error {
 
 	for _, node := range nodes {
 		go SendSetMessageNode(node.String(), setReqMsg, responseCh, errorCh)
-		// break
+		break
 	}
 
 	timeout := time.After(defaultTimeout)
