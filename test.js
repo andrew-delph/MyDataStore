@@ -29,25 +29,25 @@ export let options = {
     //   preAllocatedVUs: 1,
     //   maxVUs: 1,
     // },
-    // load: {
-    //   executor: "constant-vus",
-    //   vus: 5,
-    //   duration: "10m",
-    //   exec: "default",
-    // },
-    arrival: {
-      executor: "ramping-arrival-rate",
-      startRate: 50,
-      stages: [
-        { target: 300, duration: "2m" },
-        { target: 300, duration: "1h" },
-      ],
-      // Start `rate` iterations per second
-      timeUnit: "1s",
-      // Pre-allocate VUs
-      preAllocatedVUs: 50,
-      maxVUs: 10000,
+    load: {
+      executor: "constant-vus",
+      vus: 100,
+      duration: "10m",
+      exec: "default",
     },
+    // arrival: {
+    //   executor: "ramping-arrival-rate",
+    //   startRate: 50,
+    //   stages: [
+    //     { target: 300, duration: "2m" },
+    //     { target: 300, duration: "1h" },
+    //   ],
+    //   // Start `rate` iterations per second
+    //   timeUnit: "1s",
+    //   // Pre-allocate VUs
+    //   preAllocatedVUs: 50,
+    //   maxVUs: 10000,
+    // },
   },
 };
 
@@ -169,7 +169,7 @@ export default function () {
     "Set: status was 200": (r) =>
       r.status === 200 || console.error(`Set Error: Status was ${r.status}`),
   });
-  sleep(10);
+  // sleep(10);
 
   // Get a value from the map
   let getRes = http.get(`http://${address}/get?key=${key}`);

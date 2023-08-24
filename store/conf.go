@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	N                int           = 3
+	N                int           = 2
 	W                int           = 1
 	R                int           = 2
 	saveInterval     time.Duration = 30 * time.Second
