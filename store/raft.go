@@ -29,7 +29,7 @@ type FSM struct {
 
 var validFSMObserver = make(chan bool, 1)
 
-var epochObserver = make(chan int64, 1)
+var epochObserver = make(chan int64, 10000) // TODO: dont want to miss any updates right now. come up with better solution.
 
 func MakeRaftConf(localIp string) *raft.Config {
 	conf := raft.DefaultConfig()

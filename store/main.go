@@ -132,9 +132,6 @@ func main() {
 			}
 			message.Handle(messageHolder)
 
-		case currEpoch = <-epochObserver:
-			handleEpochUpdate(currEpoch)
-
 		case isLeader := <-raftNode.LeaderCh():
 			logrus.Warnf("leader change. %t %s %d", isLeader, raftNode.State(), currEpoch)
 			if !isLeader {

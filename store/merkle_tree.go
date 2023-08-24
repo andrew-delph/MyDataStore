@@ -220,10 +220,8 @@ func DifferentMerkleTreeBucketsDFS(node1 *merkletree.Node, node2 *merkletree.Nod
 			switch bucket2 := node2.C.(type) {
 			case *RealMerkleBucket:
 				bucketId2 = bucket2.BaseMerkleBucket.bucketId
-				logrus.Warnf("RealMerkleBucket BUCKET DIFF: bucketId %d bucketId2 %d", bucketId1, bucketId2)
 			case *SerializedMerkleBucket:
 				bucketId2 = bucket2.BaseMerkleBucket.bucketId
-				logrus.Warnf("SerializedMerkleBucket BUCKET DIFF: bucketId %d bucketId2 %d", bucketId1, bucketId2)
 			default:
 				logrus.Fatalf("bucket type not found. %v", bucket2)
 			}

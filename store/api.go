@@ -20,7 +20,7 @@ func setHandler(w http.ResponseWriter, r *http.Request) {
 
 	err := SendSetMessage(key, value)
 	if err != nil {
-		errorMessage := fmt.Sprintf("Get Error: key = '%s', value = '%s'. Error = %v", key, value, err)
+		errorMessage := fmt.Sprintf("Set Error: key = '%s', value = '%s'. Error = %v", key, value, err)
 		logrus.Error(errorMessage)
 		http.Error(w, errorMessage, http.StatusBadRequest)
 		return

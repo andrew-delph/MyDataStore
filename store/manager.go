@@ -72,6 +72,8 @@ func managerInit() {
 					}
 
 				}
+			case currEpoch = <-epochObserver:
+				handleEpochUpdate(currEpoch)
 
 			}
 		}
@@ -175,7 +177,7 @@ func handlePartitionEpochItem() {
 
 	unsyncedBuckets, err := verifyPartitionEpochTree(paritionEpochObject)
 	if err != nil {
-		logrus.Errorf("verifyPartitionEpochTree partion = %d epoch = %d err = %v", item.partitionId, item.epoch, err)
+		logrus.Debugf("verifyPartitionEpochTree partion = %d epoch = %d err = %v", item.partitionId, item.epoch, err)
 	}
 	if unsyncedBuckets != nil && len(unsyncedBuckets) > 0 {
 		logrus.Debugf("confirmed unsynced nodes partion = %d epoch = %d # = %d", item.partitionId, item.epoch, len(unsyncedBuckets))
