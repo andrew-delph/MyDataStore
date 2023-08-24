@@ -36,11 +36,12 @@ export let options = {
     //   exec: "default",
     // },
     arrival: {
-      executor: "constant-arrival-rate",
-      // How long the test lasts
-      duration: "1h",
-      // How many iterations per timeUnit
-      rate: 100,
+      executor: "ramping-arrival-rate",
+      startRate: 100,
+      stages: [
+        { target: 400, duration: "2m" },
+        { target: 400, duration: "10m" },
+      ],
       // Start `rate` iterations per second
       timeUnit: "1s",
       // Pre-allocate VUs
@@ -53,15 +54,13 @@ export let options = {
 let address = "192.168.49.2:30033";
 address = "localhost:80";
 
-export function handleSummary(data) {
-  let output = data;
-
-  delete output.metrics;
-
-  return {
-    stdout: textSummary(output, { indent: " ", enableColors: true }),
-  };
-}
+// export function handleSummary(data) {
+//   let output = data;
+//   delete output.metrics;
+//   return {
+//     stdout: textSummary(output, { indent: " ", enableColors: true }),
+//   };
+// }
 
 export function panic() {
   let addr = `http://${address}/leader`;
