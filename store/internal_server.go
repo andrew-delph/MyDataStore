@@ -1,15 +1,9 @@
 package main
 
 import (
-	"bytes"
-	"container/list"
 	"context"
-	"errors"
 	"fmt"
-	"io"
 	"net"
-
-	"github.com/cbergoon/merkletree"
 
 	datap "github.com/andrew-delph/my-key-store/datap"
 
@@ -77,99 +71,6 @@ func (s *internalServer) GetRequest(ctx context.Context, m *datap.GetRequestMess
 	} else {
 		return nil, err
 	}
-}
-
-func (*internalServer) VerifyMerkleTree(stream datap.InternalNodeService_VerifyMerkleTreeServer) error {
-	// defer logrus.Warn("server done.")
-	// logrus.Warn("server start.")
-	rootNode, err := stream.Recv()
-	if err != nil {
-		logrus.Error("SERVER ", err)
-		return err
-	}
-	epoch := rootNode.Epoch
-	partitionId := int(rootNode.Partition)
-
-	var partitionTree *merkletree.MerkleTree
-
-	partitionTree, _, err = RawPartitionMerkleTree(epoch, true, partitionId)
-	if err != nil {
-		err = fmt.Errorf("SERVER VerifyMerkleTree err = %v", err)
-		logrus.Error(err)
-		return err
-	}
-
-	isEqual := bytes.Equal(partitionTree.Root.Hash, rootNode.Hash)
-	nodeResponse := &datap.VerifyMerkleTreeNodeResponse{IsEqual: isEqual}
-
-	err = stream.Send(nodeResponse)
-	if err != nil {
-		logrus.Error("SERVER ", err)
-		return err
-	}
-	if isEqual {
-		return nil
-	}
-	defer logrus.Debugf("SERVER COMPLETED SYNC")
-	logrus.Debugf("server not equal.")
-
-	nodesQueue := list.New()
-	nodesQueue.PushFront(partitionTree.Root.Left)
-	nodesQueue.PushFront(partitionTree.Root.Right)
-
-	for nodesQueue.Len() > 0 {
-		element := nodesQueue.Front()
-		node, ok := element.Value.(*merkletree.Node)
-		if !ok {
-			logrus.Error("could not decode server.")
-			return fmt.Errorf("could not decode node server.")
-		}
-		nodesQueue.Remove(element)
-		logrus.Debugf("server waiting.")
-		nodeRequest, err := stream.Recv()
-		if err == io.EOF {
-			logrus.Warn("Server VerifyMerkleTree Done.")
-			return nil
-		}
-		if err != nil {
-			logrus.Error("SERVER ", err)
-			return err
-		}
-
-		isEqual := bytes.Equal(node.Hash, nodeRequest.Hash)
-		logrus.Debugf("server isEqual %t", isEqual)
-
-		nodeResponse := &datap.VerifyMerkleTreeNodeResponse{IsEqual: isEqual}
-
-		err = stream.Send(nodeResponse)
-		if err != nil {
-			logrus.Error("SERVER ", err)
-			return err
-		}
-
-		if !isEqual {
-			if node.Left == nil && node.Right == nil {
-				logrus.Debugf("SERVER the node is a leaf!")
-				hash, _ := node.C.CalculateHash()
-				bucket, ok := node.C.(*RealMerkleBucket)
-				if !ok {
-					logrus.Errorf("SERVER could not decode bucket = %v hash = %v", bucket, hash)
-					return errors.New("SERVER value is not of type MerkleContent")
-				}
-				logrus.Debugf("SERVER unsynced bucketId = %v", bucket.bucketId)
-
-			} else {
-				if node.Left != nil {
-					nodesQueue.PushFront(node.Left)
-				}
-				if node.Right != nil {
-					nodesQueue.PushFront(node.Right)
-				}
-			}
-		}
-	}
-
-	return io.EOF
 }
 
 func (s *internalServer) StreamBuckets(req *datap.StreamBucketsRequest, stream datap.InternalNodeService_StreamBucketsServer) error {

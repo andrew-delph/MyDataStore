@@ -1,14 +1,10 @@
 package main
 
 import (
-	"container/list"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"time"
-
-	"github.com/cbergoon/merkletree"
 
 	datap "github.com/andrew-delph/my-key-store/datap"
 
@@ -195,92 +191,6 @@ func SendGetMessage(key string) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("value not found. expected = %d recievedCount= %d", R, len(resList))
-}
-
-func VerifyMerkleTree(addr string, epoch int64, globalEpoch bool, partitionId int) (map[int32]struct{}, error) {
-	unsyncedBuckets := make(map[int32]struct{})
-	var partitionTree *merkletree.MerkleTree
-	var err error
-
-	partitionTree, _, err = RawPartitionMerkleTree(epoch, false, partitionId)
-	if err != nil {
-		err = fmt.Errorf("CLIENT VerifyMerkleTree err = %v", err)
-		logrus.Error(err)
-		return nil, fmt.Errorf("CLIENT VerifyMerkleTree err = %v", err)
-	}
-
-	if err != nil {
-		err = fmt.Errorf("CLIENT VerifyMerkleTree err = %v", err)
-		logrus.Error(err)
-		return nil, err
-	}
-
-	conn, client, err := GetClient(addr)
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-	stream, err := client.VerifyMerkleTree(ctx)
-	if err != nil {
-		logrus.Warnf("CLIENT SyncPartition Failed to open stream: %v", err)
-		return nil, err
-	}
-
-	nodesQueue := list.New()
-	nodesQueue.PushFront(partitionTree.Root)
-
-	for nodesQueue.Len() > 0 {
-		element := nodesQueue.Front()
-		node, ok := element.Value.(*merkletree.Node)
-		if !ok {
-			logrus.Error("client no decode.")
-			return nil, fmt.Errorf("could not decode node")
-		}
-		nodesQueue.Remove(element)
-		nodeRequest := &datap.VerifyMerkleTreeNodeRequest{Epoch: int64(epoch), Global: globalEpoch, Partition: int32(partitionId), Hash: node.Hash}
-		err = stream.Send(nodeRequest)
-		if err != nil {
-			logrus.Error("CLIENT ", err)
-			return unsyncedBuckets, err
-		}
-		nodeResponse, err := stream.Recv()
-		if err == io.EOF {
-			logrus.Debug("Client VerifyMerkleTree Done.")
-			return unsyncedBuckets, nil
-		}
-		if err != nil {
-			logrus.Error("client err = ", err)
-			return unsyncedBuckets, err
-		}
-
-		if !nodeResponse.IsEqual {
-			if node.Left == nil && node.Right == nil {
-				logrus.Debugf("CLIENT the node is a leaf!")
-				bucket, ok := node.C.(*RealMerkleBucket)
-				if !ok {
-					logrus.Error("CLIENT could not decode bucket")
-					return unsyncedBuckets, errors.New("CLIENT value is not of type MerkleContent")
-				}
-				unsyncedBuckets[bucket.bucketId] = struct{}{}
-				logrus.Debugf("CLIENT bucket.bucketId %d", bucket.bucketId)
-
-			} else {
-				if node.Left != nil {
-					nodesQueue.PushFront(node.Left)
-				}
-				if node.Right != nil {
-					nodesQueue.PushFront(node.Right)
-				}
-
-			}
-		}
-	}
-
-	logrus.Debugf("CLIENT COMPLETED SYNC")
-	return unsyncedBuckets, nil
 }
 
 func StreamBuckets(addr string, buckets []int32, lowerEpoch, upperEpoch int64, partitionId int) error {
