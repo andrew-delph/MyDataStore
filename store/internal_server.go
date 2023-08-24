@@ -53,6 +53,10 @@ func (s *internalServer) TestRequest(ctx context.Context, in *datap.StandardResp
 func (s *internalServer) SetRequest(ctx context.Context, m *datap.Value) (*datap.StandardResponse, error) {
 	logrus.Debugf("Handling SetRequest: key=%s value=%s epoch=%d", m.Key, m.Value, m.Epoch)
 
+	if m.Epoch > currEpoch+1 || m.Epoch < currEpoch-1 {
+		return nil, fmt.Errorf("Epoch out of sync. currEpoch = %d requested = %d", currEpoch, m.Epoch)
+	}
+
 	err := store.SetValue(m)
 	if err != nil {
 		logrus.Errorf("failed to set %s : %s error= %v", m.Key, m.Value, err)

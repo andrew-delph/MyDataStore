@@ -41,7 +41,7 @@ func SendSetMessageNode(addr string, setReqMsg *datap.Value, responseCh chan *da
 
 	r, err := client.SetRequest(ctx, setReqMsg)
 	if err != nil {
-		logrus.Errorf("Failed SetRequest for node %s", addr)
+		logrus.Errorf("Failed SetRequest for node %s err = %v", addr, err)
 		errorCh <- err
 	} else {
 		responseCh <- r

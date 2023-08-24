@@ -31,8 +31,8 @@ export let options = {
     // },
     load: {
       executor: "constant-vus",
-      vus: 100,
-      duration: "30s",
+      vus: 1,
+      duration: "5m",
       exec: "default",
     },
     // arrival: {
