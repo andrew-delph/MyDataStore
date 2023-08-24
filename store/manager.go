@@ -73,8 +73,10 @@ func managerInit() {
 
 				}
 			case currEpoch = <-epochObserver:
-				handleEpochUpdate(currEpoch)
-
+				err := handleEpochUpdate(currEpoch)
+				if err != nil {
+					logrus.Errorf("handleEpochUpdate err = %v", err)
+				}
 			}
 		}
 	}()
