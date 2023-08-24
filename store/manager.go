@@ -79,26 +79,7 @@ func managerInit() {
 	}()
 }
 
-func syncPartition(partitionId int, requestBuckets []int32, lowerEpoch, upperEpoch int64) error {
-	nodes, err := GetClosestNForPartition(events.consistent, partitionId, N)
-	if err != nil {
-		logrus.Error(err)
-		return err
-	}
-	logrus.Debugf("StreamBuckets partitionId = %d lowerEpoch = %d upperEpoch = %d bucketsnum = %d", partitionId, lowerEpoch, upperEpoch, len(requestBuckets))
-	var wg sync.WaitGroup
 
-	for i := 0; i < len(nodes); i++ {
-		wg.Add(1)
-		go func(addr string) {
-			defer wg.Done()
-			StreamBuckets(nodes[rand.Intn(len(nodes))].String(), requestBuckets, lowerEpoch, upperEpoch, partitionId)
-		}(nodes[i].String())
-	}
-
-	wg.Wait()
-	return nil
-}
 
 // update the global merkletree bucket
 // verify merkle trees are in sync with R nodes. (recent cache and global)
@@ -158,12 +139,6 @@ func handleEpochUpdate(currEpoch int64) error {
 			nextAttempt: time.Now().Add(5 * time.Second),
 		})
 
-		// for i := lowerEpoch; i <= currEpoch-2; i++ {
-		// 	partitionEpochQueue.PushItem(&PartitionEpochItem{
-		// 		epoch:       i,
-		// 		partitionId: int(partId),
-		// 	})
-		// }
 	}
 	return nil
 }
@@ -304,6 +279,27 @@ func verifyPartitionEpochTree(paritionEpochObject *datap.ParitionEpochObject) ([
 		}
 	}
 	return unsyncedBuckets, fmt.Errorf("not enough nodes verifyied.")
+}
+
+func syncPartition(partitionId int, requestBuckets []int32, lowerEpoch, upperEpoch int64) error {
+	nodes, err := GetClosestNForPartition(events.consistent, partitionId, N)
+	if err != nil {
+		logrus.Error(err)
+		return err
+	}
+	logrus.Debugf("StreamBuckets partitionId = %d lowerEpoch = %d upperEpoch = %d bucketsnum = %d", partitionId, lowerEpoch, upperEpoch, len(requestBuckets))
+	var wg sync.WaitGroup
+
+	for i := 0; i < len(nodes); i++ {
+		wg.Add(1)
+		go func(addr string) {
+			defer wg.Done()
+			StreamBuckets(nodes[rand.Intn(len(nodes))].String(), requestBuckets, lowerEpoch, upperEpoch, partitionId)
+		}(nodes[i].String())
+	}
+
+	wg.Wait()
+	return nil
 }
 
 // An PartitionEpochItem is something we manage in a priority queue.
