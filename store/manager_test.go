@@ -4,14 +4,17 @@ import (
 	"container/heap"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestPartitionVerifyQueue(t *testing.T) {
 	// Some items and their priorities.
 	items := map[int]int{
-		1: 3, 2: 4, 3: 2,
+		1:  3,
+		22: 6,
+		2:  4,
+		7:  1,
+		3:  2,
 	}
 
 	// Create a priority queue, put the items in it, and
@@ -29,31 +32,24 @@ func TestPartitionVerifyQueue(t *testing.T) {
 		})
 	}
 
-	// Insert a new item and then modify its priority.
-	item := &PartitionEpochItem{
-		epoch:       1,
-		partitionId: 7,
-	}
-	pq.PushItem(item)
+	next1 := pq.NextItem()
+	assert.EqualValues(t, 1, next1.epoch, "next1.epoch wrong value")
+	assert.EqualValues(t, 7, next1.partitionId, "next1.partitionId wrong value")
 
-	item = &PartitionEpochItem{
-		epoch:       6,
-		partitionId: 22,
-	}
-	pq.PushItem(item)
+	next2 := pq.NextItem()
+	assert.EqualValues(t, 1, next2.epoch, "next2.epoch wrong value")
+	assert.EqualValues(t, 7, next2.partitionId, "next2.partitionId wrong value")
+	next2.completed = true
+
+	next3 := pq.NextItem()
+	assert.EqualValues(t, 2, next3.epoch, "next3.epoch wrong value")
+	assert.EqualValues(t, 3, next3.partitionId, "next3.partitionId wrong value")
 
 	peeked := pq.PeekItem()
-	assert.EqualValues(t, 1, peeked.epoch, "peeked.epoch wrong value")
-	assert.EqualValues(t, 7, peeked.partitionId, "peeked.partitionId wrong value")
+	assert.EqualValues(t, 2, peeked.epoch, "peeked.epoch wrong value")
+	assert.EqualValues(t, 3, peeked.partitionId, "peeked.partitionId wrong value")
 
 	popped := pq.PopItem()
-
-	assert.EqualValues(t, 1, popped.epoch, "popped.epoch wrong value")
-	assert.EqualValues(t, 7, popped.partitionId, "popped.partitionId wrong value")
-
-	// Take the items out; they arrive in decreasing priority order.
-	for pq.Len() > 0 {
-		item := pq.PopItem()
-		logrus.Infof("partitionId = %d epoch = %d", item.partitionId, item.epoch)
-	}
+	assert.EqualValues(t, 2, popped.epoch, "popped.epoch wrong value")
+	assert.EqualValues(t, 3, popped.partitionId, "popped.partitionId wrong value")
 }

@@ -271,12 +271,15 @@ type PartitionEpochItem struct {
 	epoch       int64
 	partitionId int
 	index       int
+	completed   bool
 }
 
 // A PartitionEpochQueue implements heap.Interface and holds Items.
 type PartitionEpochQueue []*PartitionEpochItem
 
-func (pq PartitionEpochQueue) Len() int { return len(pq) }
+func (pq PartitionEpochQueue) Len() int {
+	return len(pq)
+}
 
 func (pq PartitionEpochQueue) Less(i, j int) bool {
 	if pq[i] == nil || pq[j] == nil {
@@ -307,7 +310,7 @@ func (pq *PartitionEpochQueue) Pop() any {
 	return item
 }
 
-var queueLock sync.Mutex
+var queueLock sync.RWMutex
 
 func (pq *PartitionEpochQueue) PushItem(item *PartitionEpochItem) {
 	queueLock.Lock()
@@ -329,11 +332,28 @@ func (pq *PartitionEpochQueue) PopItem() *PartitionEpochItem {
 }
 
 func (pq *PartitionEpochQueue) PeekItem() *PartitionEpochItem {
-	queueLock.Lock()
-	defer queueLock.Unlock()
+	queueLock.RLock()
+	defer queueLock.RUnlock()
 
 	if len(*pq) == 0 {
 		return nil
 	}
 	return (*pq)[0]
+}
+
+func (pq *PartitionEpochQueue) NextItem() *PartitionEpochItem {
+	queueLock.Lock()
+	defer queueLock.Unlock()
+
+	var item *PartitionEpochItem
+
+	for len(*pq) > 0 {
+		item = (*pq)[0]
+		if item.completed {
+			heap.Pop(pq)
+		} else {
+			return item
+		}
+	}
+	return nil
 }
