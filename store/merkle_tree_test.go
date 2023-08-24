@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/cbergoon/merkletree"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -82,7 +81,7 @@ func TestLevelDbStoreRawMerkleTree(t *testing.T) {
 
 	startTime := time.Now()
 
-	tree1, _, err := RawPartitionMerkleTree(int64(setEpoch), false, extraPartition)
+	tree1, buckets1, err := RawPartitionMerkleTree(int64(setEpoch), false, extraPartition)
 	if err != nil {
 		t.Error(err)
 	}
@@ -110,6 +109,27 @@ func TestLevelDbStoreRawMerkleTree(t *testing.T) {
 
 	assert.NotEqual(t, tree1.Root.Hash, tree3.Root.Hash, "Tree hashes match")
 	assert.NotEqual(t, tree2.Root.Hash, tree3.Root.Hash, "Tree hashes match")
+
+	diff1 := DifferentMerkleTreeBuckets(tree1, tree3)
+	diff2 := DifferentMerkleTreeBuckets(tree3, tree1)
+
+	// serialize the tree and unserialize...
+
+	paritionEpochObject, err := MerkleTreeToParitionEpochObject(tree1, buckets1, int64(setEpoch), extraPartition)
+	if err != nil {
+		t.Error(err)
+	}
+	serializeTree1, err := ParitionEpochObjectToMerkleTree(paritionEpochObject)
+	if err != nil {
+		t.Error(err)
+	}
+
+	diff3 := DifferentMerkleTreeBuckets(tree3, serializeTree1)
+	diff4 := DifferentMerkleTreeBuckets(serializeTree1, tree3)
+
+	assert.EqualValues(t, diff1, diff2, "diffs dont match")
+	assert.EqualValues(t, diff2, diff3, "diffs dont match")
+	assert.EqualValues(t, diff3, diff4, "diffs dont match")
 
 	// Test global
 	tree4, _, err := RawPartitionMerkleTree(2, true, extraPartition)
@@ -140,8 +160,6 @@ func TestLevelDbStoreRawMerkleTree(t *testing.T) {
 	// if err != nil {
 	// 	t.Error(err)
 	// }
-
-	logrus.Warnf("hash1 %s hash3 %s", tree1.Root.Hash, tree3.Root.Hash)
 
 	elapsedTime := time.Since(startTime).Seconds()
 

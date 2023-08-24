@@ -184,7 +184,7 @@ func MerkleTreeToParitionEpochObject(tree *merkletree.MerkleTree, bucketList []*
 func ParitionEpochObjectToMerkleTree(paritionEpochObject *datap.ParitionEpochObject) (*merkletree.MerkleTree, error) {
 	contentList := make([]merkletree.Content, 0, partitionBuckets)
 	for i, bucketHash := range paritionEpochObject.Buckets {
-		contentList = append(contentList, SerializedMerkleBucket{hash: bucketHash, BaseMerkleBucket: BaseMerkleBucket{bucketId: int32(i)}})
+		contentList = append(contentList, &SerializedMerkleBucket{hash: bucketHash, BaseMerkleBucket: BaseMerkleBucket{bucketId: int32(i)}})
 	}
 	return merkletree.NewTree(contentList)
 }
@@ -206,14 +206,33 @@ func DifferentMerkleTreeBucketsDFS(node1 *merkletree.Node, node2 *merkletree.Nod
 
 	if !bytes.Equal(node1.Hash, node2.Hash) {
 		if node1.Left == nil && node1.Right == nil {
-			var bucketId int32
+			var bucketId1 int32
 			switch bucket := node1.C.(type) {
 			case *RealMerkleBucket:
-				bucketId = bucket.bucketId
+				bucketId1 = bucket.BaseMerkleBucket.bucketId
 			case *SerializedMerkleBucket:
-				bucketId = bucket.bucketId
+				bucketId1 = bucket.BaseMerkleBucket.bucketId
+			default:
+				logrus.Fatalf("bucket type not found. %v", bucket)
 			}
-			differences = append(differences, bucketId)
+
+			var bucketId2 int32
+			switch bucket2 := node2.C.(type) {
+			case *RealMerkleBucket:
+				bucketId2 = bucket2.BaseMerkleBucket.bucketId
+				logrus.Warnf("RealMerkleBucket BUCKET DIFF: bucketId %d bucketId2 %d", bucketId1, bucketId2)
+			case *SerializedMerkleBucket:
+				bucketId2 = bucket2.BaseMerkleBucket.bucketId
+				logrus.Warnf("SerializedMerkleBucket BUCKET DIFF: bucketId %d bucketId2 %d", bucketId1, bucketId2)
+			default:
+				logrus.Fatalf("bucket type not found. %v", bucket2)
+			}
+
+			if bucketId1 != bucketId2 {
+				logrus.Fatalf("bucketIds dont match. bucketId1 %v bucketId2%v", bucketId1, bucketId2)
+			}
+
+			differences = append(differences, bucketId1)
 		} else {
 			// Recurse into child nodes
 			differences = append(differences, DifferentMerkleTreeBucketsDFS(node1.Left, node2.Left)...)
