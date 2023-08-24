@@ -85,6 +85,9 @@ func syncPartition(partitionId int, requestBuckets []int32, lowerEpoch, upperEpo
 // if out of sync. it will call appropiate sync functions
 func handleEpochUpdate(currEpoch int64) error {
 	logrus.Debugf("currEpoch %d", currEpoch)
+	if currEpoch-2 < 0 {
+		return nil
+	}
 
 	myPartions, err := GetMemberPartions(events.consistent, conf.Name)
 	if err != nil {
@@ -98,41 +101,40 @@ func handleEpochUpdate(currEpoch int64) error {
 		}
 	}()
 	for _, partId := range myPartions {
-		if currEpoch-2 >= 0 {
-			partition, err := store.getPartition(partId)
-			if err != nil {
-				logrus.Errorf("handlePartitionEpochItem getPartition err = %v", err)
-				return err
-			}
-			tree, buckets, err := RawPartitionMerkleTree(currEpoch-2, false, partId)
-			if err != nil {
-				logrus.Errorf("handlePartitionEpochItem RawPartitionMerkleTree err = %v", err)
-				return err
-			}
-			paritionEpochObject, err := MerkleTreeToParitionEpochObject(tree, buckets, currEpoch-2, partId)
-			if err != nil {
-				logrus.Errorf("handlePartitionEpochItem MerkleTreeToParitionEpochObject err = %v", err)
-				return err
-			}
 
-			paritionEpochObject.Valid = false
-			partition.PutParitionEpochObject(paritionEpochObject)
-			lastValidParitionEpochObject, err := partition.LastParitionEpochObject()
-			if err != nil && err != STORE_NOT_FOUND {
-				logrus.Errorf("handlePartitionEpochItem LastParitionEpochObject err = %v", err)
-				return err
-			}
-
-			lowerEpoch := int64(0)
-			if lastValidParitionEpochObject != nil {
-				lowerEpoch = lastValidParitionEpochObject.Epoch
-			}
-			lag = min(lag, int(lowerEpoch))
-			partitionEpochQueue.PushItem(&PartitionEpochItem{
-				epoch:       currEpoch - 2,
-				partitionId: int(partId),
-			})
+		partition, err := store.getPartition(partId)
+		if err != nil {
+			logrus.Errorf("handlePartitionEpochItem getPartition err = %v", err)
+			return err
 		}
+		tree, buckets, err := RawPartitionMerkleTree(currEpoch-2, false, partId)
+		if err != nil {
+			logrus.Errorf("handlePartitionEpochItem RawPartitionMerkleTree err = %v", err)
+			return err
+		}
+		paritionEpochObject, err := MerkleTreeToParitionEpochObject(tree, buckets, currEpoch-2, partId)
+		if err != nil {
+			logrus.Errorf("handlePartitionEpochItem MerkleTreeToParitionEpochObject err = %v", err)
+			return err
+		}
+
+		paritionEpochObject.Valid = false
+		partition.PutParitionEpochObject(paritionEpochObject)
+		lastValidParitionEpochObject, err := partition.LastParitionEpochObject()
+		if err != nil && err != STORE_NOT_FOUND {
+			logrus.Errorf("handlePartitionEpochItem LastParitionEpochObject err = %v", err)
+			return err
+		}
+
+		lowerEpoch := int64(0)
+		if lastValidParitionEpochObject != nil {
+			lowerEpoch = lastValidParitionEpochObject.Epoch
+		}
+		lag = min(lag, int(lowerEpoch))
+		partitionEpochQueue.PushItem(&PartitionEpochItem{
+			epoch:       currEpoch - 2,
+			partitionId: int(partId),
+		})
 
 		// for i := lowerEpoch; i <= currEpoch-2; i++ {
 		// 	partitionEpochQueue.PushItem(&PartitionEpochItem{
@@ -157,11 +159,7 @@ func handlePartitionEpochItem() {
 	// 		logrus.Warnf("handle item e = %d currEpoch = %d attemps = %d", item.epoch, currEpoch, item.attempts)
 	// 	}
 	// }()
-	if item.epoch > currEpoch-2 {
-		return
-	}
 
-	// Time 1 second from now
 	item.attempts++
 	item.nextAttempt = time.Now().Add(10 * time.Second)
 
@@ -311,6 +309,8 @@ func (pq PartitionEpochQueue) Less(i, j int) bool {
 
 func (pq PartitionEpochQueue) Swap(i, j int) {
 	pq[i], pq[j] = pq[j], pq[i]
+	pq[i].index = i
+	pq[j].index = j
 }
 
 func (pq *PartitionEpochQueue) Push(x any) {
@@ -371,9 +371,24 @@ func (pq *PartitionEpochQueue) NextItem() *PartitionEpochItem {
 		item = (*pq)[0]
 		if item.completed {
 			heap.Pop(pq)
+		} else if time.Now().Before(item.nextAttempt) {
+			return nil
 		} else {
 			return item
 		}
 	}
+	return nil
+}
+
+func (pq *PartitionEpochQueue) Fix(item *PartitionEpochItem) *PartitionEpochItem {
+	queueLock.Lock()
+	defer queueLock.Unlock()
+
+	if len(*pq) < item.index || (*pq)[item.index] != item {
+		logrus.Fatalf("Fix index out of sync! %v %v", &(*pq)[item.index], &item)
+	}
+
+	heap.Fix(pq, item.index)
+
 	return nil
 }

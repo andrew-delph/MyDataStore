@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestPartitionVerifyQueue(t *testing.T) {
+func TestPartitionVerifyQueueBasic(t *testing.T) {
 	// Some items and their priorities.
 	items := map[int]int{
 		1:  3,
@@ -25,36 +25,6 @@ func TestPartitionVerifyQueue(t *testing.T) {
 
 	var nilValue *PartitionEpochItem
 	assert.Equal(t, nilValue, pq.PopItem(), "Should be nil")
-
-	now := time.Now()
-
-	pq.PushItem(&PartitionEpochItem{
-		epoch:       int64(66),
-		partitionId: 66,
-	})
-
-	pq.PushItem(&PartitionEpochItem{
-		epoch:       int64(66),
-		partitionId: 77,
-		nextAttempt: now.Add(1 * time.Second),
-	})
-	pq.PushItem(&PartitionEpochItem{
-		epoch:       int64(66),
-		partitionId: 88,
-		nextAttempt: now.Add(2 * time.Second),
-	})
-
-	peekedTime1 := pq.PopItem()
-	assert.EqualValues(t, 66, peekedTime1.epoch, "peekedTime1.epoch wrong value")
-	assert.EqualValues(t, 66, peekedTime1.partitionId, "peekedTime1.partitionId wrong value")
-
-	peekedTime2 := pq.PopItem()
-	assert.EqualValues(t, 66, peekedTime2.epoch, "peeked.epoch wrong value")
-	assert.EqualValues(t, 77, peekedTime2.partitionId, "peeked.partitionId wrong value")
-
-	peekedTime3 := pq.PopItem()
-	assert.EqualValues(t, 66, peekedTime3.epoch, "peeked.epoch wrong value")
-	assert.EqualValues(t, 88, peekedTime3.partitionId, "peeked.partitionId wrong value")
 
 	for partitionId, epoch := range items {
 		pq.PushItem(&PartitionEpochItem{
@@ -83,4 +53,80 @@ func TestPartitionVerifyQueue(t *testing.T) {
 	popped := pq.PopItem()
 	assert.EqualValues(t, 2, popped.epoch, "popped.epoch wrong value")
 	assert.EqualValues(t, 3, popped.partitionId, "popped.partitionId wrong value")
+}
+
+func TestPartitionVerifyQueueNextAttempt(t *testing.T) {
+	// Create a priority queue, put the items in it, and
+	// establish the priority queue (heap) invariants.
+	pq := &PartitionEpochQueue{}
+	heap.Init(pq)
+
+	var nilValue *PartitionEpochItem
+	assert.Equal(t, nilValue, pq.PopItem(), "Should be nil")
+
+	now := time.Now()
+
+	pq.PushItem(&PartitionEpochItem{
+		epoch:       int64(1),
+		partitionId: 1,
+	})
+
+	pq.PushItem(&PartitionEpochItem{
+		epoch:       int64(1),
+		partitionId: 2,
+		nextAttempt: now.Add(-2 * time.Second),
+	})
+
+	pq.PushItem(&PartitionEpochItem{
+		epoch:       int64(1),
+		partitionId: 4,
+		nextAttempt: now,
+	})
+
+	pq.PushItem(&PartitionEpochItem{
+		epoch:       int64(1),
+		partitionId: 5,
+		nextAttempt: now.Add(10 * time.Second),
+	})
+
+	pq.PushItem(&PartitionEpochItem{
+		epoch:       int64(1),
+		partitionId: 3,
+		nextAttempt: now.Add(-1 * time.Second),
+	})
+
+	var nextItem *PartitionEpochItem
+	nextItem = pq.NextItem()
+	nextItem.completed = true
+	assert.EqualValues(t, 1, nextItem.epoch, "peekedTime1.epoch wrong value")
+	assert.EqualValues(t, 1, nextItem.partitionId, "peekedTime1.partitionId wrong value")
+
+	nextItem = pq.NextItem()
+	nextItem.completed = true
+	assert.EqualValues(t, 1, nextItem.epoch, "peeked.epoch wrong value")
+	assert.EqualValues(t, 2, nextItem.partitionId, "peeked.partitionId wrong value")
+
+	nextItem = pq.NextItem()
+	nextItem.completed = true
+	assert.EqualValues(t, 1, nextItem.epoch, "peeked.epoch wrong value")
+	assert.EqualValues(t, 3, nextItem.partitionId, "peeked.partitionId wrong value")
+	pq.NextItem()
+
+	assert.EqualValues(t, 2, pq.Len(), "Len() wrong value")
+	assert.EqualValues(t, 4, pq.PeekItem().partitionId, "peeked.partitionId wrong value")
+	pq.PushItem(&PartitionEpochItem{
+		epoch:       int64(1),
+		partitionId: 5,
+		nextAttempt: time.Now(),
+	})
+	nextItem = pq.NextItem()
+	// try and mess up queue with time changes...
+	nextItem.nextAttempt = time.Now().Add(1 * time.Second)
+	assert.EqualValues(t, 1, nextItem.epoch, "peeked.epoch wrong value")
+	assert.EqualValues(t, 4, nextItem.partitionId, "peeked.partitionId wrong value")
+	assert.EqualValues(t, 4, pq.PeekItem().partitionId, "peeked.partitionId wrong value")
+
+	pq.Fix(nextItem)
+
+	assert.EqualValues(t, 5, pq.PeekItem().partitionId, "peeked.partitionId wrong value")
 }
