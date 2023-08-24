@@ -177,6 +177,20 @@ func handlePartitionEpochItem() {
 		}
 		syncPartition(item.partitionId, requestBuckets, item.epoch, item.epoch+1)
 
+		tree, buckets, err := RawPartitionMerkleTree(item.epoch, false, item.partitionId)
+		if err != nil {
+			logrus.Errorf("handlePartitionEpochItem RawPartitionMerkleTree err = %v", err)
+			return
+		}
+		paritionEpochObject, err := MerkleTreeToParitionEpochObject(tree, buckets, item.epoch, item.partitionId)
+		if err != nil {
+			logrus.Errorf("handlePartitionEpochItem MerkleTreeToParitionEpochObject err = %v", err)
+			return
+		}
+
+		paritionEpochObject.Valid = false
+		partition.PutParitionEpochObject(paritionEpochObject)
+
 	} else {
 		partition, err := store.getPartition(item.partitionId)
 		if err != nil {
