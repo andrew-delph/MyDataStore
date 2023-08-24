@@ -178,7 +178,7 @@ func handlePartitionEpochItem() {
 	}
 	defer func() {
 		if item.attempts > 2 && !item.completed {
-			logrus.Warnf("handle item e = %d currEpoch = %d attemps = %d", item.epoch, currEpoch, item.attempts)
+			logrus.Warnf("Attempts Warning: e = %d p =  %d currEpoch = %d attemps = %d", item.epoch, item.partitionId, currEpoch, item.attempts)
 		}
 	}()
 
@@ -193,6 +193,7 @@ func handlePartitionEpochItem() {
 	}
 	paritionEpochObject, err := partition.GetParitionEpochObject(int(item.epoch))
 	if paritionEpochObject != nil && paritionEpochObject.Valid {
+		item.completed = true
 		return
 	}
 	if paritionEpochObject == nil {
