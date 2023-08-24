@@ -255,6 +255,9 @@ func (store LevelDbStore) Clear() {
 func (partition LevelDbPartition) GetParitionEpochObject(epoch int) (*datap.ParitionEpochObject, error) {
 	keyBytes := IndexParitionEpochObject(partition.GetPartitionId(), epoch)
 	valueBytes, err := partition.db.Get(keyBytes, nil)
+	if err == leveldb.ErrNotFound {
+		return nil, STORE_NOT_FOUND
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -309,5 +312,5 @@ func (partition LevelDbPartition) LastParitionEpochObject() (*datap.ParitionEpoc
 		}
 
 	}
-	return nil, nil
+	return nil, STORE_NOT_FOUND
 }

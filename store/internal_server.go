@@ -195,13 +195,22 @@ func (s *internalServer) StreamBuckets(req *datap.StreamBucketsRequest, stream d
 
 func (s *internalServer) GetParitionEpochObject(ctx context.Context, req *datap.ParitionEpochObject) (*datap.ParitionEpochObject, error) {
 	logrus.Debugf("Handling GetParitionEpochObject: Partition=%d Epoch=%d", req.Partition, req.Epoch)
-	tree, buckets, err := RawPartitionMerkleTree(req.Epoch, false, int(req.Partition))
+
+	partition, err := store.getPartition(int(req.Partition))
 	if err != nil {
+		logrus.Debugf("SERVER GetParitionEpochObject.getPartition err = %v", err)
 		return nil, err
 	}
-	paritionEpochObject, err := MerkleTreeToParitionEpochObject(tree, buckets, req.Epoch, int(req.Partition))
+
+	paritionEpochObject, err := partition.GetParitionEpochObject(int(req.Epoch))
 	if err != nil {
+		logrus.Debugf("SERVER GetParitionEpochObject.GetParitionEpochObject Partition = %d Epoch = %d err = %v", req.Partition, req.Epoch, err)
 		return nil, err
 	}
+	if paritionEpochObject == nil {
+		logrus.Debugf("SERVER GetParitionEpochObject paritionEpochObject is nil")
+		return nil, fmt.Errorf("COULD NOT FIND!")
+	}
+
 	return paritionEpochObject, nil
 }

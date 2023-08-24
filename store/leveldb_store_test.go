@@ -244,7 +244,7 @@ func TestLevelDbParitionEpochObject(t *testing.T) {
 	if paritionEpochObject != nil {
 		t.Errorf("should be nil: paritionEpochObject = %v err = %v", paritionEpochObject, err)
 	}
-	if err != nil {
+	if err != STORE_NOT_FOUND {
 		t.Error(err)
 	}
 

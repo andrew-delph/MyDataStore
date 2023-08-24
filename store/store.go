@@ -31,6 +31,8 @@ type Partition interface {
 	LastParitionEpochObject() (*datap.ParitionEpochObject, error)
 }
 
+var STORE_NOT_FOUND error = fmt.Errorf("Store not found.")
+
 type GoCacheStore struct {
 	partitionStore *cache.Cache
 }
