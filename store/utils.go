@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"time"
 
+	"github.com/sirupsen/logrus"
 	"golang.org/x/exp/constraints"
 )
 
@@ -120,4 +122,9 @@ func compare2dBytes(a, b [][]byte) bool {
 		}
 	}
 	return true
+}
+
+func trackTime(start time.Time, name string) {
+	elapsed := time.Since(start)
+	logrus.Warnf("trackTime: %s took %.2f seconds", name, elapsed.Seconds())
 }

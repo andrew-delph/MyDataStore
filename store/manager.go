@@ -89,7 +89,7 @@ func managerInit() {
 // if out of sync. it will call appropiate sync functions
 func handleEpochUpdate(currEpoch int64) error {
 	defer func() { checkQueueTick <- struct{}{} }()
-	logrus.Warnf("currEpoch %d", currEpoch)
+	defer trackTime(time.Now(), fmt.Sprintf("handleEpochUpdate currEpoch %d", currEpoch))
 	if currEpoch-2 < 0 {
 		return nil
 	}
@@ -102,7 +102,7 @@ func handleEpochUpdate(currEpoch int64) error {
 	lag := math.MaxInt32
 	defer func() {
 		if int(currEpoch)-lag > 3 {
-			logrus.Warnf("currently lagging. diff = %d currEpoch = %d lag = %d", int(currEpoch)-lag, currEpoch, lag)
+			logrus.Warnf("currently lagging. lag = %d currEpoch = %d", int(currEpoch)-lag, currEpoch)
 		}
 	}()
 	for _, partId := range myPartions {
