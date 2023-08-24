@@ -37,16 +37,16 @@ export let options = {
     // },
     arrival: {
       executor: "ramping-arrival-rate",
-      startRate: 100,
+      startRate: 50,
       stages: [
-        { target: 400, duration: "2m" },
-        { target: 400, duration: "10m" },
+        { target: 300, duration: "2m" },
+        { target: 300, duration: "1h" },
       ],
       // Start `rate` iterations per second
       timeUnit: "1s",
       // Pre-allocate VUs
       preAllocatedVUs: 50,
-      maxVUs: 5000,
+      maxVUs: 10000,
     },
   },
 };

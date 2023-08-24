@@ -16,9 +16,9 @@ var (
 	R                int           = 2
 	saveInterval     time.Duration = 30 * time.Second
 	defaultTimeout   time.Duration = 2 * time.Second
-	partitionBuckets int           = 100
-	partitionCount   int           = 100
-	epochTime        time.Duration = 60 * time.Second
+	partitionBuckets int           = 500
+	partitionCount   int           = 500
+	epochTime        time.Duration = 100 * time.Second
 	dataPath         string        = "/store"
 	raftLogs         bool          = false
 	autoBootStrap    bool          = true
