@@ -92,7 +92,7 @@ func handleEpochUpdate(currEpoch int64) error {
 	}
 	lag := math.MaxInt32
 	defer func() {
-		if lag > 4 {
+		if lag > 3 {
 			logrus.Warnf("currently lagging. lag = %d currEpoch = %d", lag, currEpoch)
 		}
 	}()
