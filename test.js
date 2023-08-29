@@ -29,30 +29,30 @@ export let options = {
     //   preAllocatedVUs: 1,
     //   maxVUs: 1,
     // },
-    load: {
-      executor: "constant-vus",
-      vus: 1,
-      duration: "5m",
-      exec: "default",
-    },
-    // arrival: {
-    //   executor: "ramping-arrival-rate",
-    //   startRate: 50,
-    //   stages: [
-    //     { target: 300, duration: "2m" },
-    //     { target: 300, duration: "1h" },
-    //   ],
-    //   // Start `rate` iterations per second
-    //   timeUnit: "1s",
-    //   // Pre-allocate VUs
-    //   preAllocatedVUs: 50,
-    //   maxVUs: 10000,
+    // load: {
+    //   executor: "constant-vus",
+    //   vus: 1,
+    //   duration: "5m",
+    //   exec: "default",
     // },
+    arrival: {
+      executor: "ramping-arrival-rate",
+      startRate: 50,
+      stages: [
+        { target: 200, duration: "2m" },
+        { target: 300, duration: "1h" },
+      ],
+      // Start `rate` iterations per second
+      timeUnit: "1s",
+      // Pre-allocate VUs
+      preAllocatedVUs: 50,
+      maxVUs: 10000,
+    },
   },
 };
 
 let address = "192.168.49.2:30033";
-address = "localhost:80";
+address = "localhost:8080";
 
 // export function handleSummary(data) {
 //   let output = data;
@@ -169,8 +169,7 @@ export default function () {
     "Set: status was 200": (r) =>
       r.status === 200 || console.error(`Set Error: Status was ${r.status}`),
   });
-  return;
-  //
+  sleep(10);
 
   // Get a value from the map
   let getRes = http.get(`http://${address}/get?key=${key}`);
