@@ -136,14 +136,18 @@ func handleEpochUpdate(currEpoch int64) error {
 
 		lowerEpoch := int64(0)
 		if lastValidParitionEpochObject != nil {
-			lowerEpoch = lastValidParitionEpochObject.Epoch
+			lowerEpoch = lastValidParitionEpochObject.Epoch + 1
 		}
 		minValidEpoch = min(minValidEpoch, int(lowerEpoch))
-		partitionEpochQueue.PushItem(&PartitionEpochItem{
-			epoch:       currEpoch - 2,
-			partitionId: int(partId),
-			nextAttempt: time.Now().Add(5 * time.Second),
-		})
+
+		// queue all invalid epochs up to the current
+		for epochQueue := lowerEpoch; epochQueue < currEpoch-1; epochQueue++ {
+			partitionEpochQueue.PushItem(&PartitionEpochItem{
+				epoch:       epochQueue,
+				partitionId: int(partId),
+				nextAttempt: time.Now().Add(5 * time.Second),
+			})
+		}
 
 	}
 	return nil
