@@ -148,8 +148,6 @@ func handleEpochUpdate(currEpoch int64) error {
 
 func handlePartitionEpochItem() {
 	item := partitionEpochQueue.NextItem()
-	// logrus.Warnf("handling item partion = %d epoch = %d", item.partitionId, item.epoch)
-	// defer logrus.Warnf("DONE handling item partion = %d epoch = %d", item.partitionId, item.epoch)
 
 	if item == nil {
 		return
