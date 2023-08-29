@@ -20,7 +20,7 @@ service InternalNodeService {
   // request to stream buckets from a partition back to the client
   rpc StreamBuckets(StreamBucketsRequest) returns (stream Value);
 
-  rpc GetParitionEpochObject(ParitionEpochObject) returns (ParitionEpochObject);
+  rpc GetPartitionEpochObject(PartitionEpochObject) returns (PartitionEpochObject);
   
 }
 
@@ -51,7 +51,7 @@ message StreamBucketsRequest{
   repeated int32 buckets =4;
 }
 
-message ParitionEpochObject{
+message PartitionEpochObject{
   int32 partition = 1;
   int64 epoch = 2;
   bytes rootHash = 3;

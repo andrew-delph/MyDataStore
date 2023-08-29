@@ -96,24 +96,24 @@ func (s *internalServer) StreamBuckets(req *datap.StreamBucketsRequest, stream d
 	return nil
 }
 
-func (s *internalServer) GetParitionEpochObject(ctx context.Context, req *datap.ParitionEpochObject) (*datap.ParitionEpochObject, error) {
-	logrus.Debugf("Handling GetParitionEpochObject: Partition=%d Epoch=%d", req.Partition, req.Epoch)
+func (s *internalServer) GetPartitionEpochObject(ctx context.Context, req *datap.PartitionEpochObject) (*datap.PartitionEpochObject, error) {
+	logrus.Debugf("Handling GetPartitionEpochObject: Partition=%d Epoch=%d", req.Partition, req.Epoch)
 
 	partition, err := store.getPartition(int(req.Partition))
 	if err != nil {
-		logrus.Debugf("SERVER GetParitionEpochObject.getPartition err = %v", err)
+		logrus.Debugf("SERVER GetPartitionEpochObject.getPartition err = %v", err)
 		return nil, err
 	}
 
-	paritionEpochObject, err := partition.GetParitionEpochObject(int(req.Epoch))
+	partitionEpochObject, err := partition.GetPartitionEpochObject(int(req.Epoch))
 	if err != nil {
-		logrus.Debugf("SERVER GetParitionEpochObject.GetParitionEpochObject Partition = %d Epoch = %d err = %v", req.Partition, req.Epoch, err)
+		logrus.Debugf("SERVER GetPartitionEpochObject.GetPartitionEpochObject Partition = %d Epoch = %d err = %v", req.Partition, req.Epoch, err)
 		return nil, err
 	}
-	if paritionEpochObject == nil {
-		logrus.Debugf("SERVER GetParitionEpochObject paritionEpochObject is nil")
+	if partitionEpochObject == nil {
+		logrus.Debugf("SERVER GetPartitionEpochObject partitionEpochObject is nil")
 		return nil, fmt.Errorf("COULD NOT FIND!")
 	}
 
-	return paritionEpochObject, nil
+	return partitionEpochObject, nil
 }

@@ -218,7 +218,7 @@ func TestLevelDbIndex(t *testing.T) {
 	logrus.Infof("TestLevelDbIndex Elapsed Time: %.2f seconds\n", elapsedTime)
 }
 
-func TestLevelDbParitionEpochObject(t *testing.T) {
+func TestLevelDbPartitionEpochObject(t *testing.T) {
 	hostname = randomString(5)
 
 	conf, delegate, events = GetConf()
@@ -239,110 +239,110 @@ func TestLevelDbParitionEpochObject(t *testing.T) {
 		logrus.Errorf("handlePartitionEpochItem err = %v", err)
 		t.Error(err)
 	}
-	// check if last ParitionEpochObject exists. verify it doesnt.
-	paritionEpochObject, err := partition.LastParitionEpochObject()
-	if paritionEpochObject != nil {
-		t.Errorf("should be nil: paritionEpochObject = %v err = %v", paritionEpochObject, err)
+	// check if last PartitionEpochObject exists. verify it doesnt.
+	partitionEpochObject, err := partition.LastPartitionEpochObject()
+	if partitionEpochObject != nil {
+		t.Errorf("should be nil: partitionEpochObject = %v err = %v", partitionEpochObject, err)
 	}
 	if err != STORE_NOT_FOUND {
 		t.Error(err)
 	}
 
 	// input new object not valid ahead
-	paritionEpochObject = &datap.ParitionEpochObject{
+	partitionEpochObject = &datap.PartitionEpochObject{
 		Epoch:     5,
 		Partition: int32(partitionId),
 	}
-	err = partition.PutParitionEpochObject(paritionEpochObject)
+	err = partition.PutPartitionEpochObject(partitionEpochObject)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// input new object valid
-	paritionEpochObject = &datap.ParitionEpochObject{
+	partitionEpochObject = &datap.PartitionEpochObject{
 		Epoch:     2,
 		Partition: int32(partitionId),
 		Valid:     true,
 	}
-	err = partition.PutParitionEpochObject(paritionEpochObject)
+	err = partition.PutPartitionEpochObject(partitionEpochObject)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// input new object not valid ahead
-	paritionEpochObject = &datap.ParitionEpochObject{
+	partitionEpochObject = &datap.PartitionEpochObject{
 		Epoch:     6,
 		Partition: int32(partitionId),
 	}
-	err = partition.PutParitionEpochObject(paritionEpochObject)
+	err = partition.PutPartitionEpochObject(partitionEpochObject)
 	if err != nil {
 		t.Error(err)
 	}
 
-	// check if last ParitionEpochObject exists. verify it exits.
-	paritionEpochObject, err = partition.LastParitionEpochObject()
-	if paritionEpochObject == nil {
-		t.Fatalf("should exist: paritionEpochObject = %v err = %v", paritionEpochObject, err)
+	// check if last PartitionEpochObject exists. verify it exits.
+	partitionEpochObject, err = partition.LastPartitionEpochObject()
+	if partitionEpochObject == nil {
+		t.Fatalf("should exist: partitionEpochObject = %v err = %v", partitionEpochObject, err)
 	}
 	if err != nil {
 		t.Error(err)
 	}
-	assert.EqualValues(t, partitionId, paritionEpochObject.Partition, "partition value was wrong.")
-	assert.EqualValues(t, 2, paritionEpochObject.Epoch, "epoch value was wrong.")
+	assert.EqualValues(t, partitionId, partitionEpochObject.Partition, "partition value was wrong.")
+	assert.EqualValues(t, 2, partitionEpochObject.Epoch, "epoch value was wrong.")
 
 	// input new higher object
 
-	paritionEpochObject = &datap.ParitionEpochObject{
+	partitionEpochObject = &datap.PartitionEpochObject{
 		Epoch:     4,
 		Partition: int32(partitionId),
 		Valid:     true,
 	}
-	err = partition.PutParitionEpochObject(paritionEpochObject)
+	err = partition.PutPartitionEpochObject(partitionEpochObject)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// make sure last returned is correct
-	paritionEpochObject, err = partition.LastParitionEpochObject()
-	if paritionEpochObject == nil {
-		t.Fatalf("should be nil: paritionEpochObject = %v err = %v", paritionEpochObject, err)
+	partitionEpochObject, err = partition.LastPartitionEpochObject()
+	if partitionEpochObject == nil {
+		t.Fatalf("should be nil: partitionEpochObject = %v err = %v", partitionEpochObject, err)
 	}
 	if err != nil {
 		t.Error(err)
 	}
-	assert.EqualValues(t, partitionId, paritionEpochObject.Partition, "partition value was wrong.")
-	assert.EqualValues(t, 4, paritionEpochObject.Epoch, "epoch value was wrong.")
+	assert.EqualValues(t, partitionId, partitionEpochObject.Partition, "partition value was wrong.")
+	assert.EqualValues(t, 4, partitionEpochObject.Epoch, "epoch value was wrong.")
 
 	// request first one specific and make sure it is returned
-	paritionEpochObject, err = partition.GetParitionEpochObject(2)
-	if paritionEpochObject == nil {
-		t.Fatalf("should be nil: paritionEpochObject = %v err = %v", paritionEpochObject, err)
+	partitionEpochObject, err = partition.GetPartitionEpochObject(2)
+	if partitionEpochObject == nil {
+		t.Fatalf("should be nil: partitionEpochObject = %v err = %v", partitionEpochObject, err)
 	}
 	if err != nil {
 		t.Error(err)
 	}
-	assert.EqualValues(t, partitionId, paritionEpochObject.Partition, "Partition value was wrong.")
-	assert.EqualValues(t, 2, paritionEpochObject.Epoch, "Epoch value was wrong.")
-	assert.EqualValues(t, true, paritionEpochObject.Valid, "Valid value was wrong.")
+	assert.EqualValues(t, partitionId, partitionEpochObject.Partition, "Partition value was wrong.")
+	assert.EqualValues(t, 2, partitionEpochObject.Epoch, "Epoch value was wrong.")
+	assert.EqualValues(t, true, partitionEpochObject.Valid, "Valid value was wrong.")
 
-	paritionEpochObject, err = partition.GetParitionEpochObject(6)
-	if paritionEpochObject == nil {
-		t.Fatalf("should be nil: paritionEpochObject = %v err = %v", paritionEpochObject, err)
+	partitionEpochObject, err = partition.GetPartitionEpochObject(6)
+	if partitionEpochObject == nil {
+		t.Fatalf("should be nil: partitionEpochObject = %v err = %v", partitionEpochObject, err)
 	}
 	if err != nil {
 		t.Error(err)
 	}
-	assert.EqualValues(t, partitionId, paritionEpochObject.Partition, "Partition value was wrong.")
-	assert.EqualValues(t, 6, paritionEpochObject.Epoch, "Epoch value was wrong.")
-	assert.EqualValues(t, false, paritionEpochObject.Valid, "Valid value was wrong.")
+	assert.EqualValues(t, partitionId, partitionEpochObject.Partition, "Partition value was wrong.")
+	assert.EqualValues(t, 6, partitionEpochObject.Epoch, "Epoch value was wrong.")
+	assert.EqualValues(t, false, partitionEpochObject.Valid, "Valid value was wrong.")
 
-	paritionEpochObject, err = partition.GetParitionEpochObject(4)
-	if paritionEpochObject == nil {
-		t.Fatalf("should be nil: paritionEpochObject = %v err = %v", paritionEpochObject, err)
+	partitionEpochObject, err = partition.GetPartitionEpochObject(4)
+	if partitionEpochObject == nil {
+		t.Fatalf("should be nil: partitionEpochObject = %v err = %v", partitionEpochObject, err)
 	}
 	if err != nil {
 		t.Error(err)
 	}
-	assert.EqualValues(t, partitionId, paritionEpochObject.Partition, "partition value was wrong.")
-	assert.EqualValues(t, 4, paritionEpochObject.Epoch, "epoch value was wrong.")
+	assert.EqualValues(t, partitionId, partitionEpochObject.Partition, "partition value was wrong.")
+	assert.EqualValues(t, 4, partitionEpochObject.Epoch, "epoch value was wrong.")
 }

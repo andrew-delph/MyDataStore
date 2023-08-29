@@ -164,7 +164,7 @@ func RawPartitionMerkleTree(epoch int64, globalEpoch bool, partitionId int) (*me
 	return tree, bucketList, nil
 }
 
-func MerkleTreeToParitionEpochObject(tree *merkletree.MerkleTree, bucketList []*RealMerkleBucket, epoch int64, partitionId int) (*datap.ParitionEpochObject, error) {
+func MerkleTreeToPartitionEpochObject(tree *merkletree.MerkleTree, bucketList []*RealMerkleBucket, epoch int64, partitionId int) (*datap.PartitionEpochObject, error) {
 	bucketHashes := make([][]byte, 0, partitionBuckets)
 	for i, bucket := range bucketList {
 		hash, err := bucket.CalculateHash()
@@ -176,14 +176,14 @@ func MerkleTreeToParitionEpochObject(tree *merkletree.MerkleTree, bucketList []*
 		bucketHashes = append(bucketHashes, hash)
 	}
 
-	bucketsReq := &datap.ParitionEpochObject{RootHash: tree.MerkleRoot(), Epoch: epoch, Partition: int32(partitionId), Buckets: bucketHashes}
+	bucketsReq := &datap.PartitionEpochObject{RootHash: tree.MerkleRoot(), Epoch: epoch, Partition: int32(partitionId), Buckets: bucketHashes}
 
 	return bucketsReq, nil
 }
 
-func ParitionEpochObjectToMerkleTree(paritionEpochObject *datap.ParitionEpochObject) (*merkletree.MerkleTree, error) {
+func PartitionEpochObjectToMerkleTree(partitionEpochObject *datap.PartitionEpochObject) (*merkletree.MerkleTree, error) {
 	contentList := make([]merkletree.Content, 0, partitionBuckets)
-	for i, bucketHash := range paritionEpochObject.Buckets {
+	for i, bucketHash := range partitionEpochObject.Buckets {
 		contentList = append(contentList, &SerializedMerkleBucket{hash: bucketHash, BaseMerkleBucket: BaseMerkleBucket{bucketId: int32(i)}})
 	}
 	return merkletree.NewTree(contentList)

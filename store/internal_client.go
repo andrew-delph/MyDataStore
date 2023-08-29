@@ -232,7 +232,7 @@ func StreamBuckets(addr string, buckets *[]int32, lowerEpoch, upperEpoch int64, 
 	}
 }
 
-func GetParitionEpochObject(addr string, epoch int64, partitionId int) (*datap.ParitionEpochObject, error) {
+func GetPartitionEpochObject(addr string, epoch int64, partitionId int) (*datap.PartitionEpochObject, error) {
 	conn, client, err := GetClient(addr)
 	if err != nil {
 		return nil, err
@@ -243,9 +243,9 @@ func GetParitionEpochObject(addr string, epoch int64, partitionId int) (*datap.P
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	req := &datap.ParitionEpochObject{Epoch: epoch, Partition: int32(partitionId)}
+	req := &datap.PartitionEpochObject{Epoch: epoch, Partition: int32(partitionId)}
 
-	res, err := client.GetParitionEpochObject(ctx, req)
+	res, err := client.GetPartitionEpochObject(ctx, req)
 	if err != nil {
 		return nil, err
 	}

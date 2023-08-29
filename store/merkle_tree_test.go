@@ -115,11 +115,11 @@ func TestLevelDbStoreRawMerkleTree(t *testing.T) {
 
 	// serialize the tree and unserialize...
 
-	paritionEpochObject, err := MerkleTreeToParitionEpochObject(tree1, buckets1, int64(setEpoch), extraPartition)
+	partitionEpochObject, err := MerkleTreeToPartitionEpochObject(tree1, buckets1, int64(setEpoch), extraPartition)
 	if err != nil {
 		t.Error(err)
 	}
-	serializeTree1, err := ParitionEpochObjectToMerkleTree(paritionEpochObject)
+	serializeTree1, err := PartitionEpochObjectToMerkleTree(partitionEpochObject)
 	if err != nil {
 		t.Error(err)
 	}
