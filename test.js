@@ -134,7 +134,7 @@ export function remove() {
   return;
 }
 
-options = { duration: "2h", vus: 2 };
+options = { duration: "2h", vus: 1 };
 export default function () {
   // panic();
   // return;
@@ -170,7 +170,7 @@ export default function () {
       r.status === 200 || console.error(`Set Error: Status was ${r.status}`),
   });
   return;
-  // sleep(10);
+  //
 
   // Get a value from the map
   let getRes = http.get(`http://${address}/get?key=${key}`);
