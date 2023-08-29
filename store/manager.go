@@ -87,12 +87,11 @@ func managerInit() {
 // update the global merkletree bucket
 // verify merkle trees are in sync with R nodes. (recent cache and global)
 // if out of sync. it will call appropiate sync functions
-func handleEpochUpdate(currEpoch int64) error {
-	defer func() { checkQueueTick <- struct{}{} }()
-	defer trackTime(time.Now(), time.Second, fmt.Sprintf("handleEpochUpdate currEpoch %d", currEpoch))
+func handleEpochUpdate(handleEpoch int64) error {
+	defer trackTime(time.Now(), time.Second, fmt.Sprintf("handleEpochUpdate handleEpoch %d", handleEpoch))
 
 	// if the current epoch is not passed the commited range, skip.
-	if currEpoch-2 < 0 {
+	if handleEpoch-2 < 0 {
 		return nil
 	}
 
@@ -103,54 +102,67 @@ func handleEpochUpdate(currEpoch int64) error {
 	}
 	minValidEpoch := math.MaxInt32
 	defer func() {
-		diff := int(currEpoch) - minValidEpoch
+		diff := int(handleEpoch) - minValidEpoch
 		if diff > 3 {
-			logrus.Warnf("currently lagging. diff = %d currEpoch = %d", diff, currEpoch)
+			logrus.Warnf("currently lagging. diff = %d handleEpoch = %d", diff, handleEpoch)
 		}
 	}()
-	for _, partId := range myPartions {
-
-		partition, err := store.getPartition(partId)
+	for _, partitionId := range myPartions {
+		lowerEpoch, err := queuePartitionEpochItem(partitionId, handleEpoch)
 		if err != nil {
-			logrus.Errorf("handlePartitionEpochItem getPartition err = %v", err)
-			return err
-		}
-		tree, buckets, err := RawPartitionMerkleTree(currEpoch-2, false, partId)
-		if err != nil {
-			logrus.Errorf("handlePartitionEpochItem RawPartitionMerkleTree err = %v", err)
-			return err
-		}
-		partitionEpochObject, err := MerkleTreeToPartitionEpochObject(tree, buckets, currEpoch-2, partId)
-		if err != nil {
-			logrus.Errorf("handlePartitionEpochItem MerkleTreeToPartitionEpochObject err = %v", err)
-			return err
-		}
-
-		partitionEpochObject.Valid = false
-		partition.PutPartitionEpochObject(partitionEpochObject)
-		lastValidPartitionEpochObject, err := partition.LastPartitionEpochObject()
-		if err != nil && err != STORE_NOT_FOUND {
-			logrus.Errorf("handlePartitionEpochItem LastPartitionEpochObject err = %v", err)
-			return err
-		}
-
-		lowerEpoch := int64(0)
-		if lastValidPartitionEpochObject != nil {
-			lowerEpoch = lastValidPartitionEpochObject.Epoch + 1
+			logrus.Errorf("queuePartitionEpochItem err = %v", err)
 		}
 		minValidEpoch = min(minValidEpoch, int(lowerEpoch))
-
-		// queue all invalid epochs up to the current
-		for epochQueue := lowerEpoch; epochQueue < currEpoch-1; epochQueue++ {
-			partitionEpochQueue.PushItem(&PartitionEpochItem{
-				epoch:       epochQueue,
-				partitionId: int(partId),
-				nextAttempt: time.Now().Add(5 * time.Second),
-			})
-		}
-
 	}
 	return nil
+}
+
+func queuePartitionEpochItem(partitionId int, handleEpoch int64) (int64, error) {
+	defer trackTime(time.Now(), time.Second, fmt.Sprintf("queuePartitionEpochItem handleEpoch %d partitionId %d", handleEpoch, partitionId))
+	defer func() { checkQueueTick <- struct{}{} }()
+
+	partition, err := store.getPartition(partitionId)
+	if err != nil {
+		logrus.Errorf("handlePartitionEpochItem getPartition err = %v", err)
+		return math.MaxInt32, err
+	}
+	tree, buckets, err := RawPartitionMerkleTree(handleEpoch-2, false, partitionId)
+	if err != nil {
+		logrus.Errorf("handlePartitionEpochItem RawPartitionMerkleTree err = %v", err)
+		return math.MaxInt32, err
+	}
+	partitionEpochObject, err := MerkleTreeToPartitionEpochObject(tree, buckets, handleEpoch-2, partitionId)
+	if err != nil {
+		logrus.Errorf("handlePartitionEpochItem MerkleTreeToPartitionEpochObject err = %v", err)
+		return math.MaxInt32, err
+	}
+
+	partitionEpochObject.Valid = false
+	partition.PutPartitionEpochObject(partitionEpochObject)
+	lastValidPartitionEpochObject, err := partition.LastPartitionEpochObject()
+	if err != nil && err != STORE_NOT_FOUND {
+		logrus.Errorf("handlePartitionEpochItem LastPartitionEpochObject err = %v", err)
+		return math.MaxInt32, err
+	}
+
+	lowerEpoch := int64(0)
+	if lastValidPartitionEpochObject != nil {
+		lowerEpoch = lastValidPartitionEpochObject.Epoch + 1
+	}
+
+	// queue all invalid epochs up to the current
+	if lowerEpoch < handleEpoch-2 {
+		logrus.Warnf("recursively calling handleEpochUpdate with handleEpoch = %d partitionId = %d", handleEpoch-1, partitionId)
+		handleEpochUpdate(handleEpoch - 1)
+	}
+
+	partitionEpochQueue.PushItem(&PartitionEpochItem{
+		epoch:       handleEpoch - 2,
+		partitionId: int(partitionId),
+		nextAttempt: time.Now().Add(5 * time.Second),
+	})
+
+	return lowerEpoch, nil
 }
 
 func handlePartitionEpochItem() {
@@ -163,7 +175,7 @@ func handlePartitionEpochItem() {
 
 	defer func() {
 		if item.attempts > 2 && !item.completed {
-			logrus.Warnf("Attempts Warning: attemps = %d e = %d p =  %d currEpoch = %d", item.attempts, item.epoch, item.partitionId, globalEpoch)
+			logrus.Warnf("Attempts Warning: attemps = %d e = %d p =  %d globalEpoch = %d", item.attempts, item.epoch, item.partitionId, globalEpoch)
 		}
 	}()
 
@@ -182,7 +194,7 @@ func handlePartitionEpochItem() {
 		return
 	}
 	if partitionEpochObject == nil {
-		logrus.Warnf("partitionEpochObject is nil. err = %v", err)
+		logrus.Warnf("partitionEpochObject is nil. attemps = %d e = %d p =  %d err = %v", item.attempts, item.epoch, item.partitionId, err)
 		return
 	}
 
