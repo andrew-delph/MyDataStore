@@ -3,8 +3,8 @@
 # Exit on any error
 set -e
 
-bazel run //store:store_image
-docker-compose up --force-recreate -d store
+bazel run //store:image_push
+kubectl rollout restart statefulset store
 
 
 

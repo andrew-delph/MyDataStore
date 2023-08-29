@@ -8,11 +8,7 @@ tmuxinator local
 
 # K8 DEV
 
-kubectl create configmap nginx-config --from-file=nginx.conf
-
-kubectl apply -f ./resources/
-
-ibazel -run_command_after_success='./deploy_k8.sh' run //store:image_push
+ibazel -run_command_after_success='./deploy_k8.sh' build //store:store_image
 
 while true; do kubectl logs -f deployment/store; done
 
