@@ -90,6 +90,8 @@ func managerInit() {
 func handleEpochUpdate(currEpoch int64) error {
 	defer func() { checkQueueTick <- struct{}{} }()
 	defer trackTime(time.Now(), time.Second, fmt.Sprintf("handleEpochUpdate currEpoch %d", currEpoch))
+
+	// if the current epoch is not passed the commited range, skip.
 	if currEpoch-2 < 0 {
 		return nil
 	}
