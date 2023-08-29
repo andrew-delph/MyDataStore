@@ -2,21 +2,13 @@ package main
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
-var myCounter = prometheus.NewCounterVec(
-	prometheus.CounterOpts{
-		Name: "andrew",
-		Help: "testing andrew metric",
+var healthyPartitionsGauge = promauto.NewGaugeVec(
+	prometheus.GaugeOpts{
+		Name: "node_partitions_healthy",
+		Help: "The number of healthy partitions for a node",
 	},
-	[]string{"type"},
+	[]string{"hostname"},
 )
-
-func initProm() {
-	// Register the metric.
-	prometheus.MustRegister(myCounter)
-
-	myCounter.WithLabelValues("andrew_type").Inc()
-	myCounter.WithLabelValues("andrew_type").Inc()
-	myCounter.WithLabelValues("andrew_type").Inc()
-}

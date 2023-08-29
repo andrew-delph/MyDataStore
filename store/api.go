@@ -193,7 +193,6 @@ func epochHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func startHttpServer() {
-	initProm()
 	http.HandleFunc("/", baseHandler)
 	http.HandleFunc("/set", setHandler)
 	http.HandleFunc("/get", getHandler)
