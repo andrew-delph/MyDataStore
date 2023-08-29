@@ -16,3 +16,4 @@ kubectl rollout restart statefulset store
 kubectl rollout status statefulset/store -w --timeout=30s
 
 
+

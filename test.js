@@ -145,7 +145,7 @@ export function remove() {
   return;
 }
 
-options = { duration: "2h", vus: 1 };
+// options = { duration: "2h", vus: 1 };
 export default function () {
   // panic();
   // return;
