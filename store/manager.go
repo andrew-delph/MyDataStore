@@ -73,6 +73,7 @@ func managerInit() {
 
 				}
 			case globalEpoch = <-epochObserver:
+				andrewGauge.WithLabelValues(hostname).Add(1)
 				go func(currEpoch int64) {
 					err := handleEpochUpdate(currEpoch)
 					if err != nil {

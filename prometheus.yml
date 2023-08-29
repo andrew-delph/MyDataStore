@@ -1,0 +1,7 @@
+scrape_configs:
+  - job_name: "store"
+    dns_sd_configs:
+      - names:
+          - store
+        type: A
+        port: 8080
