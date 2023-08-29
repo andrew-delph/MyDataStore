@@ -18,7 +18,7 @@ var (
 )
 var partitionEpochQueue *PartitionEpochQueue
 
-var checkQueueTick = make(chan struct{}, 1)
+var checkQueueTick = make(chan struct{}, 5)
 
 func managerInit() {
 	partitionEpochQueue = &PartitionEpochQueue{}
@@ -73,6 +73,10 @@ func managerInit() {
 
 				}
 			case globalEpoch = <-epochObserver:
+				// err := handleEpochUpdate(globalEpoch)
+				// if err != nil {
+				// 	logrus.Errorf("handleEpochUpdate err = %v", err)
+				// }
 
 				go func(currEpoch int64) {
 					err := handleEpochUpdate(currEpoch)
