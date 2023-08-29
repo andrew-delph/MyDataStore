@@ -126,19 +126,26 @@ func queuePartitionEpochItem(partitionId int, handleEpoch int64) (int64, error) 
 		logrus.Errorf("handlePartitionEpochItem getPartition err = %v", err)
 		return math.MaxInt32, err
 	}
-	tree, buckets, err := RawPartitionMerkleTree(handleEpoch-2, false, partitionId)
-	if err != nil {
-		logrus.Errorf("handlePartitionEpochItem RawPartitionMerkleTree err = %v", err)
-		return math.MaxInt32, err
-	}
-	partitionEpochObject, err := MerkleTreeToPartitionEpochObject(tree, buckets, handleEpoch-2, partitionId)
-	if err != nil {
-		logrus.Errorf("handlePartitionEpochItem MerkleTreeToPartitionEpochObject err = %v", err)
-		return math.MaxInt32, err
+
+	existingPartitionEpochObject, err := partition.GetPartitionEpochObject(int(handleEpoch - 2))
+
+	// if the tree is not cached. create it yourself.
+	if existingPartitionEpochObject == nil {
+		tree, buckets, err := RawPartitionMerkleTree(handleEpoch-2, false, partitionId)
+		if err != nil {
+			logrus.Errorf("handlePartitionEpochItem RawPartitionMerkleTree err = %v", err)
+			return math.MaxInt32, err
+		}
+		partitionEpochObject, err := MerkleTreeToPartitionEpochObject(tree, buckets, handleEpoch-2, partitionId)
+		if err != nil {
+			logrus.Errorf("handlePartitionEpochItem MerkleTreeToPartitionEpochObject err = %v", err)
+			return math.MaxInt32, err
+		}
+
+		partitionEpochObject.Valid = false
+		partition.PutPartitionEpochObject(partitionEpochObject)
 	}
 
-	partitionEpochObject.Valid = false
-	partition.PutPartitionEpochObject(partitionEpochObject)
 	lastValidPartitionEpochObject, err := partition.LastPartitionEpochObject()
 	if err != nil && err != STORE_NOT_FOUND {
 		logrus.Errorf("handlePartitionEpochItem LastPartitionEpochObject err = %v", err)
@@ -152,7 +159,7 @@ func queuePartitionEpochItem(partitionId int, handleEpoch int64) (int64, error) 
 
 	// queue all invalid epochs up to the current
 	if lowerEpoch < handleEpoch-2 {
-		logrus.Warnf("recursively calling handleEpochUpdate with handleEpoch = %d partitionId = %d", handleEpoch-1, partitionId)
+		logrus.Debugf("recursively calling handleEpochUpdate with handleEpoch = %d partitionId = %d", handleEpoch-1, partitionId)
 		handleEpochUpdate(handleEpoch - 1)
 	}
 
@@ -206,12 +213,14 @@ func handlePartitionEpochItem() {
 		logrus.Debugf("confirmed unsynced nodes partion = %d epoch = %d # = %d", item.partitionId, item.epoch, len(unsyncedBuckets))
 
 		// NOTE: possibly cool down node if streamed recently
-		unsyncedNode := unsyncedBuckets[0]
-		err = StreamBuckets(unsyncedNode.Addr, unsyncedNode.Diff, item.epoch, item.epoch+1, item.partitionId)
-		if err != nil {
-			logrus.Errorf("handlePartitionEpochItem RawPartitionMerkleTree err = %v", err)
-			return
+		// this is asking everyone and will shlow things down.
+		for _, unsyncedNode := range unsyncedBuckets {
+			err = StreamBuckets(unsyncedNode.Addr, unsyncedNode.Diff, item.epoch, item.epoch+1, item.partitionId)
+			if err != nil {
+				logrus.Errorf("handlePartitionEpochItem RawPartitionMerkleTree err = %v", err)
+			}
 		}
+
 		// TODO be polite...
 		// var requestBuckets []int32
 		// for _, buckedId := range unsyncedBuckets {
@@ -231,8 +240,8 @@ func handlePartitionEpochItem() {
 		}
 
 		// NOTE: possibly use bucketsCheck in the future...
-		bucketsCheck := compare2dBytes(*unsyncedNode.Buckets, partitionEpochObject.Buckets)
-		logrus.Debugf("bucketsCheck is %v", bucketsCheck)
+		// bucketsCheck := compare2dBytes(*unsyncedNode.Buckets, partitionEpochObject.Buckets)
+		// logrus.Debugf("bucketsCheck is %v", bucketsCheck)
 
 		partitionEpochObject.Valid = false
 		partition.PutPartitionEpochObject(partitionEpochObject)
