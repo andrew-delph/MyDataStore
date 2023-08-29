@@ -124,7 +124,9 @@ func compare2dBytes(a, b [][]byte) bool {
 	return true
 }
 
-func trackTime(start time.Time, name string) {
+func trackTime(start time.Time, limit time.Duration, name string) {
 	elapsed := time.Since(start)
-	logrus.Warnf("trackTime: %s took %.2f seconds", name, elapsed.Seconds())
+	if elapsed > limit {
+		logrus.Warnf("trackTime: %s took %.2f seconds", name, elapsed.Seconds())
+	}
 }

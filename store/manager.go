@@ -89,7 +89,7 @@ func managerInit() {
 // if out of sync. it will call appropiate sync functions
 func handleEpochUpdate(currEpoch int64) error {
 	defer func() { checkQueueTick <- struct{}{} }()
-	defer trackTime(time.Now(), fmt.Sprintf("handleEpochUpdate currEpoch %d", currEpoch))
+	defer trackTime(time.Now(), time.Second, fmt.Sprintf("handleEpochUpdate currEpoch %d", currEpoch))
 	if currEpoch-2 < 0 {
 		return nil
 	}
