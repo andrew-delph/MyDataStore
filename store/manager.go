@@ -73,7 +73,7 @@ func managerInit() {
 
 				}
 			case globalEpoch = <-epochObserver:
-				andrewGauge.WithLabelValues(hostname).Add(1)
+
 				go func(currEpoch int64) {
 					err := handleEpochUpdate(currEpoch)
 					if err != nil {
@@ -108,13 +108,29 @@ func handleEpochUpdate(handleEpoch int64) error {
 			logrus.Warnf("currently lagging. diff = %d handleEpoch = %d", diff, handleEpoch)
 		}
 	}()
+	healthyCount := 0
+	unhealthyCount := 0
 	for _, partitionId := range myPartions {
+
 		lowerEpoch, err := queuePartitionEpochItem(partitionId, handleEpoch)
 		if err != nil {
 			logrus.Errorf("queuePartitionEpochItem err = %v", err)
 		}
 		minValidEpoch = min(minValidEpoch, int(lowerEpoch))
+		// queue all invalid epochs up to the current
+		for otherEpoch := lowerEpoch + 1; otherEpoch < handleEpoch-2; otherEpoch++ {
+			queuePartitionEpochItem(partitionId, otherEpoch)
+		}
+		if lowerEpoch < handleEpoch-2 {
+			// unhealthy
+			unhealthyCount++
+		} else {
+			// healthy
+			healthyCount++
+		}
 	}
+	healthyPartitionsGauge.WithLabelValues(hostname).Set(float64(healthyCount))
+	unhealthyPartitionsGauge.WithLabelValues(hostname).Set(float64(unhealthyCount))
 	return nil
 }
 
@@ -156,12 +172,6 @@ func queuePartitionEpochItem(partitionId int, handleEpoch int64) (int64, error) 
 	lowerEpoch := int64(0)
 	if lastValidPartitionEpochObject != nil {
 		lowerEpoch = lastValidPartitionEpochObject.Epoch + 1
-	}
-
-	// queue all invalid epochs up to the current
-	if lowerEpoch < handleEpoch-2 {
-		logrus.Debugf("recursively calling handleEpochUpdate with handleEpoch = %d partitionId = %d", handleEpoch-1, partitionId)
-		handleEpochUpdate(handleEpoch - 1)
 	}
 
 	partitionEpochQueue.PushItem(&PartitionEpochItem{
