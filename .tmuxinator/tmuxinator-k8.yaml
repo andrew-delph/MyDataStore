@@ -1,0 +1,12 @@
+name: k8_dev
+
+on_project_start: minikube start
+
+windows:
+  - editor:
+      layout: tiled
+      panes:
+        - ibazel -run_command_after_success='./deploy_k8.sh' build //store:store_image
+        -
+        - while true; do kubectl logs -f statefulset/store; done
+        -

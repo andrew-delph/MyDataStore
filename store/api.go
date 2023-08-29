@@ -11,6 +11,7 @@ import (
 )
 
 func baseHandler(w http.ResponseWriter, r *http.Request) {
+	logrus.Warnf("handling / for %s", hostname)
 	fmt.Fprint(w, "server is running")
 }
 

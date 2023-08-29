@@ -2,15 +2,13 @@
 
 bazel run //:gazelle -- update-repos -from_file="store/go.mod" -to_macro=repositories.bzl%go_repositories -prune
 
-# LOCAL DEC
+# DOCKER-COMPOSE DEV
 
-tmuxinator local
+tmuxinator start -p ./.tmuxinator/tmuxinator-dc.yaml
 
-# K8 DEV
+# KUBERNETES DEV
 
-ibazel -run_command_after_success='./deploy_k8.sh' build //store:store_image
-
-while true; do kubectl logs -f statefulset/store; done
+tmuxinator start -p ./.tmuxinator/tmuxinator-k8.yaml
 
 # TEST
 

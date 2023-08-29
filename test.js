@@ -74,10 +74,7 @@ export function basic() {
 }
 
 export function panic() {
-  let addr = `http://${address}/leader`;
-  addr = `http://${address}/follower`;
-  // addr = `http://${address}/panic`;
-  console.log(addr);
+  let addr = `http://${address}/panic`;
   let baseRes = http.get(addr);
   check(baseRes, {
     "Panic: status was 200": (r) =>
@@ -145,10 +142,12 @@ export function remove() {
   return;
 }
 
-// options = { duration: "2h", vus: 1 };
+options = { duration: "2h", vus: 1 };
+options = { iterations: 1, vus: 1 };
 export default function () {
-  // panic();
-  // return;
+  panic();
+  // sleep(4);
+  return;
   // bootstrap();
   // sleep(15);
 
