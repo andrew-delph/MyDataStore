@@ -102,7 +102,7 @@ func handleEpochUpdate(currEpoch int64) error {
 	lag := math.MaxInt32
 	defer func() {
 		if int(currEpoch)-lag > 3 {
-			logrus.Warnf("currently lagging. lag = %d currEpoch = %d", int(currEpoch)-lag, currEpoch)
+			logrus.Warnf("currently lagging. diff = %d currEpoch = %d", int(currEpoch)-lag, currEpoch)
 		}
 	}()
 	for _, partId := range myPartions {
@@ -154,9 +154,11 @@ func handlePartitionEpochItem() {
 	if item == nil {
 		return
 	}
+	defer trackTime(time.Now(), time.Second, fmt.Sprintf("handling item partion = %d epoch = %d", item.partitionId, item.epoch))
+
 	defer func() {
 		if item.attempts > 2 && !item.completed {
-			logrus.Warnf("Attempts Warning: e = %d p =  %d currEpoch = %d attemps = %d", item.epoch, item.partitionId, globalEpoch, item.attempts)
+			logrus.Warnf("Attempts Warning: attemps = %d e = %d p =  %d currEpoch = %d", item.attempts, item.epoch, item.partitionId, globalEpoch)
 		}
 	}()
 
