@@ -10,7 +10,7 @@ tmuxinator local
 
 ibazel -run_command_after_success='./deploy_k8.sh' build //store:store_image
 
-while true; do kubectl logs -f deployment/store; done
+while true; do kubectl logs -f statefulset/store; done
 
 # TEST
 
