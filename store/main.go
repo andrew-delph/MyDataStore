@@ -80,12 +80,18 @@ func main() {
 	}
 
 	// Join an existing cluster by specifying at least one known member.
-	n, err := clusterNodes.Join([]string{"store:8081"})
-	if err != nil {
-		logrus.Panic("Failed to join cluster: " + err.Error())
-	}
+	for true {
+		n, err := clusterNodes.Join([]string{"store:8081"})
+		logrus.Info("n", n)
 
-	logrus.Info("n", n)
+		if err == nil {
+			logrus.Warn("JOINED MEMBERLIST CLUSTER")
+			break
+		}
+		time.Sleep(time.Second)
+		logrus.Error("Failed to join cluster: " + err.Error())
+
+	}
 
 	// Ask for members of the cluster
 	for _, member := range clusterNodes.Members() {
@@ -96,7 +102,6 @@ func main() {
 	managerInit()
 
 	go startHttpServer()
-	// var count uint32
 
 	logrus.Warn("starting run.")
 	tick := time.NewTicker(3 * time.Second)

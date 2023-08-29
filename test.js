@@ -51,8 +51,8 @@ export let options = {
   },
 };
 
-let address = "192.168.49.2:30033";
-address = "localhost:8080";
+let address = "192.168.49.2:30000";
+// address = "localhost:8080";
 
 // export function handleSummary(data) {
 //   let output = data;
@@ -61,6 +61,17 @@ address = "localhost:8080";
 //     stdout: textSummary(output, { indent: " ", enableColors: true }),
 //   };
 // }
+
+export function basic() {
+  let addr = `http://${address}`;
+  let baseRes = http.get(addr);
+  check(baseRes, {
+    "Basic: status was 200": (r) =>
+      r.status === 200 || console.error(`Base Error: Status was ${r.status}`),
+  });
+
+  return;
+}
 
 export function panic() {
   let addr = `http://${address}/leader`;
