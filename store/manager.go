@@ -101,10 +101,11 @@ func handleEpochUpdate(currEpoch int64) error {
 		logrus.Error(err)
 		return err
 	}
-	lag := math.MaxInt32
+	minValidEpoch := math.MaxInt32
 	defer func() {
-		if int(currEpoch)-lag > 3 {
-			logrus.Warnf("currently lagging. diff = %d currEpoch = %d", int(currEpoch)-lag, currEpoch)
+		diff := int(currEpoch) - minValidEpoch
+		if diff > 3 {
+			logrus.Warnf("currently lagging. diff = %d currEpoch = %d", diff, currEpoch)
 		}
 	}()
 	for _, partId := range myPartions {
@@ -137,7 +138,7 @@ func handleEpochUpdate(currEpoch int64) error {
 		if lastValidParitionEpochObject != nil {
 			lowerEpoch = lastValidParitionEpochObject.Epoch
 		}
-		lag = min(lag, int(lowerEpoch))
+		minValidEpoch = min(minValidEpoch, int(lowerEpoch))
 		partitionEpochQueue.PushItem(&PartitionEpochItem{
 			epoch:       currEpoch - 2,
 			partitionId: int(partId),
