@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/raft"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 )
 
@@ -192,6 +193,7 @@ func epochHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func startHttpServer() {
+	initProm()
 	http.HandleFunc("/", baseHandler)
 	http.HandleFunc("/set", setHandler)
 	http.HandleFunc("/get", getHandler)
@@ -201,6 +203,7 @@ func startHttpServer() {
 	http.HandleFunc("/bootstrap", bootstrapHandler)
 	http.HandleFunc("/remove", removeHandler)
 	http.HandleFunc("/epoch", epochHandler)
+	http.Handle("/metrics", promhttp.Handler())
 
 	logrus.Info("Server is running on http://localhost:8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
