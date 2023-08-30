@@ -18,7 +18,7 @@ var (
 	defaultTimeout   time.Duration = 2 * time.Second
 	partitionBuckets int           = 500
 	partitionCount   int           = 100
-	epochTime        time.Duration = 60 * time.Second
+	epochTime        time.Duration = 10 * time.Second
 	dataPath         string        = "/store"
 	raftLogs         bool          = false
 	autoBootStrap    bool          = true
@@ -50,11 +50,7 @@ func GetConf() (*memberlist.Config, *MyDelegate, *MyEventDelegate) {
 	conf.Delegate = delegate
 	conf.Events = events
 
-	localIp, err := getLocalIP()
-	if err != nil {
-		logrus.Fatal(err)
-	}
-	conf.Name = localIp
+	conf.Name = hostname
 
 	return conf, delegate, events
 }

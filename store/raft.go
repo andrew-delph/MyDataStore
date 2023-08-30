@@ -49,6 +49,26 @@ func MakeRaftConf(localIp string) *raft.Config {
 	return conf
 }
 
+func UpdateEpoch() error {
+	logrus.Warnf("Leader Update Epoch. Epoch = %d", globalEpoch+1)
+
+	epochBytes, err := EncodeInt64ToBytes(globalEpoch + 1)
+	if err != nil {
+		logrus.Errorf("EncodeInt64ToBytes Err= %v", err)
+		return err
+	}
+	logEntry := raftNode.Apply(epochBytes, defaultTimeout)
+	err = logEntry.Error()
+
+	if err == nil {
+		// logrus.Warnf("Leader Update Epoch. Epoch = %d", currEpoch)
+	} else {
+		logrus.Warnf("update fsm Err= %v", err)
+	}
+	logrus.Debugf("Done.")
+	return err
+}
+
 func (fsm *FSM) Apply(logEntry *raft.Log) interface{} {
 	applyLock.Lock()
 	defer applyLock.Unlock()
@@ -59,7 +79,7 @@ func (fsm *FSM) Apply(logEntry *raft.Log) interface{} {
 	}
 	fsm.Epoch = epoch
 
-	logrus.Debugf("E = %d state = %s fsm.index = %d last = %d applied = %d name = %s", epoch, raftNode.State(), logEntry.Index, raftNode.LastIndex(), raftNode.AppliedIndex(), conf.Name)
+	logrus.Warnf(" E = %d state = %s fsm.index = %d last = %d applied = %d name = %s", epoch, raftNode.State(), logEntry.Index, raftNode.LastIndex(), raftNode.AppliedIndex(), conf.Name)
 
 	if logEntry.Index == raftNode.AppliedIndex() {
 		validFSMObserver <- true
@@ -239,6 +259,7 @@ func RaftBootstrap() error {
 func RaftTryLead() error {
 	err := RaftBootstrap()
 	if err != nil {
+		logrus.Errorf("RaftBootstrap err = %v", err)
 		return err
 	}
 	succ := ""
@@ -250,7 +271,7 @@ func RaftTryLead() error {
 			logrus.Errorf("RaftTryLead AddVoter: %v", err)
 			return nil
 		} else {
-			succ = fmt.Sprintf("%s,%d", succ, i)
+			logrus.Warnf("%s,%d", succ, i)
 		}
 		// }(node)
 	}
@@ -291,17 +312,6 @@ func RemoveServer(otherAddr string) error {
 	otherRaftAddr := fmt.Sprintf("%s:7000", otherAddr)
 	logrus.Warn("RemoveServer otherRaftAddr ", otherRaftAddr)
 
-	// raftLock.Lock()         // Lock the critical section
-	// defer raftLock.Unlock() // Ensure the lock is released once the function completes
-
-	// err = raftNode.DemoteVoter(raft.ServerID(otherRaftAddr), raftNode.GetConfiguration().Index(), defaultTimeout).Error()
-	// if err != nil {
-	// 	for i := 0; i < 100; i++ {
-	// 		logrus.Warn("DemoteVoter ", err)
-	// 	}
-	// 	return err
-	// }
-
 	// raftNode.GetConfiguration().Index()
 	err = raftNode.RemoveServer(raft.ServerID(otherRaftAddr), 0, 0).Error()
 	if err != nil {
@@ -310,28 +320,6 @@ func RemoveServer(otherAddr string) error {
 		}
 		return err
 	}
-
-	// err = raftNode.ReloadConfig(raftNode.ReloadableConfig())
-	// if err != nil {
-	// 	for i := 0; i < 100; i++ {
-	// 		logrus.Warn("ReloadConfig ", err)
-	// 	}
-	// 	return err
-	// }
-
-	// servers := raftNode.GetConfiguration().Configuration()
-
-	// for i := 0; i < 100; i++ {
-	// 	logrus.Warn("servers ", servers)
-	// }
-
-	// err = raft.RecoverCluster(raftConf, &FSM{}, logStore, stableStore, snapshotStore, trans, raftNode.GetConfiguration().Configuration())
-	// if err != nil {
-	// 	for i := 0; i < 100; i++ {
-	// 		logrus.Warn("RecoverCluster ", err)
-	// 	}
-	// 	return err
-	// }
 
 	return err
 }
@@ -345,25 +333,5 @@ func Snapshot() error {
 	if err != nil {
 		logrus.Error("Snapshot Error ", err)
 	}
-	return err
-}
-
-func UpdateEpoch() error {
-	logrus.Infof("Leader Update Epoch. Epoch = %d", globalEpoch+1)
-
-	epochBytes, err := EncodeInt64ToBytes(globalEpoch + 1)
-	if err != nil {
-		logrus.Errorf("EncodeInt64ToBytes Err= %v", err)
-		return err
-	}
-	logEntry := raftNode.Apply(epochBytes, defaultTimeout)
-	err = logEntry.Error()
-
-	if err == nil {
-		// logrus.Warnf("Leader Update Epoch. Epoch = %d", currEpoch)
-	} else {
-		logrus.Warnf("update fsm Err= %v", err)
-	}
-	logrus.Debugf("Done.")
 	return err
 }

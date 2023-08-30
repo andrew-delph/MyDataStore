@@ -27,10 +27,10 @@ func managerInit() {
 
 	for {
 		if len(events.nodes) > N {
-			logrus.Warnf("Manger Ready.")
+			logrus.Warnf("Manager Ready.")
 			break
 		}
-		logrus.Warnf("Manger not Ready. Sleeping...")
+		logrus.Warnf("Manager not Ready. Sleeping...")
 		time.Sleep(time.Second * 5)
 	}
 
