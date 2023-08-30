@@ -23,6 +23,9 @@ case $1 in
     e2e)
         k6 run test.js
         ;;
+    test)
+        ibazel test --test_output=errors //store:go_default_test
+        ;;
     deps)
         ./update_deps.sh
         ;;

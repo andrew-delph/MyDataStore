@@ -18,7 +18,7 @@
 
 # TEST
 
-ibazel test --test_output=errors //store:go_default_test
+./dev test
 
 ibazel run --test_output=errors //store:go_default_test --test_arg=-test.run=TestStore
 
