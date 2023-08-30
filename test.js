@@ -54,13 +54,13 @@ export let options = {
 let address = "192.168.49.2:30000";
 // address = "localhost:8080";
 
-// export function handleSummary(data) {
-//   let output = data;
-//   delete output.metrics;
-//   return {
-//     stdout: textSummary(output, { indent: " ", enableColors: true }),
-//   };
-// }
+export function handleSummary(data) {
+  let output = data;
+  delete output.metrics;
+  return {
+    stdout: textSummary(output, { indent: " ", enableColors: true }),
+  };
+}
 
 export function basic() {
   let addr = `http://${address}`;
@@ -142,12 +142,12 @@ export function remove() {
   return;
 }
 
-options = { duration: "2h", vus: 1 };
-options = { iterations: 1, vus: 1 };
+// options = { duration: "2h", vus: 1 };
+// options = { iterations: 1, vus: 1 };
 export default function () {
-  panic();
+  // panic();
   // sleep(4);
-  return;
+  // return;
   // bootstrap();
   // sleep(15);
 

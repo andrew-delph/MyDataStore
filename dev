@@ -2,22 +2,26 @@
 
 # Check for required argument
 if [ "$#" -ne 1 ]; then
-    echo "Usage: $0 <dc|k8>"
+    echo "Usage: $0 <arg>"
     exit 1
 fi
 
 # Choose the command based on the argument
 case $1 in
     dc)
-        # Replace with the actual command you want to execute for "dc"
         tmuxinator start -p ./.tmuxinator/tmuxinator-dc.yaml
         ;;
     k8)
-        # Replace with the actual command you want to execute for "k8"
         tmuxinator start -p ./.tmuxinator/tmuxinator-k8.yaml
         ;;
+    e2e)
+        k6 run test.js
+        ;;
+    deps)
+        bazel run //:gazelle -- update-repos -from_file="store/go.mod" -to_macro=repositories.bzl%go_repositories -prune
+        ;;
     *)
-        echo "Invalid argument. Please provide either 'dc' or 'k8'."
+        echo "Invalid argument."
         exit 1
         ;;
 esac

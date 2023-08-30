@@ -1,6 +1,6 @@
 # UPDATE GO DEPS
 
-bazel run //:gazelle -- update-repos -from_file="store/go.mod" -to_macro=repositories.bzl%go_repositories -prune
+./dev deps
 
 # DOCKER-COMPOSE DEV
 
@@ -9,6 +9,10 @@ bazel run //:gazelle -- update-repos -from_file="store/go.mod" -to_macro=reposit
 # KUBERNETES DEV
 
 ./dev k8
+
+# E2E
+
+./dev e2e
 
 # TEST
 
