@@ -60,8 +60,6 @@ func (events *MyEventDelegate) NotifyLeave(node *memberlist.Node) {
 		logrus.Errorf("remove server err = %v", err)
 		return
 	}
-	// Snapshot()
-	logrus.Warn("RemoveServer SUCCESS")
 
 	// myPartions, err = GetMemberPartions(events.consistent, conf.Name)
 	// if err != nil {

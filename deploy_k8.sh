@@ -28,23 +28,23 @@ while getopts ":r" opt; do
   esac
 done
 
-# Check if the rollout flag was set
+
+SECONDS=0  # Reset the SECONDS variable
+
+
 if [ $ROLL_OUT_FLAG -eq 0 ]; then
-    echo "The 'rollout' flag is not set. Setting up and exiting."
+    echo "The 'rollout' flag is not set. Setting up."
     kubectl create -f ./resources/store.yaml
-    exit 1
+else
+    echo "The 'rollout' flag is set."
+    kubectl patch statefulset $STATEFULSET_NAME -n $NAMESPACE --type='json' -p='[{"op": "replace", "path": "/spec/template/spec/containers/0/readinessProbe/httpGet/path", "value": "/health"}]'
+    kubectl rollout restart statefulset/store
 fi
-
-
-
-# kubectl patch statefulset $STATEFULSET_NAME -n $NAMESPACE --type='json' -p='[{"op": "replace", "path": "/spec/template/spec/containers/0/readinessProbe/httpGet/path", "value": "/health"}]'
-# exit 1
-
-kubectl rollout restart statefulset/store
 
 kubectl rollout status statefulset/store -w 
 
 echo "Rollout complete!"
+echo "Elapsed time: $SECONDS seconds"
 
 
 

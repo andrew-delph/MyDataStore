@@ -19,8 +19,8 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	logrus.Debugf("handling /health for %s validFSM = %v", hostname, validFSM)
 	// if validFSM && raftNode.Leader() != "" {
 	// if raftNode.Leader() != "" {
-	if validFSM {
-		fmt.Fprint(w, "validFSM")
+	if (raftNode.State() == raft.Follower || raftNode.State() == raft.Leader) && raftNode.Leader() != "" {
+		fmt.Fprintf(w, "validFSM %s", raftNode.State())
 	} else {
 		http.Error(w, "not validFSM", http.StatusBadRequest)
 		// RaftTryLead()

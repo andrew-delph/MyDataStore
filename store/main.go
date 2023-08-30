@@ -113,15 +113,15 @@ func main() {
 
 			if raftNode.Leader() == "" {
 				err := raftNode.VerifyLeader().Error()
-				logrus.Warnf("NO LEADER! state = %s ME = %s num_peers = %v VerifyLeader = %v", raftNode.State(), conf.Name, raftNode.Stats()["num_peers"], err)
+				logrus.Warnf("NO LEADER! state = %s num_peers = %v VerifyLeader = %v", raftNode.State(), raftNode.Stats()["num_peers"], err)
 				if autoBootStrap {
 					RaftTryLead()
 				}
 			} else {
-				logrus.Warnf("state = %s ME = %s num_peers = %v", raftNode.State(), conf.Name, raftNode.Stats()["num_peers"])
+				logrus.Warnf("state = %s num_peers = %v", raftNode.State(), raftNode.Stats()["num_peers"])
 			}
 			if raftNode.State() != raft.Leader && raftNode.State() != raft.Follower {
-				logrus.Warnf("BAD state = %s ME = %s", raftNode.State(), conf.Name)
+				logrus.Warnf("BAD state = %s num_peers = %v", raftNode.State(), raftNode.Stats()["num_peers"])
 			}
 
 		case <-epochTick.C:

@@ -20,8 +20,8 @@ var (
 	partitionCount   int           = 100
 	epochTime        time.Duration = 150 * time.Second
 	dataPath         string        = "/store"
-	raftLogs         bool          = true
-	autoBootStrap    bool          = false
+	raftLogs         bool          = false
+	autoBootStrap    bool          = true
 )
 
 func GetConf() (*memberlist.Config, *MyDelegate, *MyEventDelegate) {
