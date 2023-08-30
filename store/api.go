@@ -11,8 +11,21 @@ import (
 )
 
 func baseHandler(w http.ResponseWriter, r *http.Request) {
-	logrus.Warnf("handling / for %s", hostname)
+	logrus.Debugf("handling / for %s", hostname)
 	fmt.Fprint(w, "server is running")
+}
+
+func healthHandler(w http.ResponseWriter, r *http.Request) {
+	logrus.Debugf("handling /health for %s validFSM = %v", hostname, validFSM)
+	// if validFSM && raftNode.Leader() != "" {
+	// if raftNode.Leader() != "" {
+	if validFSM {
+		fmt.Fprint(w, "validFSM")
+	} else {
+		http.Error(w, "not validFSM", http.StatusBadRequest)
+		// RaftTryLead()
+		// AddAllMembers()
+	}
 }
 
 func setHandler(w http.ResponseWriter, r *http.Request) {
@@ -124,40 +137,40 @@ func bootstrapHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func removeHandler(w http.ResponseWriter, r *http.Request) {
-	curr := raftNode.State()
+// func removeHandler(w http.ResponseWriter, r *http.Request) {
+// 	curr := raftNode.State()
 
-	if curr == raft.Leader {
-		// 172.26.0.2
-		members := events.consistent.GetMembers()
+// 	if curr == raft.Leader {
+// 		// 172.26.0.2
+// 		members := events.consistent.GetMembers()
 
-		logrus.Warnf("TO_REMOVE = %s MINE = %s", members[0].String(), conf.Name)
-		if members[0].String() == conf.Name {
-			logrus.Warnf("USING NEXT!!! TO_REMOVE = %s MINE = %s", members[1].String(), conf.Name)
-			RemoveServer(members[1].String())
-		} else {
-			RemoveServer(members[0].String())
-		}
+// 		logrus.Warnf("TO_REMOVE = %s MINE = %s", members[0].String(), conf.Name)
+// 		if members[0].String() == conf.Name {
+// 			logrus.Warnf("USING NEXT!!! TO_REMOVE = %s MINE = %s", members[1].String(), conf.Name)
+// 			RemoveServer(members[1].String())
+// 		} else {
+// 			RemoveServer(members[0].String())
+// 		}
 
-		fmt.Fprintf(w, "Recieved panic.")
-	} else {
-		hijacker, ok := w.(http.Hijacker)
-		if !ok {
-			http.Error(w, "Server doesn't support hijacking", http.StatusInternalServerError)
-			return
-		}
+// 		fmt.Fprintf(w, "Recieved panic.")
+// 	} else {
+// 		hijacker, ok := w.(http.Hijacker)
+// 		if !ok {
+// 			http.Error(w, "Server doesn't support hijacking", http.StatusInternalServerError)
+// 			return
+// 		}
 
-		// Hijack the connection
-		conn, _, err := hijacker.Hijack()
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Connection hijacking failed: %v", err), http.StatusInternalServerError)
-			return
-		}
+// 		// Hijack the connection
+// 		conn, _, err := hijacker.Hijack()
+// 		if err != nil {
+// 			http.Error(w, fmt.Sprintf("Connection hijacking failed: %v", err), http.StatusInternalServerError)
+// 			return
+// 		}
 
-		// Close the connection
-		conn.Close()
-	}
-}
+// 		// Close the connection
+// 		conn.Close()
+// 	}
+// }
 
 func epochHandler(w http.ResponseWriter, r *http.Request) {
 	curr := raftNode.State()
@@ -195,13 +208,14 @@ func epochHandler(w http.ResponseWriter, r *http.Request) {
 
 func startHttpServer() {
 	http.HandleFunc("/", baseHandler)
+	http.HandleFunc("/health", healthHandler)
 	http.HandleFunc("/set", setHandler)
 	http.HandleFunc("/get", getHandler)
 	http.HandleFunc("/panic", panicHandler)
 	http.HandleFunc("/leader", leaderHandler)
 	http.HandleFunc("/follower", followerHandler)
 	http.HandleFunc("/bootstrap", bootstrapHandler)
-	http.HandleFunc("/remove", removeHandler)
+	// http.HandleFunc("/remove", removeHandler)
 	http.HandleFunc("/epoch", epochHandler)
 	http.Handle("/metrics", promhttp.Handler())
 

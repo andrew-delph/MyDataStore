@@ -143,11 +143,12 @@ export function remove() {
 }
 
 // options = { duration: "2h", vus: 1 };
-// options = { iterations: 1, vus: 1 };
+options = { iterations: 1, vus: 1 };
 export default function () {
   // panic();
   // sleep(4);
-  // return;
+  leader();
+  return;
   // bootstrap();
   // sleep(15);
 

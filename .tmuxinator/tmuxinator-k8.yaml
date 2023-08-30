@@ -1,12 +1,12 @@
 name: k8_dev
 
-on_project_start: minikube start
+on_project_start: minikube start && ./deploy_k8.sh
 
 windows:
   - editor:
       layout: tiled
       panes:
-        - ibazel -run_command_after_success='./deploy_k8.sh' build //store:store_image
+        - sleep 60 && ibazel -run_command_after_success='./deploy_k8.sh -r' -debounce='10s' build //store:store_image
         -
-        - stern statefulset/store
+        - while true; do stern statefulset/store; done
         -

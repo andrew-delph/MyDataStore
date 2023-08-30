@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
 	raftboltdb "github.com/hashicorp/raft-boltdb"
 	"github.com/sirupsen/logrus"
@@ -31,11 +32,17 @@ var validFSMObserver = make(chan bool, 1)
 
 var epochObserver = make(chan int64, 10000) // TODO: dont want to miss any updates right now. come up with better solution.
 
-func MakeRaftConf(localIp string) *raft.Config {
+func MakeRaftConf() *raft.Config {
 	conf := raft.DefaultConfig()
-	conf.LocalID = raft.ServerID(fmt.Sprintf("%s:7000", localIp))
+	conf.LocalID = raft.ServerID(hostname)
 	// conf.SnapshotInterval = time.Second * 1
 	// conf.SnapshotThreshold = 1
+	logrus.Warn("conf.ElectionTimeout ", conf.ElectionTimeout)
+	logrus.Warn("conf.HeartbeatTimeout ", conf.HeartbeatTimeout)
+	logrus.Warn("conf.LeaderLeaseTimeout ", conf.LeaderLeaseTimeout)
+	logrus.Warn("conf.CommitTimeout ", conf.CommitTimeout)
+	logrus.Warn("conf.SnapshotInterval ", conf.SnapshotInterval)
+	logrus.Warn("conf.SnapshotThreshold ", conf.SnapshotThreshold)
 
 	if !raftLogs {
 		raftLogger := hclog.New(&hclog.LoggerOptions{
@@ -79,7 +86,7 @@ func (fsm *FSM) Apply(logEntry *raft.Log) interface{} {
 	}
 	fsm.Epoch = epoch
 
-	logrus.Warnf(" E = %d state = %s fsm.index = %d last = %d applied = %d name = %s", epoch, raftNode.State(), logEntry.Index, raftNode.LastIndex(), raftNode.AppliedIndex(), conf.Name)
+	logrus.Warnf("E= %d state= %s name= %s", epoch, raftNode.State(), conf.Name)
 
 	if logEntry.Index == raftNode.AppliedIndex() {
 		validFSMObserver <- true
@@ -163,12 +170,12 @@ func SetupRaft() {
 		logrus.Infof("hostname='%s'", hostname)
 	}
 
-	localIp, err := getLocalIP()
-	if err != nil {
-		logrus.Fatal("getLocalIP failed", err)
-	} else {
-		logrus.Warnf("localIp='%s'", localIp)
-	}
+	// localIp, err := getLocalIP()
+	// if err != nil {
+	// 	logrus.Fatal("getLocalIP failed", err)
+	// } else {
+	// 	logrus.Warnf("localIp='%s'", localIp)
+	// }
 
 	raftDir = fmt.Sprintf("/store/raft/raft_%s", hostname)
 
@@ -180,7 +187,7 @@ func SetupRaft() {
 		logrus.Fatal(err)
 	}
 
-	raftBindAddr = fmt.Sprintf("%s:7000", localIp)
+	raftBindAddr = fmt.Sprintf("%s:7000", hostname)
 	advertiseAddr, err := net.ResolveTCPAddr("tcp", raftBindAddr)
 	if err != nil {
 		logrus.Fatal(err)
@@ -204,9 +211,7 @@ func SetupRaft() {
 	}
 
 	// Create a configuration for raftNode1
-	raftConf = MakeRaftConf(localIp)
-
-	logrus.Warnf("raftConf.SnapshotInterval %v", raftConf.SnapshotInterval)
+	raftConf = MakeRaftConf()
 
 	if trans != nil {
 		err = trans.Close()
@@ -223,7 +228,7 @@ func SetupRaft() {
 
 	fsm := &FSM{} // Your state machine instance
 	// Create raftNode
-	raftNode, err = raft.NewRaft(raftConf, fsm, logStore, stableStore, snapshotStore, trans)
+	raftNode, err = raft.NewRaft(raftConf, fsm, logStore, logStore, snapshotStore, trans)
 	if err != nil {
 		logrus.Fatal(err)
 	}
@@ -262,11 +267,12 @@ func RaftTryLead() error {
 		logrus.Errorf("RaftBootstrap err = %v", err)
 		return err
 	}
+	logrus.Warn("BOOTSTRAP SUCCESS")
 	succ := ""
 	for i, node := range clusterNodes.Members() {
 		// logrus.Warnf("node name = %s addr = %s", node.Name, node.Addr.String())
 		// go func(node *memberlist.Node) {
-		err := AddVoter(node.Name)
+		err := AddVoter(node)
 		if err != nil {
 			logrus.Errorf("RaftTryLead AddVoter: %v", err)
 			return nil
@@ -280,40 +286,30 @@ func RaftTryLead() error {
 
 // var raftLock sync.Mutex
 
-func AddVoter(otherAddr string) error {
+func AddVoter(node *memberlist.Node) error {
 	err := raftNode.VerifyLeader().Error()
 	if err != nil {
-		return err
+		return nil
 	}
 
-	// raftLock.Lock()         // Lock the critical section
-	// defer raftLock.Unlock() // Ensure the lock is released once the function completes
-
-	otherRaftAddr := fmt.Sprintf("%s:7000", otherAddr)
+	otherRaftAddr := fmt.Sprintf("%s:7000", node.Addr)
 	logrus.Debugf("AddVoter otherRaftAddr %s", otherRaftAddr)
 
-	// if raftNode.AppliedIndex() > 20 {
-	// 	addVoterFuture := raftNode.AddVoter(config2.LocalID, raft.ServerAddress(otherAddr), raftNode.AppliedIndex(), time.Second)
-	// 	return addVoterFuture.Error()
-	// } else {
-	// 	addVoterFuture := raftNode.AddVoter(config2.LocalID, raft.ServerAddress(otherAddr), 0, time.Second)
-	// 	return addVoterFuture.Error()
-	// }
-	addVoterFuture := raftNode.AddVoter(raft.ServerID(otherRaftAddr), raft.ServerAddress(otherRaftAddr), 0, 0)
+	addVoterFuture := raftNode.AddVoter(raft.ServerID(node.Name), raft.ServerAddress(otherRaftAddr), 0, 0)
 	return addVoterFuture.Error()
 }
 
-func RemoveServer(otherAddr string) error {
+func RemoveServer(node *memberlist.Node) error {
 	err := raftNode.VerifyLeader().Error()
 	if err != nil {
-		return err
+		return nil
 	}
 
-	otherRaftAddr := fmt.Sprintf("%s:7000", otherAddr)
-	logrus.Warn("RemoveServer otherRaftAddr ", otherRaftAddr)
+	// otherRaftAddr := fmt.Sprintf("%s:7000", node.Addr)
+	// logrus.Warn("RemoveServer otherRaftAddr ", otherRaftAddr)
 
 	// raftNode.GetConfiguration().Index()
-	err = raftNode.RemoveServer(raft.ServerID(otherRaftAddr), 0, 0).Error()
+	err = raftNode.RemoveServer(raft.ServerID(node.Name), 0, 0).Error()
 	if err != nil {
 		for i := 0; i < 100; i++ {
 			logrus.Warn("RemoveServer ", err)
@@ -334,4 +330,14 @@ func Snapshot() error {
 		logrus.Error("Snapshot Error ", err)
 	}
 	return err
+}
+
+func AddAllMembers() {
+	for _, node := range clusterNodes.Members() {
+		err := AddVoter(node)
+		if err != nil {
+			logrus.Errorf("LeaderCh AddVoter: %v", err)
+			continue
+		}
+	}
 }

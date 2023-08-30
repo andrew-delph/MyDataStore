@@ -44,7 +44,8 @@ var store Store
 var globalEpoch int64 = 0
 
 func main() {
-	// time.Sleep(20 * time.Second)
+	// logrus.Warn("sleeping 1000 seconds.")
+	// time.Sleep(1000 * time.Second)
 
 	go StartInterGrpcServer()
 	logrus.SetLevel(logrus.WarnLevel)
@@ -79,6 +80,8 @@ func main() {
 		logrus.Panic("Failed to create memberlist: " + err.Error())
 	}
 
+	go startHttpServer()
+
 	// Join an existing cluster by specifying at least one known member.
 	for true {
 		n, err := clusterNodes.Join([]string{"store:8081"})
@@ -89,7 +92,7 @@ func main() {
 			break
 		}
 		time.Sleep(time.Second)
-		logrus.Error("Failed to join cluster: " + err.Error())
+		logrus.Errorf("Failed to join cluster: my_addr = %v err = %v", clusterNodes.LocalNode().Addr, err)
 
 	}
 
@@ -101,19 +104,21 @@ func main() {
 	epochTick := time.NewTicker(epochTime)
 	managerInit()
 
-	go startHttpServer()
-
 	logrus.Warn("starting run.")
 	tick := time.NewTicker(3 * time.Second)
 	run := true
 	for run {
 		select {
 		case <-tick.C:
+
 			if raftNode.Leader() == "" {
-				logrus.Warnf("NO LEADER! state = %s ME = %s err = %v", raftNode.State(), conf.Name, nil) // RaftTryLead()
+				err := raftNode.VerifyLeader().Error()
+				logrus.Warnf("NO LEADER! state = %s ME = %s num_peers = %v VerifyLeader = %v", raftNode.State(), conf.Name, raftNode.Stats()["num_peers"], err)
 				if autoBootStrap {
 					RaftTryLead()
 				}
+			} else {
+				logrus.Warnf("state = %s ME = %s num_peers = %v", raftNode.State(), conf.Name, raftNode.Stats()["num_peers"])
 			}
 			if raftNode.State() != raft.Leader && raftNode.State() != raft.Follower {
 				logrus.Warnf("BAD state = %s ME = %s", raftNode.State(), conf.Name)
@@ -142,13 +147,7 @@ func main() {
 			if !isLeader {
 				continue
 			}
-			for _, node := range clusterNodes.Members() {
-				err := AddVoter(node.Name)
-				if err != nil {
-					logrus.Errorf("LeaderCh AddVoter: %v", err)
-					break
-				}
-			}
+			AddAllMembers()
 		}
 	}
 

@@ -32,7 +32,7 @@ func (events *MyEventDelegate) NotifyJoin(node *memberlist.Node) {
 
 	events.nodes[node.Name] = node
 	var err error
-	err = AddVoter(node.Address())
+	err = AddVoter(node)
 	if err != nil {
 		logrus.Errorf("add voter err = %v", err)
 	}
@@ -55,13 +55,13 @@ func (events *MyEventDelegate) NotifyLeave(node *memberlist.Node) {
 	delete(events.nodes, node.Name)
 	var err error
 
-	err = RemoveServer(node.Address())
+	err = RemoveServer(node)
 	if err != nil {
 		logrus.Errorf("remove server err = %v", err)
 		return
 	}
 	// Snapshot()
-	logrus.Warn("SUCCESS")
+	logrus.Warn("RemoveServer SUCCESS")
 
 	// myPartions, err = GetMemberPartions(events.consistent, conf.Name)
 	// if err != nil {

@@ -14,6 +14,9 @@ case $1 in
     k8)
         tmuxinator start -p ./.tmuxinator/tmuxinator-k8.yaml
         ;;
+    k8!)
+        tmux kill-session -t k8_dev
+        ;;
     e2e)
         k6 run test.js
         ;;

@@ -26,11 +26,11 @@ func managerInit() {
 	logrus.Warn("managerInit")
 
 	for {
-		if len(events.nodes) > N {
+		if len(events.nodes) >= N {
 			logrus.Warnf("Manager Ready.")
 			break
 		}
-		logrus.Warnf("Manager not Ready. Sleeping...")
+		logrus.Warnf("Manager: not enough nodes = %d need %d. Sleeping...", len(events.nodes), N)
 		time.Sleep(time.Second * 5)
 	}
 
@@ -78,12 +78,12 @@ func managerInit() {
 				// 	logrus.Errorf("handleEpochUpdate err = %v", err)
 				// }
 
-				go func(currEpoch int64) {
-					err := handleEpochUpdate(currEpoch)
-					if err != nil {
-						logrus.Errorf("handleEpochUpdate err = %v", err)
-					}
-				}(globalEpoch)
+				// go func(currEpoch int64) {
+				// 	err := handleEpochUpdate(currEpoch)
+				// 	if err != nil {
+				// 		logrus.Errorf("handleEpochUpdate err = %v", err)
+				// 	}
+				// }(globalEpoch)
 			}
 		}
 	}()
