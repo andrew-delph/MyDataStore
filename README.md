@@ -8,6 +8,8 @@
 
 # KUBERNETES DEV
 
+minikube start && ./deploy_k8.sh
+
 ./dev k8
 
 # E2E
