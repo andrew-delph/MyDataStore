@@ -6,7 +6,7 @@ windows:
   - editor:
       layout: tiled
       panes:
-        - sleep 60 && ibazel -run_command_after_success='./deploy_k8.sh -r' -debounce='10s' build //store:store_image
+        - ibazel -run_command_after_success='./deploy_k8.sh -r' -debounce='10s' build //store:store_image
         -
         - while true; do stern statefulset/store; done
         -
