@@ -324,7 +324,7 @@ func verifyPartitionEpochTree(partitionEpochObject *datap.PartitionEpochObject) 
 				logrus.Debug("bucketsDiff ", bucketsDiff)
 				unsyncedCh <- &UnsyncedBuckets{Addr: addr, Diff: &bucketsDiff, Buckets: &otherPartitionEpochObject.Buckets}
 			}
-		}(node.String())
+		}(node.addr)
 	}
 
 	timeout := time.After(time.Second * 40)

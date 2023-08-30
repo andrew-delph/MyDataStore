@@ -28,7 +28,7 @@ func GetMyEventDelegate() *MyEventDelegate {
 func (events *MyEventDelegate) NotifyJoin(node *memberlist.Node) {
 	logrus.Infof("join %s", node.Name)
 
-	AddNode(events.consistent, node.Name)
+	AddNode(events.consistent, node)
 
 	events.nodes[node.Name] = node
 	var err error
@@ -50,7 +50,7 @@ func (events *MyEventDelegate) NotifyJoin(node *memberlist.Node) {
 func (events *MyEventDelegate) NotifyLeave(node *memberlist.Node) {
 	logrus.Infof("leave %s", node.Name)
 
-	RemoveNode(events.consistent, node.Name)
+	RemoveNode(events.consistent, node)
 
 	delete(events.nodes, node.Name)
 	var err error

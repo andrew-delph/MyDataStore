@@ -1,4 +1,5 @@
 {
+  "files.autoSave": "off",
   "cSpell.words": ["predeploy", "pubspec"],
   "search.useIgnoreFiles": true,
   "editor.formatOnSave": true,

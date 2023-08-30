@@ -58,7 +58,7 @@ func SendSetMessage(key, value string) error {
 	errorCh := make(chan error, N)
 
 	for _, node := range nodes {
-		go SendSetMessageNode(node.String(), setReqMsg, responseCh, errorCh)
+		go SendSetMessageNode(node.addr, setReqMsg, responseCh, errorCh)
 	}
 
 	timeout := time.After(defaultTimeout)
@@ -113,7 +113,7 @@ func SendGetMessage(key string) (string, error) {
 			} else {
 				resCh <- &Res{Value: res, Addr: addr}
 			}
-		}(i, node.String())
+		}(i, node.addr)
 	}
 
 	timeout := time.After(defaultTimeout)

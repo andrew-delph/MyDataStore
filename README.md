@@ -8,7 +8,7 @@
 
 # KUBERNETES DEV
 
-minikube start && ./deploy_k8.sh
+./dev k8-init
 
 ./dev k8
 

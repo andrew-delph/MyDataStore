@@ -142,36 +142,15 @@ export function remove() {
   return;
 }
 
-// options = { duration: "2h", vus: 1 };
-options = { iterations: 1, vus: 1 };
+options = { duration: "2h", vus: 4 };
+// options = { iterations: 1, vus: 1 };
 export default function () {
-  // panic();
-  // sleep(4);
-  leader();
-  return;
-  // bootstrap();
-  // sleep(15);
-
-  // epoch();
-  // sleep(10);
-  // epoch();
-  // sleep(10);
-
-  // follower();
-  // sleep(10);
-
-  // epoch();
-  // sleep(10);
-  // epoch();
-  // // sleep(20);
+  // leader();
   // return;
 
   // the key value to insert
   let key = randomString(15);
   let value = randomString(15);
-
-  // key = "key1";
-  // value = "value1";
 
   // Set a value to the map
   let setRes = http.get(`http://${address}/set?key=${key}&value=${value}`);
@@ -190,36 +169,11 @@ export default function () {
       r.status === 200 ||
       console.error(`Get Error: Status was ${r.status} body = ${r.body}`),
     "Get: body contains testValue": (r) =>
-      (value && r.body.indexOf(value) !== -1) ||
+      (r.body && r.body.indexOf(value) !== -1) ||
       console.error(
         `Get Error: Body does not contain ${value}. body = ${r.body}`
       ),
   });
-
-  // sleep(15);
-
-  // // Get a value from the map
-  // getRes = http.get(`http://${address}/get?key=${key}`);
-  // check(getRes, {
-  //   "Get2: status was 200": (r) =>
-  //     r.status === 200 ||
-  //     console.error(`Get Error: Status was ${r.status} body = ${r.body}`),
-  //   "Get2: body contains testValue": (r) =>
-  //     r.body.indexOf(value) !== -1 ||
-  //     console.error(
-  //       `Get Error: Body does not contain ${value}. body = ${r.body}`
-  //     ),
-  // });
-
-  // console.log("getRes.body", getRes.body);
-
-  // // List all values from the map
-  // let listRes = http.get(`http://${address}/list`);
-
-  // console.log("listRes:", listRes.body);
-  // check(listRes, {
-  //   "List: status was 200": (r) => r.status === 200,
-  // });
 }
 
 export function disrupt() {

@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/buraksezer/consistent"
 	"github.com/cespare/xxhash"
+	"github.com/hashicorp/memberlist"
 )
 
 var hashRingConf = consistent.Config{
@@ -18,10 +19,13 @@ func (h hasher) Sum64(data []byte) uint64 {
 	return xxhash.Sum64(data)
 }
 
-type HashRingMember string
+type HashRingMember struct {
+	name string
+	addr string
+}
 
 func (m HashRingMember) String() string {
-	return string(m)
+	return string(m.name)
 }
 
 func GetHashRing() *consistent.Consistent {
@@ -29,13 +33,13 @@ func GetHashRing() *consistent.Consistent {
 	return hashring
 }
 
-func AddNode(hashring *consistent.Consistent, nodeName string) {
-	member := HashRingMember(nodeName)
+func AddNode(hashring *consistent.Consistent, node *memberlist.Node) {
+	member := HashRingMember{name: node.Name, addr: string(node.Addr)}
 	hashring.Add(member)
 }
 
-func RemoveNode(hashring *consistent.Consistent, member string) {
-	hashring.Remove(member)
+func RemoveNode(hashring *consistent.Consistent, node *memberlist.Node) {
+	hashring.Remove(node.Name)
 }
 
 func FindPartitionID(hashring *consistent.Consistent, key string) int {

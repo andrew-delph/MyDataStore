@@ -11,6 +11,9 @@ case $1 in
     dc)
         tmuxinator start -p ./.tmuxinator/tmuxinator-dc.yaml
         ;;
+    k8-init)
+        minikube delete && minikube start && ./deploy_k8.sh
+        ;;
     k8)
         tmuxinator start -p ./.tmuxinator/tmuxinator-k8.yaml
         ;;
