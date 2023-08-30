@@ -34,7 +34,7 @@ func GetHashRing() *consistent.Consistent {
 }
 
 func AddNode(hashring *consistent.Consistent, node *memberlist.Node) {
-	member := HashRingMember{name: node.Name, addr: string(node.Addr)}
+	member := HashRingMember{name: node.Name, addr: node.Addr.String()}
 	hashring.Add(member)
 }
 

@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/memberlist"
 	"github.com/serialx/hashring"
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 )
 
 var totalKeys = 1000
@@ -48,14 +49,9 @@ func TestHashRing2(t *testing.T) {
 			t.Error("Recovered from panic:", r)
 		}
 	}()
-	// using hashring.go
 
 	c1 := GetHashRing()
 	c2 := GetHashRing()
-
-	// Add some members to the consistent hash table.
-	// Add function calculates average load and distributes partitions over members
-	// node1 := &HashRingMember{name: "node1", addr: "addr1"}
 
 	node1 := &memberlist.Node{Name: "node1", Addr: net.ParseIP("192.168.1.1")}
 
@@ -70,12 +66,6 @@ func TestHashRing2(t *testing.T) {
 	node3 := &memberlist.Node{Name: "node3", Addr: net.ParseIP("192.168.1.3")}
 	AddNode(c1, node3)
 	AddNode(c2, node3)
-
-	// calculates partition id for the given key
-	// partID := hash(key) % partitionCount
-	// the partitions are already distributed among members by Add function.
-
-	// Prints node2.olric.com
 
 	nodeCount1 := make(map[string]int)
 	nodeCount2 := make(map[string]int)
@@ -92,6 +82,8 @@ func TestHashRing2(t *testing.T) {
 
 	logrus.Info("nodeCount1", nodeCount1)
 	logrus.Info("nodeCount2", nodeCount2)
+	assert.EqualValues(t, len(GetMembers(c1)), 3, "c1 should have len 3")
+	assert.EqualValues(t, len(GetMembers(c1)), len(GetMembers(c2)), "nodeCount1 and nodeCount2 should be equal")
 
 	for node, count := range nodeCount1 {
 		percentage := float64(count) / float64(totalKeys) * 100
@@ -106,7 +98,20 @@ func TestHashRing2(t *testing.T) {
 
 	RemoveNode(c1, removeMember)
 
+	assert.EqualValues(t, len(GetMembers(c1))+1, len(GetMembers(c2)), "c1 should have 1 less than c2")
+
 	logrus.Info(GetMembers(c1))
+
+	closestN, err := GetClosestN(c1, "test", 1)
+	if err != nil {
+		t.Error(err)
+	}
+	assert.EqualValues(t, 1, len(closestN), "1 node should be returned.")
+
+	next := closestN[0]
+
+	assert.EqualValues(t, "node1", next.name, "should be the correct name")
+	assert.EqualValues(t, "192.168.1.1", next.addr, "should be the correct addr")
 }
 
 func TestPartitions(t *testing.T) {
