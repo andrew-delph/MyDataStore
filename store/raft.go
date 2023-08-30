@@ -86,7 +86,7 @@ func (fsm *FSM) Apply(logEntry *raft.Log) interface{} {
 	}
 	fsm.Epoch = epoch
 
-	logrus.Warnf("E= %d state= %s name= %s", epoch, raftNode.State(), conf.Name)
+	logrus.Debugf("E= %d state= %s name= %s", epoch, raftNode.State(), conf.Name)
 
 	if logEntry.Index == raftNode.AppliedIndex() {
 		validFSMObserver <- true

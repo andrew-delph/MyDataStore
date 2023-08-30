@@ -1,8 +1,12 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/hashicorp/raft"
@@ -19,7 +23,7 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	logrus.Debugf("handling /health for %s validFSM = %v", hostname, validFSM)
 	// if validFSM && raftNode.Leader() != "" {
 	// if raftNode.Leader() != "" {
-	if (raftNode.State() == raft.Follower || raftNode.State() == raft.Leader) && raftNode.Leader() != "" {
+	if (raftNode.State() == raft.Follower || raftNode.State() == raft.Leader) && raftNode.Leader() != "" && raftNode.AppliedIndex() == raftNode.LastIndex() {
 		fmt.Fprintf(w, "validFSM %s", raftNode.State())
 	} else {
 		http.Error(w, "not validFSM", http.StatusBadRequest)
@@ -219,8 +223,31 @@ func startHttpServer() {
 	http.HandleFunc("/epoch", epochHandler)
 	http.Handle("/metrics", promhttp.Handler())
 
-	logrus.Warn("Server is running on http://localhost:8080")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
-		logrus.Panic(err)
+	srv := &http.Server{
+		Addr: ":8080",
 	}
+
+	go func() {
+		logrus.Warn("Server is running on http://localhost:8080")
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logrus.Panic(err)
+		}
+	}()
+
+	// Set up a channel to listen for OS signals
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+
+	// Block until we receive a SIGTERM or SIGINT
+	<-stop
+
+	// Create a context with a 5-second timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Attempt a graceful shutdown
+	if err := srv.Shutdown(ctx); err != nil {
+		logrus.Fatalf("Server Shutdown Failed:%+v", err)
+	}
+	logrus.Warnf("Server gracefully stopped")
 }

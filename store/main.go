@@ -105,7 +105,7 @@ func main() {
 	managerInit()
 
 	logrus.Warn("starting run.")
-	tick := time.NewTicker(3 * time.Second)
+	tick := time.NewTicker(10 * time.Second)
 	run := true
 	for run {
 		select {
@@ -118,7 +118,7 @@ func main() {
 					RaftTryLead()
 				}
 			} else {
-				logrus.Warnf("state = %s num_peers = %v", raftNode.State(), raftNode.Stats()["num_peers"])
+				logrus.Debugf("state = %s num_peers = %v", raftNode.State(), raftNode.Stats()["num_peers"])
 			}
 			if raftNode.State() != raft.Leader && raftNode.State() != raft.Follower {
 				logrus.Warnf("BAD state = %s num_peers = %v", raftNode.State(), raftNode.Stats()["num_peers"])
@@ -128,12 +128,16 @@ func main() {
 			if raftNode.State() != raft.Leader {
 				continue
 			}
-			verifyErr := raftNode.VerifyLeader().Error()
-			if verifyErr != nil {
-				logrus.Warnf("verifyErr = %v", verifyErr)
+			err := raftNode.VerifyLeader().Error()
+			if err != nil {
+				logrus.Warnf("VerifyLeader err = %v", err)
 				continue
 			}
-			UpdateEpoch()
+			err = UpdateEpoch()
+			if err != nil {
+				logrus.Warnf("UpdateEpoch err = %v", err)
+				continue
+			}
 
 		case data := <-delegate.msgCh:
 			messageHolder, message, err := DecodeMessageHolder(data)

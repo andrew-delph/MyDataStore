@@ -1,0 +1,8 @@
+repos:
+  - repo: local
+    hooks:
+      - id: bazel-test
+        name: Run unit tests
+        entry: bazel test  //store:go_default_test
+        language: system
+        files: '\.go$'
