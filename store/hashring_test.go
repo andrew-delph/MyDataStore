@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
+	"net"
 	"testing"
 
+	"github.com/hashicorp/memberlist"
 	"github.com/serialx/hashring"
 	"github.com/sirupsen/logrus"
 )
@@ -53,16 +55,19 @@ func TestHashRing2(t *testing.T) {
 
 	// Add some members to the consistent hash table.
 	// Add function calculates average load and distributes partitions over members
-	node1 := randomString(7)
+	// node1 := &HashRingMember{name: "node1", addr: "addr1"}
+
+	node1 := &memberlist.Node{Name: "node1", Addr: net.ParseIP("192.168.1.1")}
+
 	AddNode(c1, node1)
 	AddNode(c2, node1)
 
-	node2 := randomString(7)
+	node2 := &memberlist.Node{Name: "node2", Addr: net.ParseIP("192.168.1.2")}
 
 	AddNode(c1, node2)
 	AddNode(c2, node2)
 
-	node3 := randomString(7)
+	node3 := &memberlist.Node{Name: "node3", Addr: net.ParseIP("192.168.1.3")}
 	AddNode(c1, node3)
 	AddNode(c2, node3)
 
@@ -113,7 +118,7 @@ func TestPartitions(t *testing.T) {
 	c := GetHashRing()
 
 	for i := 0; i < 8; i++ {
-		AddNode(c, fmt.Sprintf("node%d.olricmq", i))
+		AddNode(c, &memberlist.Node{Name: fmt.Sprintf("node%d", i), Addr: net.ParseIP(fmt.Sprintf("192.168.1.%d", i))})
 	}
 
 	// Store current layout of partitions
@@ -122,7 +127,7 @@ func TestPartitions(t *testing.T) {
 		owners[partID] = c.GetPartitionOwner(partID).String()
 	}
 
-	AddNode(c, fmt.Sprintf("node%d.olricmq", 9))
+	AddNode(c, &memberlist.Node{Name: fmt.Sprintf("node%d", 9), Addr: net.ParseIP(fmt.Sprintf("192.168.1.%d", 9))})
 
 	// Get the new layout and compare with the previous
 	var changed int
