@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# Check for required argument
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 <dc|k8>"
+    exit 1
+fi
+
+# Choose the command based on the argument
+case $1 in
+    dc)
+        # Replace with the actual command you want to execute for "dc"
+        tmuxinator start -p ./.tmuxinator/tmuxinator-dc.yaml
+        ;;
+    k8)
+        # Replace with the actual command you want to execute for "k8"
+        tmuxinator start -p ./.tmuxinator/tmuxinator-k8.yaml
+        ;;
+    *)
+        echo "Invalid argument. Please provide either 'dc' or 'k8'."
+        exit 1
+        ;;
+esac

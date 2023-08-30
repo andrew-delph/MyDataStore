@@ -4,11 +4,11 @@ bazel run //:gazelle -- update-repos -from_file="store/go.mod" -to_macro=reposit
 
 # DOCKER-COMPOSE DEV
 
-tmuxinator start -p ./.tmuxinator/tmuxinator-dc.yaml
+./dev dc
 
 # KUBERNETES DEV
 
-tmuxinator start -p ./.tmuxinator/tmuxinator-k8.yaml
+./dev k8
 
 # TEST
 
