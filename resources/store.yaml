@@ -87,4 +87,4 @@ spec:
     - name: external-http
       port: 8080
       targetPort: 8080
-      nodePort: 30000
+      nodePort: 30001

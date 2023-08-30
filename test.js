@@ -9,12 +9,36 @@ export let options = {
   // iterations: 20,
   // vus: 5,
   scenarios: {
-    // bootstrap: {
-    //   executor: "shared-iterations",
-    //   iterations: 1,
+    // load: {
+    //   executor: "constant-vus",
     //   vus: 1,
-    //   exec: "bootstrap",
-    //   startTime: "0s",
+    //   duration: "5m",
+    //   exec: "default",
+    // },
+    constant_arrival: {
+      executor: "constant-arrival-rate",
+      // How long the test lasts
+      duration: "2h",
+      // How many iterations per timeUnit
+      rate: 10,
+      // Start `rate` iterations per second
+      timeUnit: "1s",
+      // Pre-allocate VUs
+      preAllocatedVUs: 1,
+      maxVUs: 500,
+    },
+    // ramping_arrival: {
+    //   executor: "ramping-arrival-rate",
+    //   startRate: 50,
+    //   stages: [
+    //     { target: 75, duration: "2m" },
+    //     { target: 100, duration: "1h" },
+    //   ],
+    //   // Start `rate` iterations per second
+    //   timeUnit: "1s",
+    //   // Pre-allocate VUs
+    //   preAllocatedVUs: 50,
+    //   maxVUs: 10000,
     // },
     // epoch: {
     //   executor: "constant-arrival-rate",
@@ -29,25 +53,6 @@ export let options = {
     //   preAllocatedVUs: 1,
     //   maxVUs: 1,
     // },
-    // load: {
-    //   executor: "constant-vus",
-    //   vus: 1,
-    //   duration: "5m",
-    //   exec: "default",
-    // },
-    arrival: {
-      executor: "ramping-arrival-rate",
-      startRate: 50,
-      stages: [
-        { target: 200, duration: "2m" },
-        { target: 300, duration: "1h" },
-      ],
-      // Start `rate` iterations per second
-      timeUnit: "1s",
-      // Pre-allocate VUs
-      preAllocatedVUs: 50,
-      maxVUs: 10000,
-    },
   },
 };
 
@@ -142,7 +147,7 @@ export function remove() {
   return;
 }
 
-options = { duration: "2h", vus: 4 };
+// options = { duration: "2h", vus: 4 };
 // options = { iterations: 1, vus: 1 };
 export default function () {
   // leader();
