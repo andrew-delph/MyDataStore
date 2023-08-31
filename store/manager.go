@@ -53,6 +53,10 @@ func managerInit() {
 					}
 					validFSM = false
 				}
+				err := UpdateNodeHealth(validFSMUpdate)
+				if err != nil {
+					logrus.Errorf("UpdateNodeHealth err = %v", err)
+				}
 			// case <-time.After(time.Now().Add(time.Second).Sub(time.Now())):
 			// 	logrus.Warn("Tick!")
 			// 	checkQueueTick <- struct{}{}

@@ -6,7 +6,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/memberlist"
+	"github.com/hashicorp/raft"
 	"github.com/sirupsen/logrus"
 )
 
@@ -18,13 +20,13 @@ var (
 	defaultTimeout   time.Duration = 2 * time.Second
 	partitionBuckets int           = 500
 	partitionCount   int           = 100
-	epochTime        time.Duration = 120 * time.Second
+	epochTime        time.Duration = 10 * time.Second
 	dataPath         string        = "/store"
 	raftLogs         bool          = false
 	autoBootStrap    bool          = true
 )
 
-func GetConf() (*memberlist.Config, *MyDelegate, *MyEventDelegate) {
+func GetMemberlistConf() (*memberlist.Config, *MyDelegate, *MyEventDelegate) {
 	delegate := GetMyDelegate()
 	events := GetMyEventDelegate()
 
@@ -53,4 +55,28 @@ func GetConf() (*memberlist.Config, *MyDelegate, *MyEventDelegate) {
 	conf.Name = hostname
 
 	return conf, delegate, events
+}
+
+func GetRaftConf() *raft.Config {
+	conf := raft.DefaultConfig()
+	conf.LocalID = raft.ServerID(hostname)
+	// conf.SnapshotInterval = time.Second * 1
+	// conf.SnapshotThreshold = 1
+	logrus.Warn("conf.ElectionTimeout ", conf.ElectionTimeout)
+	logrus.Warn("conf.HeartbeatTimeout ", conf.HeartbeatTimeout)
+	logrus.Warn("conf.LeaderLeaseTimeout ", conf.LeaderLeaseTimeout)
+	logrus.Warn("conf.CommitTimeout ", conf.CommitTimeout)
+	logrus.Warn("conf.SnapshotInterval ", conf.SnapshotInterval)
+	logrus.Warn("conf.SnapshotThreshold ", conf.SnapshotThreshold)
+
+	if !raftLogs {
+		raftLogger := hclog.New(&hclog.LoggerOptions{
+			Name:   "discard",
+			Output: io.Discard,
+			Level:  hclog.NoLevel,
+		})
+		conf.Logger = raftLogger
+		conf.LogLevel = "ERROR"
+	}
+	return conf
 }

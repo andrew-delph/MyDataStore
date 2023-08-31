@@ -1,12 +1,66 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/buraksezer/consistent"
 	"github.com/hashicorp/memberlist"
 	"github.com/sirupsen/logrus"
 )
+
+type NodeState struct {
+	Health bool
+}
+
+type MyDelegate struct {
+	msgCh chan []byte
+	state *NodeState
+}
+
+func GetMyDelegate() *MyDelegate {
+	delegate := &MyDelegate{state: &NodeState{Health: validFSM}}
+	delegate.msgCh = make(chan []byte)
+	return delegate
+}
+
+func UpdateNodeHealth(health bool) error {
+	logrus.Debug("UpdateNodeHealth >> ", health)
+	delegate.state.Health = health
+	err := clusterNodes.UpdateNode(0)
+	if err != nil {
+		logrus.Errorf("UpdateNode err = %v", err)
+	}
+	return err
+}
+
+func (d *MyDelegate) NotifyMsg(msg []byte) {
+	d.msgCh <- msg
+}
+
+func (d *MyDelegate) NodeMeta(limit int) []byte {
+	data, err := json.Marshal(d.state)
+	if err != nil {
+		logrus.Errorf("NodeMeta err = %v", err)
+		return nil
+	}
+	logrus.Debug("NodeMeta >> ", d.state.Health)
+	return data
+}
+
+func (d *MyDelegate) LocalState(join bool) []byte {
+	// not use, noop
+	return []byte("")
+}
+
+func (d *MyDelegate) GetBroadcasts(overhead, limit int) [][]byte {
+	// not use, noop
+	return nil
+}
+
+func (d *MyDelegate) MergeRemoteState(buf []byte, join bool) {
+	// not use
+}
 
 type MyEventDelegate struct {
 	consistent *consistent.Consistent
@@ -27,8 +81,6 @@ func GetMyEventDelegate() *MyEventDelegate {
 
 func (events *MyEventDelegate) NotifyJoin(node *memberlist.Node) {
 	logrus.Infof("join %s", node.Name)
-
-	AddNode(events.consistent, node)
 
 	events.nodes[node.Name] = node
 	var err error
@@ -71,7 +123,20 @@ func (events *MyEventDelegate) NotifyLeave(node *memberlist.Node) {
 }
 
 func (events *MyEventDelegate) NotifyUpdate(node *memberlist.Node) {
-	logrus.Warnf("NotifyUpdate %s", node.Name)
+	var otherNode NodeState
+	err := json.Unmarshal(node.Meta, &otherNode)
+	if err != nil {
+		logrus.Errorf("NotifyUpdate error deserializing. err = %v", err)
+		return
+	}
+
+	if otherNode.Health {
+		AddNode(events.consistent, node)
+	} else {
+		RemoveNode(events.consistent, node)
+	}
+
+	logrus.Warnf("NotifyUpdate name = %s Health = %v", node.Name, otherNode.Health)
 }
 
 func (events *MyEventDelegate) SendAckMessage(value, ackId, senderName string, success bool) error {

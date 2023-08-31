@@ -11,6 +11,9 @@ case $1 in
     dc)
         tmuxinator start -p ./.tmuxinator/tmuxinator-dc.yaml
         ;;
+    dc!)
+        tmux kill-session -t dc_dev
+        ;;
     k8-init)
         minikube delete && minikube start && ./deploy_k8.sh
         minikube addons enable ingress

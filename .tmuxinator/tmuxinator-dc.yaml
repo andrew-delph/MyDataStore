@@ -1,5 +1,5 @@
 name: dc_dev
-
+on_project_exit: docker-compose down
 windows:
   - editor:
       layout: tiled

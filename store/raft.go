@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
 	raftboltdb "github.com/hashicorp/raft-boltdb"
@@ -31,30 +30,6 @@ type FSM struct {
 var validFSMObserver = make(chan bool, 1)
 
 var epochObserver = make(chan int64, 10000) // TODO: dont want to miss any updates right now. come up with better solution.
-
-func MakeRaftConf() *raft.Config {
-	conf := raft.DefaultConfig()
-	conf.LocalID = raft.ServerID(hostname)
-	// conf.SnapshotInterval = time.Second * 1
-	// conf.SnapshotThreshold = 1
-	logrus.Warn("conf.ElectionTimeout ", conf.ElectionTimeout)
-	logrus.Warn("conf.HeartbeatTimeout ", conf.HeartbeatTimeout)
-	logrus.Warn("conf.LeaderLeaseTimeout ", conf.LeaderLeaseTimeout)
-	logrus.Warn("conf.CommitTimeout ", conf.CommitTimeout)
-	logrus.Warn("conf.SnapshotInterval ", conf.SnapshotInterval)
-	logrus.Warn("conf.SnapshotThreshold ", conf.SnapshotThreshold)
-
-	if !raftLogs {
-		raftLogger := hclog.New(&hclog.LoggerOptions{
-			Name:   "discard",
-			Output: io.Discard,
-			Level:  hclog.NoLevel,
-		})
-		conf.Logger = raftLogger
-		conf.LogLevel = "ERROR"
-	}
-	return conf
-}
 
 func UpdateEpoch() error {
 	logrus.Warnf("Leader Update Epoch. Epoch = %d", globalEpoch+1)
@@ -211,7 +186,7 @@ func SetupRaft() {
 	}
 
 	// Create a configuration for raftNode1
-	raftConf = MakeRaftConf()
+	raftConf = GetRaftConf()
 
 	if trans != nil {
 		err = trans.Close()
@@ -277,7 +252,7 @@ func RaftTryLead() error {
 			logrus.Errorf("RaftTryLead AddVoter: %v", err)
 			return nil
 		} else {
-			logrus.Warnf("%s,%d", succ, i)
+			logrus.Debugf("%s,%d", succ, i)
 		}
 		// }(node)
 	}

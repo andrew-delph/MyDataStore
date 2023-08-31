@@ -71,7 +71,7 @@ func main() {
 
 	logrus.Infof("starting! %s", hostname)
 
-	conf, delegate, events = GetConf()
+	conf, delegate, events = GetMemberlistConf()
 
 	var err error
 	clusterNodes, err = memberlist.Create(conf)

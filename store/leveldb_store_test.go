@@ -95,7 +95,7 @@ func TestExampleLevelDbIndex(t *testing.T) {
 }
 
 func TestLevelDbStoreSingle(t *testing.T) {
-	conf, delegate, events = GetConf()
+	conf, delegate, events = GetMemberlistConf()
 	var err error
 	store, err = NewLevelDbStore()
 	if err != nil {
@@ -126,7 +126,7 @@ func TestLevelDbStoreSingle(t *testing.T) {
 func TestLevelDbStoreSpeed(t *testing.T) {
 	hostname = randomString(5)
 
-	conf, delegate, events = GetConf()
+	conf, delegate, events = GetMemberlistConf()
 
 	var err error
 	store, err = NewLevelDbStore()
@@ -149,7 +149,7 @@ func TestLevelDbStoreSpeed(t *testing.T) {
 func TestLevelDbIndex(t *testing.T) {
 	hostname = randomString(5)
 
-	conf, delegate, events = GetConf()
+	conf, delegate, events = GetMemberlistConf()
 
 	var err error
 	store, err = NewLevelDbStore()
@@ -221,7 +221,7 @@ func TestLevelDbIndex(t *testing.T) {
 func TestLevelDbPartitionEpochObject(t *testing.T) {
 	hostname = randomString(5)
 
-	conf, delegate, events = GetConf()
+	conf, delegate, events = GetMemberlistConf()
 
 	var err error
 	store, err = NewLevelDbStore()
