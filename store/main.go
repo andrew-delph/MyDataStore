@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -51,17 +50,16 @@ func main() {
 	logrus.SetLevel(logrus.WarnLevel)
 	// logrus.SetFormatter(&logrus.JSONFormatter{})
 
-	data, err2 := os.ReadFile("/etc/hostname")
-	if err2 != nil {
-		logrus.Errorf("Error reading /etc/hostname: %v", err2)
+	var err error
+	hostname, err = os.Hostname()
+	if err != nil {
+		logrus.Errorf("hostname err = %v", err)
 		return
 	}
 
-	hostname = strings.TrimSpace(string(data))
-
-	store, err2 = NewLevelDbStore()
-	if err2 != nil {
-		logrus.Fatalf("NewLevelDbStore: %v", err2)
+	store, err = NewLevelDbStore()
+	if err != nil {
+		logrus.Fatalf("NewLevelDbStore err = %v", err)
 	}
 	defer store.Close()
 
@@ -73,7 +71,6 @@ func main() {
 
 	conf, delegate, events = GetMemberlistConf()
 
-	var err error
 	clusterNodes, err = memberlist.Create(conf)
 
 	if err != nil {
