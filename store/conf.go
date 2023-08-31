@@ -20,7 +20,7 @@ var (
 	defaultTimeout   time.Duration = 2 * time.Second
 	partitionBuckets int           = 500
 	partitionCount   int           = 100
-	epochTime        time.Duration = 10 * time.Second
+	epochTime        time.Duration = 100 * time.Second
 	dataPath         string        = "/store"
 	raftLogs         bool          = false
 	autoBootStrap    bool          = true
