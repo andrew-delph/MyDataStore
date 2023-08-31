@@ -41,10 +41,10 @@ else
     kubectl rollout restart statefulset/store
 fi
 
-kubectl rollout status statefulset/store -w 
+# kubectl rollout status statefulset/store -w 
 
-echo "Rollout complete!"
-echo "[$(date +"%Y-%m-%d %H:%M")] Elapsed time: $SECONDS seconds" | tee -a rollout.txt
+# echo "Rollout complete!"
+# echo "[$(date +"%Y-%m-%d %H:%M")] Elapsed time: $SECONDS seconds" | tee -a rollout.txt
 
 
 

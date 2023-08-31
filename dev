@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Exit on any error
+set -e
+
 # Check for required argument
 if [ "$#" -ne 1 ]; then
     echo "Usage: $0 <arg>"
@@ -16,6 +19,7 @@ case $1 in
         ;;
     k8-init)
         minikube delete && minikube start && ./deploy_k8.sh
+        minikube addons enable metrics-server
         minikube addons enable ingress
         kubectl wait --namespace ingress-nginx  --for=condition=ready pod  --selector=app.kubernetes.io/component=controller  --timeout=120s
         kubectl apply -f ./resources/ingress.yaml

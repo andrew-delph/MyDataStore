@@ -24,7 +24,7 @@ var (
 	dataPath         string        = "/store"
 	raftLogs         bool          = false
 	autoBootstrap    bool          = true
-	bootstrapTimeout time.Duration = 20 * time.Second
+	bootstrapTimeout time.Duration = 60 * time.Second
 )
 
 func GetMemberlistConf() (*memberlist.Config, *MyDelegate, *MyEventDelegate) {

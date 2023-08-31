@@ -167,6 +167,8 @@ export default function () {
     console.error(`Set Error: status= ${setRes.status} body= ${setRes.body}`);
   }
 
+  return;
+
   sleep(10);
 
   // Get a value from the map
