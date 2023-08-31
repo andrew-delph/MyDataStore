@@ -59,13 +59,13 @@ export let options = {
 let address = "192.168.49.2:30000";
 // address = "localhost:8080";
 
-export function handleSummary(data) {
-  let output = data;
-  delete output.metrics;
-  return {
-    stdout: textSummary(output, { indent: " ", enableColors: true }),
-  };
-}
+// export function handleSummary(data) {
+//   let output = data;
+//   delete output.metrics;
+//   return {
+//     stdout: textSummary(output, { indent: " ", enableColors: true }),
+//   };
+// }
 
 export function basic() {
   let addr = `http://${address}`;
