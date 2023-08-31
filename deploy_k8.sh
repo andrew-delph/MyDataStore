@@ -44,7 +44,7 @@ fi
 kubectl rollout status statefulset/store -w 
 
 echo "Rollout complete!"
-echo "Elapsed time: $SECONDS seconds" | tee -a rollout.txt
+echo "[$(date +"%Y-%m-%d %H:%M")] Elapsed time: $SECONDS seconds" | tee -a rollout.txt
 
 
 
