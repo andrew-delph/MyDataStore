@@ -221,7 +221,7 @@ func SetupRaft() {
 	// obs := raft.NewObserver(updates, true, nil)
 	// raftNode.RegisterObserver(obs)
 
-	logrus.Warnf("after SetupRaft state = %s", raftNode.State())
+	logrus.Infof("after SetupRaft state = %s", raftNode.State())
 	if autoBootstrap {
 		go func() {
 			time.Sleep(bootstrapTimeout)

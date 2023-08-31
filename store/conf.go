@@ -63,12 +63,12 @@ func GetRaftConf() *raft.Config {
 	conf.LocalID = raft.ServerID(hostname)
 	// conf.SnapshotInterval = time.Second * 1
 	// conf.SnapshotThreshold = 1
-	logrus.Warn("conf.ElectionTimeout ", conf.ElectionTimeout)
-	logrus.Warn("conf.HeartbeatTimeout ", conf.HeartbeatTimeout)
-	logrus.Warn("conf.LeaderLeaseTimeout ", conf.LeaderLeaseTimeout)
-	logrus.Warn("conf.CommitTimeout ", conf.CommitTimeout)
-	logrus.Warn("conf.SnapshotInterval ", conf.SnapshotInterval)
-	logrus.Warn("conf.SnapshotThreshold ", conf.SnapshotThreshold)
+	logrus.Infof("conf.ElectionTimeout %v", conf.ElectionTimeout)
+	logrus.Infof("conf.HeartbeatTimeout %v", conf.HeartbeatTimeout)
+	logrus.Infof("conf.LeaderLeaseTimeout %v", conf.LeaderLeaseTimeout)
+	logrus.Infof("conf.CommitTimeout %v", conf.CommitTimeout)
+	logrus.Infof("conf.SnapshotInterval %v", conf.SnapshotInterval)
+	logrus.Infof("conf.SnapshotThreshold %v", conf.SnapshotThreshold)
 
 	if !raftLogs {
 		raftLogger := hclog.New(&hclog.LoggerOptions{

@@ -228,7 +228,7 @@ func startHttpServer() {
 	}
 
 	go func() {
-		logrus.Warn("Server is running on http://localhost:8080")
+		logrus.Infof("Server is running on http://localhost:8080")
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logrus.Panic(err)
 		}
