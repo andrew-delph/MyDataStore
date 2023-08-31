@@ -113,9 +113,6 @@ func main() {
 			if raftNode.Leader() == "" {
 				err := raftNode.VerifyLeader().Error()
 				logrus.Warnf("NO LEADER! state = %s num_peers = %v VerifyLeader = %v", raftNode.State(), raftNode.Stats()["num_peers"], err)
-				if autoBootStrap {
-					RaftTryLead()
-				}
 			} else {
 				logrus.Debugf("state = %s num_peers = %v", raftNode.State(), raftNode.Stats()["num_peers"])
 			}

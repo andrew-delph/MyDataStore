@@ -23,7 +23,8 @@ var (
 	epochTime        time.Duration = 100 * time.Second
 	dataPath         string        = "/store"
 	raftLogs         bool          = false
-	autoBootStrap    bool          = true
+	autoBootstrap    bool          = true
+	bootstrapTimeout time.Duration = 20 * time.Second
 )
 
 func GetMemberlistConf() (*memberlist.Config, *MyDelegate, *MyEventDelegate) {

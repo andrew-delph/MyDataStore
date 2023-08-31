@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
@@ -221,6 +222,19 @@ func SetupRaft() {
 	// raftNode.RegisterObserver(obs)
 
 	logrus.Warnf("after SetupRaft state = %s", raftNode.State())
+	if autoBootstrap {
+		go func() {
+			time.Sleep(bootstrapTimeout)
+			if (raftNode.State() != raft.Leader && raftNode.State() != raft.Follower) || raftNode.Leader() == "" {
+				err := RaftTryLead()
+				if err != nil {
+					logrus.Errorf("RaftTryLead timeout err = %v", err)
+				}
+			} else {
+				return
+			}
+		}()
+	}
 }
 
 func RaftBootstrap() error {
