@@ -46,7 +46,7 @@ var globalEpoch int64 = 0
 func main() {
 	// logrus.Warn("sleeping 1000 seconds.")
 	// time.Sleep(1000 * time.Second)
-
+	go StartProfileServer()
 	go StartInterGrpcServer()
 	logrus.SetLevel(logrus.WarnLevel)
 	// logrus.SetFormatter(&logrus.JSONFormatter{})

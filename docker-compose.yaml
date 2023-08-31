@@ -46,6 +46,19 @@ services:
     volumes:
       - /tmp/store_data:/store
 
+  store-profile:
+    hostname: store
+    image: docker.io/andrew-delph/store:store_image
+    environment:
+      - PROFILE_SERVER=true
+    ports:
+      - "6060:6060"
+    depends_on:
+      - nginx
+    restart: always
+    volumes:
+      - /tmp/store_data:/store
+
   prometheus:
     image: prom/prometheus
     ports:

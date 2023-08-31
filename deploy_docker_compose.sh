@@ -5,7 +5,7 @@ set -e
 
 bazel run //store:store_image
 
-docker-compose up --force-recreate -d store
+docker-compose up --force-recreate -d store store-profile
 
 
 

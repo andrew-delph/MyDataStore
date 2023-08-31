@@ -39,6 +39,9 @@ case $1 in
     deps)
         ./update_deps.sh
         ;;
+    pprof)
+        go tool pprof http://localhost:6060/debug/pprof/profile
+        ;;
     *)
         echo "Invalid argument."
         exit 1
