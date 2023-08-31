@@ -25,15 +25,6 @@ func managerInit() {
 	heap.Init(partitionEpochQueue)
 	logrus.Debug("managerInit")
 
-	for {
-		if len(events.nodes) >= ReplicaCount {
-			logrus.Warnf("Manager Ready.")
-			break
-		}
-		logrus.Warnf("Manager: not enough nodes = %d need %d. Sleeping...", len(events.nodes), ReplicaCount)
-		time.Sleep(time.Second * 5)
-	}
-
 	checkQueueTick <- struct{}{}
 
 	run := true

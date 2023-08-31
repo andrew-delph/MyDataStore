@@ -20,6 +20,9 @@ spec:
     spec:
       containers:
         - image: docker.io/andrew-delph/store:store_image
+          env:
+            - name: CLUSTER_JOIN_LIST
+              value: "store:8081,store-0:8081"
           # imagePullPolicy: "Always"
           imagePullPolicy: Never
           name: store
@@ -36,7 +39,7 @@ spec:
           #   periodSeconds: 4
           readinessProbe:
             httpGet:
-              path: /
+              path: /health
               port: 8080
             # initialDelaySeconds: 5
             periodSeconds: 5

@@ -37,7 +37,6 @@ if [ $ROLL_OUT_FLAG -eq 0 ]; then
     kubectl create -f ./resources/store.yaml
 else
     echo "The 'rollout' flag is set."
-    kubectl patch statefulset $STATEFULSET_NAME -n $NAMESPACE --type='json' -p='[{"op": "replace", "path": "/spec/template/spec/containers/0/readinessProbe/httpGet/path", "value": "/health"}]'
     kubectl rollout restart statefulset/store
 fi
 

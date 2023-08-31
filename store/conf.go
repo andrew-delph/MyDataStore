@@ -4,6 +4,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -24,7 +25,8 @@ var (
 	dataPath         string        = "/store"
 	raftLogs         bool          = false
 	autoBootstrap    bool          = true
-	bootstrapTimeout time.Duration = 60 * time.Second
+	bootstrapTimeout time.Duration = 30 * time.Second
+	clusterJoinList                = []string{"store:8081"}
 )
 
 func GetMemberlistConf() (*memberlist.Config, *MyDelegate, *MyEventDelegate) {
@@ -36,6 +38,12 @@ func GetMemberlistConf() (*memberlist.Config, *MyDelegate, *MyEventDelegate) {
 		dataPath = dataPathValue
 	}
 
+	clusterJoinListValue, exists := os.LookupEnv("CLUSTER_JOIN_LIST")
+	if exists {
+		clusterJoinList = strings.Split(clusterJoinListValue, ",")
+	}
+
+	logrus.Infof("clusterJoinListValue = %s", dataPath)
 	logrus.Infof("dataPath = %s", dataPath)
 
 	// files, err := os.ReadDir(dataPath)

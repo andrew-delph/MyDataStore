@@ -84,7 +84,7 @@ func main() {
 
 	// Join an existing cluster by specifying at least one known member.
 	for true {
-		n, err := clusterNodes.Join([]string{"store:8081"})
+		n, err := clusterNodes.Join(clusterJoinList)
 		logrus.Info("n", n)
 
 		if err == nil {
@@ -104,7 +104,7 @@ func main() {
 	epochTick := time.NewTicker(epochTime)
 	managerInit()
 
-	tick := time.NewTicker(30 * time.Second)
+	tick := time.NewTicker(15 * time.Second)
 	run := true
 	for run {
 		select {

@@ -147,7 +147,7 @@ export function remove() {
   return;
 }
 
-options = { duration: "2h", vus: 1 };
+options = { duration: "2h", vus: 5 };
 // options = { iterations: 1, vus: 1 };
 export default function () {
   // leader();
