@@ -186,12 +186,3 @@ export default function () {
     );
   }
 }
-
-export function disrupt() {
-  let panicRes = http.get(`http://${address}/panic`);
-
-  check(panicRes, {
-    "Panic: status was 502": (r) =>
-      r.status === 502 || console.error(`Base Error: Status was ${r.status}`),
-  });
-}
