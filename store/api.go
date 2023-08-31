@@ -41,7 +41,7 @@ func setHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		errorMessage := fmt.Sprintf("Set Error: key = '%s', value = '%s'. Error = %v", key, value, err)
 		logrus.Error(errorMessage)
-		http.Error(w, errorMessage, http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 

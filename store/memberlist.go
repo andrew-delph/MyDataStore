@@ -80,10 +80,16 @@ func GetMyEventDelegate() *MyEventDelegate {
 }
 
 func (events *MyEventDelegate) NotifyJoin(node *memberlist.Node) {
+	var err error
 	logrus.Infof("join %s", node.Name)
 
+	err = HandleNotifyUpdate(node)
+	if err != nil {
+		logrus.Errorf("NotifyLeave err = %v", err)
+		return
+	}
+
 	events.nodes[node.Name] = node
-	var err error
 	err = AddVoter(node)
 	if err != nil {
 		logrus.Errorf("add voter err = %v", err)
@@ -100,12 +106,19 @@ func (events *MyEventDelegate) NotifyJoin(node *memberlist.Node) {
 }
 
 func (events *MyEventDelegate) NotifyLeave(node *memberlist.Node) {
+	var err error
+
 	logrus.Infof("leave %s", node.Name)
+
+	err = HandleNotifyUpdate(node)
+	if err != nil {
+		logrus.Errorf("NotifyLeave err = %v", err)
+		return
+	}
 
 	RemoveNode(events.consistent, node)
 
 	delete(events.nodes, node.Name)
-	var err error
 
 	err = RemoveServer(node)
 	if err != nil {
@@ -123,11 +136,19 @@ func (events *MyEventDelegate) NotifyLeave(node *memberlist.Node) {
 }
 
 func (events *MyEventDelegate) NotifyUpdate(node *memberlist.Node) {
+	err := HandleNotifyUpdate(node)
+	if err != nil {
+		logrus.Errorf("NotifyUpdate err = %v", err)
+		return
+	}
+}
+
+func HandleNotifyUpdate(node *memberlist.Node) error {
 	var otherNode NodeState
 	err := json.Unmarshal(node.Meta, &otherNode)
 	if err != nil {
-		logrus.Errorf("NotifyUpdate error deserializing. err = %v", err)
-		return
+		logrus.Errorf("HandleNotifyUpdate error deserializing. err = %v", err)
+		return err
 	}
 
 	if otherNode.Health {
@@ -136,7 +157,8 @@ func (events *MyEventDelegate) NotifyUpdate(node *memberlist.Node) {
 		RemoveNode(events.consistent, node)
 	}
 
-	logrus.Warnf("NotifyUpdate name = %s Health = %v", node.Name, otherNode.Health)
+	logrus.Warnf("HandleNotifyUpdate name = %s Health = %v", node.Name, otherNode.Health)
+	return nil
 }
 
 func (events *MyEventDelegate) SendAckMessage(value, ackId, senderName string, success bool) error {

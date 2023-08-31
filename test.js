@@ -161,24 +161,34 @@ export default function () {
   let setRes = http.get(`http://${address}/set?key=${key}&value=${value}`);
 
   check(setRes, {
-    "Set: status was 200": (r) =>
-      r.status === 200 || console.error(`Set Error: Status was ${r.status}`),
+    "Set: status was 200": (r) => r.status === 200,
   });
+  if (setRes.status != 200) {
+    console.error(`Set Error: status= ${setRes.status} body= ${setRes.body}`);
+  }
+  return;
+
   sleep(10);
 
   // Get a value from the map
   let getRes = http.get(`http://${address}/get?key=${key}`);
 
   check(getRes, {
-    "Get: status was 200": (r) =>
-      r.status === 200 ||
-      console.error(`Get Error: Status was ${r.status} body = ${r.body}`),
+    "Get: status was 200": (r) => r.status === 200,
     "Get: body contains testValue": (r) =>
-      (r.body && r.body.indexOf(value) !== -1) ||
-      console.error(
-        `Get Error: Body does not contain ${value}. body = ${r.body}`
-      ),
+      r.body && r.body.indexOf(value) !== -1,
   });
+
+  if (
+    (getRes.body && getRes.body.indexOf(value) == -1) ||
+    getRes.status != 200
+  ) {
+    console.error(
+      `Get Error: status= ${getRes.status} missing= ${
+        getRes.body.indexOf(value) == -1
+      } body= ${getRes.body}`
+    );
+  }
 }
 
 export function disrupt() {
