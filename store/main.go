@@ -110,14 +110,10 @@ func main() {
 		select {
 		case <-tick.C:
 
-			if raftNode.Leader() == "" {
-				err := raftNode.VerifyLeader().Error()
-				logrus.Warnf("NO LEADER! state = %s num_peers = %v VerifyLeader = %v", raftNode.State(), raftNode.Stats()["num_peers"], err)
+			if raftNode.Leader() == "" || (raftNode.State() != raft.Leader && raftNode.State() != raft.Follower) {
+				logrus.Warnf("BAD state = %s leader = %s num_peers = %v", raftNode.State(), raftNode.Leader(), raftNode.Stats()["num_peers"])
 			} else {
 				logrus.Debugf("state = %s num_peers = %v", raftNode.State(), raftNode.Stats()["num_peers"])
-			}
-			if raftNode.State() != raft.Leader && raftNode.State() != raft.Follower {
-				logrus.Warnf("BAD state = %s num_peers = %v", raftNode.State(), raftNode.Stats()["num_peers"])
 			}
 
 		case <-epochTick.C:
