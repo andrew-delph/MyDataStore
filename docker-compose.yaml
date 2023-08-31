@@ -37,6 +37,7 @@ services:
     restart: always
 
   store:
+    # hostname: store
     image: docker.io/andrew-delph/store:store_image
     scale: 4
     depends_on:
@@ -48,6 +49,7 @@ services:
 
   store-profile:
     hostname: store
+    # scale: 1
     image: docker.io/andrew-delph/store:store_image
     environment:
       - PROFILE_SERVER=true
