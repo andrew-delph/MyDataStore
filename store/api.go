@@ -23,7 +23,7 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	logrus.Debugf("handling /health for %s validFSM = %v", hostname, validFSM)
 	// if validFSM && raftNode.Leader() != "" {
 	// if raftNode.Leader() != "" {
-	if (raftNode.State() == raft.Follower || raftNode.State() == raft.Leader) && raftNode.Leader() != "" && raftNode.AppliedIndex() == raftNode.LastIndex() {
+	if (raftNode.State() == raft.Follower || raftNode.State() == raft.Leader) && raftNode.Leader() != "" && validFSM {
 		fmt.Fprintf(w, "validFSM %s", raftNode.State())
 	} else {
 		http.Error(w, "not validFSM", http.StatusBadRequest)
@@ -242,7 +242,7 @@ func startHttpServer() {
 	<-stop
 
 	// Create a context with a 5-second timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
 	// Attempt a graceful shutdown

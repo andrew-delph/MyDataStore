@@ -166,7 +166,6 @@ export default function () {
   if (setRes.status != 200) {
     console.error(`Set Error: status= ${setRes.status} body= ${setRes.body}`);
   }
-  return;
 
   sleep(10);
 
@@ -179,13 +178,10 @@ export default function () {
       r.body && r.body.indexOf(value) !== -1,
   });
 
-  if (
-    (getRes.body && getRes.body.indexOf(value) == -1) ||
-    getRes.status != 200
-  ) {
+  if ((getRes.body || "").indexOf(value) == -1 || getRes.status != 200) {
     console.error(
       `Get Error: status= ${getRes.status} missing= ${
-        getRes.body.indexOf(value) == -1
+        (getRes.body || "").indexOf(value) == -1
       } body= ${getRes.body}`
     );
   }
