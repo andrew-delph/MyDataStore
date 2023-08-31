@@ -43,7 +43,7 @@ func GetMemberlistConf() (*memberlist.Config, *MyDelegate, *MyEventDelegate) {
 		clusterJoinList = strings.Split(clusterJoinListValue, ",")
 	}
 
-	logrus.Infof("clusterJoinListValue = %s", dataPath)
+	logrus.Infof("clusterJoinListValue = %s", clusterJoinList)
 	logrus.Infof("dataPath = %s", dataPath)
 
 	// files, err := os.ReadDir(dataPath)

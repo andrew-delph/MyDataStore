@@ -88,12 +88,11 @@ func main() {
 		logrus.Info("n", n)
 
 		if err == nil {
-			logrus.Debug("JOINED MEMBERLIST CLUSTER")
+			logrus.Info("JOINED MEMBERLIST CLUSTER")
 			break
 		}
 		time.Sleep(5 * time.Second)
 		logrus.Errorf("Failed to join cluster: my_addr = %v err = %v", clusterNodes.LocalNode().Addr, err)
-
 	}
 
 	// Ask for members of the cluster

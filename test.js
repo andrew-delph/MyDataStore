@@ -56,8 +56,7 @@ export let options = {
   },
 };
 
-let address = "192.168.49.2:30000";
-// address = "localhost:8080";
+let address = __ENV.ADDRESS || "localhost:8080";
 
 // export function handleSummary(data) {
 //   let output = data;
