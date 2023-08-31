@@ -5,6 +5,6 @@ windows:
       layout: tiled
       panes:
         - ibazel -run_command_after_success='./deploy_k8.sh -r' -debounce='10s' build //store:store_image
-        -
+        - watch kubectl get pods
         - while true; do stern statefulset/store; done
         -
