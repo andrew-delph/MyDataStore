@@ -104,7 +104,7 @@ func main() {
 	epochTick := time.NewTicker(epochTime)
 	managerInit()
 
-	tick := time.NewTicker(200 * time.Second)
+	tick := time.NewTicker(30 * time.Second)
 	run := true
 	for run {
 		select {
