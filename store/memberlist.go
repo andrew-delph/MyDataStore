@@ -154,10 +154,10 @@ func HandleNotifyUpdate(node *memberlist.Node) error {
 	if otherNode.Health {
 		AddNode(events.consistent, node)
 	} else {
+		logrus.Warnf("HandleNotifyUpdate name = %s Health = %v", node.Name, otherNode.Health)
 		RemoveNode(events.consistent, node)
 	}
 
-	logrus.Warnf("HandleNotifyUpdate name = %s Health = %v", node.Name, otherNode.Health)
 	return nil
 }
 

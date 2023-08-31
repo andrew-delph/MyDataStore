@@ -88,10 +88,10 @@ func main() {
 		logrus.Info("n", n)
 
 		if err == nil {
-			logrus.Warn("JOINED MEMBERLIST CLUSTER")
+			logrus.Debug("JOINED MEMBERLIST CLUSTER")
 			break
 		}
-		time.Sleep(time.Second)
+		time.Sleep(5 * time.Second)
 		logrus.Errorf("Failed to join cluster: my_addr = %v err = %v", clusterNodes.LocalNode().Addr, err)
 
 	}
@@ -105,7 +105,7 @@ func main() {
 	managerInit()
 
 	logrus.Warn("starting run.")
-	tick := time.NewTicker(10 * time.Second)
+	tick := time.NewTicker(200 * time.Second)
 	run := true
 	for run {
 		select {
@@ -147,7 +147,7 @@ func main() {
 			message.Handle(messageHolder)
 
 		case isLeader := <-raftNode.LeaderCh():
-			logrus.Warnf("leader change. %t %s %d", isLeader, raftNode.State(), globalEpoch)
+			logrus.Debugf("leader change. %t %s %d", isLeader, raftNode.State(), globalEpoch)
 			if !isLeader {
 				continue
 			}

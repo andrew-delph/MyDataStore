@@ -23,7 +23,7 @@ var checkQueueTick = make(chan struct{}, 5)
 func managerInit() {
 	partitionEpochQueue = &PartitionEpochQueue{}
 	heap.Init(partitionEpochQueue)
-	logrus.Warn("managerInit")
+	logrus.Debug("managerInit")
 
 	for {
 		if len(events.nodes) >= N {
