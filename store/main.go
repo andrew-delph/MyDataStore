@@ -104,7 +104,6 @@ func main() {
 	epochTick := time.NewTicker(epochTime)
 	managerInit()
 
-	logrus.Warn("starting run.")
 	tick := time.NewTicker(200 * time.Second)
 	run := true
 	for run {
