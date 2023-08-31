@@ -32,7 +32,7 @@ func StartInterGrpcServer() {
 	s := grpc.NewServer()
 	datap.RegisterInternalNodeServiceServer(s, &internalServer{})
 
-	logrus.Warnf("server listening at %v", lis.Addr())
+	logrus.Infof("server listening at %v", lis.Addr())
 
 	if err := s.Serve(lis); err != nil {
 		logrus.Fatalf("failed to serve: %v", err)
