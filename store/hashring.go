@@ -50,7 +50,7 @@ func FindPartitionID(hashring *consistent.Consistent, key string) int {
 func GetMemberPartions(hashring *consistent.Consistent, member string) ([]int, error) {
 	var belongsTo []int
 	for partID := 0; partID < hashRingConf.PartitionCount; partID++ {
-		members, err := hashring.GetClosestNForPartition(partID, N)
+		members, err := hashring.GetClosestNForPartition(partID, ReplicaCount)
 		if err != nil {
 			return nil, err
 		}

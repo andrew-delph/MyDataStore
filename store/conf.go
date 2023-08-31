@@ -13,9 +13,9 @@ import (
 )
 
 var (
-	N                int           = 3
-	W                int           = 2
-	R                int           = 2
+	ReplicaCount     int           = 3
+	WriteQuorum      int           = 2
+	ReadQuorum       int           = 2
 	saveInterval     time.Duration = 30 * time.Second
 	defaultTimeout   time.Duration = 2 * time.Second
 	partitionBuckets int           = 500

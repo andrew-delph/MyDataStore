@@ -49,13 +49,13 @@ func SendSetMessage(key, value string) error {
 	unixTimestamp := time.Now().Unix()
 	setReqMsg := &datap.Value{Key: key, Value: value, Epoch: int64(globalEpoch), UnixTimestamp: unixTimestamp}
 
-	nodes, err := GetClosestN(events.consistent, key, N)
+	nodes, err := GetClosestN(events.consistent, key, ReplicaCount)
 	if err != nil {
 		return err
 	}
 
-	responseCh := make(chan *datap.StandardResponse, N)
-	errorCh := make(chan error, N)
+	responseCh := make(chan *datap.StandardResponse, ReplicaCount)
+	errorCh := make(chan error, ReplicaCount)
 
 	for _, node := range nodes {
 		go SendSetMessageNode(node.addr, setReqMsg, responseCh, errorCh)
@@ -64,7 +64,7 @@ func SendSetMessage(key, value string) error {
 	timeout := time.After(defaultTimeout)
 	responseCount := 0
 
-	for responseCount < W {
+	for responseCount < WriteQuorum {
 		select {
 		case <-responseCh:
 			responseCount++
@@ -82,7 +82,7 @@ func SendSetMessage(key, value string) error {
 func SendGetMessage(key string) (string, error) {
 	getReqMsg := &datap.GetRequestMessage{Key: key}
 
-	nodes, err := GetClosestN(events.consistent, key, N)
+	nodes, err := GetClosestN(events.consistent, key, ReplicaCount)
 	if err != nil {
 		return "", err
 	}
@@ -161,7 +161,7 @@ func SendGetMessage(key string) (string, error) {
 		}
 	}()
 
-	for len(resList) < R {
+	for len(resList) < ReadQuorum {
 		select {
 		case res := <-resCh:
 
@@ -183,14 +183,14 @@ func SendGetMessage(key string) (string, error) {
 			return "", fmt.Errorf("timed out waiting for responses")
 		}
 	}
-	if len(resList) >= R {
+	if len(resList) >= ReadQuorum {
 		if recentValue == nil {
 			return "", fmt.Errorf("Value doesnt exist.")
 		} else {
 			return recentValue.Value, nil
 		}
 	}
-	return "", fmt.Errorf("value not found. expected = %d recievedCount= %d", R, len(resList))
+	return "", fmt.Errorf("value not found. expected = %d recievedCount= %d", ReadQuorum, len(resList))
 }
 
 func StreamBuckets(addr string, buckets *[]int32, lowerEpoch, upperEpoch int64, partitionId int) error {

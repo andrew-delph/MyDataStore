@@ -26,11 +26,11 @@ func managerInit() {
 	logrus.Debug("managerInit")
 
 	for {
-		if len(events.nodes) >= N {
+		if len(events.nodes) >= ReplicaCount {
 			logrus.Warnf("Manager Ready.")
 			break
 		}
-		logrus.Warnf("Manager: not enough nodes = %d need %d. Sleeping...", len(events.nodes), N)
+		logrus.Warnf("Manager: not enough nodes = %d need %d. Sleeping...", len(events.nodes), ReplicaCount)
 		time.Sleep(time.Second * 5)
 	}
 
@@ -297,7 +297,7 @@ func verifyPartitionEpochTree(partitionEpochObject *datap.PartitionEpochObject) 
 		logrus.Error(err)
 		return nil, err
 	}
-	nodes, err := GetClosestNForPartition(events.consistent, int(partitionEpochObject.Partition), N)
+	nodes, err := GetClosestNForPartition(events.consistent, int(partitionEpochObject.Partition), ReplicaCount)
 	if err != nil {
 		logrus.Error(err)
 		return nil, err
@@ -346,7 +346,7 @@ func verifyPartitionEpochTree(partitionEpochObject *datap.PartitionEpochObject) 
 		case <-timeout:
 			return unsyncedBucketsList, fmt.Errorf("timed out waiting for responses")
 		}
-		if responseCount >= R {
+		if responseCount >= ReadQuorum {
 			return nil, nil
 		}
 	}
