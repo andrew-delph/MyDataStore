@@ -4,6 +4,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -12,6 +13,8 @@ import (
 	"github.com/hashicorp/raft"
 	"github.com/sirupsen/logrus"
 )
+
+var hostname string
 
 var (
 	ReplicaCount     int           = 3
@@ -29,9 +32,13 @@ var (
 	clusterJoinList                = []string{"store:8081"}
 )
 
-func GetMemberlistConf() (*memberlist.Config, *MyDelegate, *MyEventDelegate) {
-	delegate := GetMyDelegate()
-	events := GetMyEventDelegate()
+func Init() {
+	var err error
+
+	hostname, err = os.Hostname()
+	if err != nil {
+		logrus.Fatalf("hostname err = %v", err)
+	}
 
 	dataPathValue, exists := os.LookupEnv("DATA_PATH")
 	if exists {
@@ -43,16 +50,57 @@ func GetMemberlistConf() (*memberlist.Config, *MyDelegate, *MyEventDelegate) {
 		clusterJoinList = strings.Split(clusterJoinListValue, ",")
 	}
 
+	replicaCountValue, exists := os.LookupEnv("REPLICA_COUNT")
+	if exists {
+		ReplicaCount, err = strconv.Atoi(replicaCountValue)
+		if err != nil {
+			logrus.Fatal(err)
+		}
+	}
+
+	writeQuorumValue, exists := os.LookupEnv("WRITE_QUORUM")
+	if exists {
+		WriteQuorum, err = strconv.Atoi(writeQuorumValue)
+		if err != nil {
+			logrus.Fatal(err)
+		}
+	}
+
+	readQuorumValue, exists := os.LookupEnv("READ_QUORUM")
+	if exists {
+		ReadQuorum, err = strconv.Atoi(readQuorumValue)
+		if err != nil {
+			logrus.Fatal(err)
+		}
+	}
+
+	epochTimeValue, exists := os.LookupEnv("EPOCH_TIME")
+	if exists {
+		seconds, err := strconv.Atoi(epochTimeValue)
+		if err != nil {
+			logrus.Fatal(err)
+		}
+		epochTime = time.Duration(seconds) * time.Second
+	}
+
+	autoBootstrap = os.Getenv("AUTO_BOOTSTRAP") != "false"
+
+	bootstrapTimeoutValue, exists := os.LookupEnv("BOOTSTRAP_TIMEOUT")
+	if exists {
+		seconds, err := strconv.Atoi(bootstrapTimeoutValue)
+		if err != nil {
+			logrus.Fatal(err)
+		}
+		bootstrapTimeout = time.Duration(seconds) * time.Second
+	}
+}
+
+func GetMemberlistConf() (*memberlist.Config, *MyDelegate, *MyEventDelegate) {
+	delegate := GetMyDelegate()
+	events := GetMyEventDelegate()
+
 	logrus.Infof("clusterJoinListValue = %s", clusterJoinList)
 	logrus.Infof("dataPath = %s", dataPath)
-
-	// files, err := os.ReadDir(dataPath)
-	// if err != nil {
-	// 	logrus.Fatalf("Failed reading directory: %s", err)
-	// }
-	// for _, file := range files {
-	// 	logrus.Warnf("File/Dir: %s", file.Name())
-	// }
 
 	conf := memberlist.DefaultLocalConfig()
 	conf.Logger = log.New(io.Discard, "", 0)

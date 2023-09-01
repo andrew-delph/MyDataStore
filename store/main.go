@@ -1,7 +1,6 @@
 package main
 
 import (
-	"os"
 	"time"
 
 	"github.com/hashicorp/memberlist"
@@ -16,16 +15,14 @@ var (
 	conf         *memberlist.Config
 )
 
-var (
-	hostname   string
-	myPartions []int
-)
+var myPartions []int
 
 var store Store
 
 var globalEpoch int64 = 0
 
 func main() {
+	Init()
 	// logrus.Warn("sleeping 1000 seconds.")
 	// time.Sleep(1000 * time.Second)
 	go StartProfileServer()
@@ -34,11 +31,6 @@ func main() {
 	// logrus.SetFormatter(&logrus.JSONFormatter{})
 
 	var err error
-	hostname, err = os.Hostname()
-	if err != nil {
-		logrus.Errorf("hostname err = %v", err)
-		return
-	}
 
 	store, err = NewLevelDbStore()
 	if err != nil {
