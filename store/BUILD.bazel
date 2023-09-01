@@ -55,6 +55,7 @@ go_test(
         "leveldb_store_test.go",
         "manager_test.go",
         "merkle_tree_test.go",
+        "store_performance_test.go",
         "store_test.go",
     ],
     embed = [":go_default_library"],
@@ -62,6 +63,7 @@ go_test(
     deps = [
         "//store/datap:go_default_library",
         "@com_github_cbergoon_merkletree//:go_default_library",
+        "@com_github_dgraph_io_badger_v3//:go_default_library",
         "@com_github_hashicorp_memberlist//:go_default_library",
         "@com_github_hashicorp_raft//:go_default_library",
         "@com_github_serialx_hashring//:go_default_library",
