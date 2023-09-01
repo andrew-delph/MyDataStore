@@ -3,10 +3,14 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"sync"
 
 	"github.com/buraksezer/consistent"
 	"github.com/hashicorp/memberlist"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc"
+
+	datap "github.com/andrew-delph/my-key-store/datap"
 )
 
 type NodeState struct {
@@ -64,24 +68,39 @@ func (d *MyDelegate) MergeRemoteState(buf []byte, join bool) {
 
 type MyEventDelegate struct {
 	consistent *consistent.Consistent
-	nodes      map[string]*memberlist.Node
+	nodes      map[string]NodeClient
+	mu         sync.RWMutex
+}
+
+type NodeClient struct {
+	conn   *grpc.ClientConn
+	client *datap.InternalNodeServiceClient
 }
 
 var partitionVerified = make(map[int]bool)
 
 func GetMyEventDelegate() *MyEventDelegate {
 	events := new(MyEventDelegate)
-
 	events.consistent = GetHashRing()
-
-	events.nodes = make(map[string]*memberlist.Node)
-
+	events.nodes = make(map[string]NodeClient)
 	return events
+}
+
+func (events *MyEventDelegate) GetNodeClient(nodeName string) (datap.InternalNodeServiceClient, error) {
+	events.mu.RLock()
+	defer events.mu.RUnlock()
+	nodeClient, exists := events.nodes[nodeName]
+	if !exists {
+		return nil, fmt.Errorf("Client does exist for node = %s", nodeName)
+	}
+	return *nodeClient.client, nil
 }
 
 func (events *MyEventDelegate) NotifyJoin(node *memberlist.Node) {
 	var err error
 	logrus.Infof("join %s", node.Name)
+	events.mu.Lock()
+	defer events.mu.Unlock()
 
 	err = HandleNotifyUpdate(node)
 	if err != nil {
@@ -89,7 +108,12 @@ func (events *MyEventDelegate) NotifyJoin(node *memberlist.Node) {
 		return
 	}
 
-	events.nodes[node.Name] = node
+	conn, client, err := GetClient(node.Addr.String())
+	if err != nil {
+		logrus.Fatalf("GetClient err=%v", err)
+	}
+
+	events.nodes[node.Name] = NodeClient{conn: conn, client: client}
 	err = AddVoter(node)
 	if err != nil {
 		logrus.Errorf("add voter err = %v", err)
@@ -107,8 +131,9 @@ func (events *MyEventDelegate) NotifyJoin(node *memberlist.Node) {
 
 func (events *MyEventDelegate) NotifyLeave(node *memberlist.Node) {
 	var err error
-
 	logrus.Infof("leave %s", node.Name)
+	events.mu.Lock()
+	defer events.mu.Unlock()
 
 	err = HandleNotifyUpdate(node)
 	if err != nil {
@@ -156,25 +181,6 @@ func HandleNotifyUpdate(node *memberlist.Node) error {
 	} else {
 		logrus.Warnf("HandleNotifyUpdate name = %s Health = %v", node.Name, otherNode.Health)
 		RemoveNode(events.consistent, node)
-	}
-
-	return nil
-}
-
-func (events *MyEventDelegate) SendAckMessage(value, ackId, senderName string, success bool) error {
-	ackMsg := NewAckMessage(ackId, success, value)
-
-	node := events.nodes[senderName]
-
-	bytes, err := EncodeHolder(ackMsg)
-	if err != nil {
-		return fmt.Errorf("FAILED TO ENCODE: %v", err)
-	}
-
-	err = clusterNodes.SendReliable(node, bytes)
-
-	if err != nil {
-		return fmt.Errorf("FAILED TO SEND: %v", err)
 	}
 
 	return nil

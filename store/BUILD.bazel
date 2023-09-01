@@ -15,7 +15,6 @@ go_library(
         "manager.go",
         "memberlist.go",
         "merkle_tree.go",
-        "messaging.go",
         "metrics.go",
         "profile.go",
         "raft.go",

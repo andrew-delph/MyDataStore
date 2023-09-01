@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"sync"
 	"time"
 
 	"github.com/hashicorp/memberlist"
@@ -15,23 +14,7 @@ var (
 	delegate     *MyDelegate
 	events       *MyEventDelegate
 	conf         *memberlist.Config
-	ackMap       sync.Map
 )
-
-func setAckChannel(key string, ch chan *MessageHolder) {
-	ackMap.Store(key, ch)
-}
-
-func getAckChannel(key string) (chan *MessageHolder, bool) {
-	if value, ok := ackMap.Load(key); ok {
-		return value.(chan *MessageHolder), true
-	}
-	return nil, false
-}
-
-func deleteAckChannel(key string) {
-	ackMap.Delete(key)
-}
 
 var (
 	hostname   string
@@ -127,12 +110,8 @@ func main() {
 				continue
 			}
 
-		case data := <-delegate.msgCh:
-			messageHolder, message, err := DecodeMessageHolder(data)
-			if err != nil {
-				logrus.Fatal(err)
-			}
-			message.Handle(messageHolder)
+		case _ = <-delegate.msgCh:
+			// handle memberlist message
 
 		case isLeader := <-raftNode.LeaderCh():
 			logrus.Debugf("leader change. %t %s %d", isLeader, raftNode.State(), globalEpoch)

@@ -167,7 +167,6 @@ export default function () {
   }
 
   return;
-
   sleep(10);
 
   // Get a value from the map
