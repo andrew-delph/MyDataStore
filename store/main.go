@@ -22,6 +22,8 @@ var store Store
 var globalEpoch int64 = 0
 
 func main() {
+	var err error
+
 	Init()
 	// logrus.Warn("sleeping 1000 seconds.")
 	// time.Sleep(1000 * time.Second)
@@ -29,8 +31,6 @@ func main() {
 	go StartInterGrpcServer()
 	logrus.SetLevel(logrus.WarnLevel)
 	// logrus.SetFormatter(&logrus.JSONFormatter{})
-
-	var err error
 
 	store, err = NewLevelDbStore()
 	if err != nil {

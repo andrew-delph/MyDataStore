@@ -6,6 +6,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "api.go",
+        "badger_store.go",
         "conf.go",
         "hashring.go",
         "internal_client.go",
@@ -28,6 +29,7 @@ go_library(
         "@com_github_buraksezer_consistent//:go_default_library",
         "@com_github_cbergoon_merkletree//:go_default_library",
         "@com_github_cespare_xxhash//:go_default_library",
+        "@com_github_dgraph_io_badger_v3//:go_default_library",
         "@com_github_hashicorp_go_hclog//:go_default_library",
         "@com_github_hashicorp_memberlist//:go_default_library",
         "@com_github_hashicorp_raft//:go_default_library",
