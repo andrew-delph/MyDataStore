@@ -143,6 +143,14 @@ func (events *MyEventDelegate) NotifyLeave(node *memberlist.Node) {
 
 	RemoveNode(events.consistent, node)
 
+	nodeClient, exists := events.nodes[node.Name]
+	if exists {
+		err := nodeClient.conn.Close()
+		if err != nil {
+			logrus.Errorf("NotifyLeave conn.Close() err = %v", err)
+		}
+	}
+
 	delete(events.nodes, node.Name)
 
 	err = RemoveServer(node)
