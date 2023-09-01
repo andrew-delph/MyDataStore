@@ -1,3 +1,4 @@
 #!/bin/sh
-bazel run //:gazelle-update-repos
+
 bazel run //:gazelle
+bazel run //:gazelle-update-repos
