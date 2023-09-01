@@ -106,7 +106,7 @@ func main() {
 			}
 			err = UpdateEpoch()
 			if err != nil {
-				logrus.Warnf("UpdateEpoch err = %v", err)
+				logrus.Errorf("UpdateEpoch err = %v", err)
 				continue
 			}
 
@@ -119,6 +119,13 @@ func main() {
 				continue
 			}
 			AddAllMembers()
+			if globalEpoch == 0 {
+				err = UpdateEpoch()
+				if err != nil {
+					logrus.Errorf("UpdateEpoch err = %v", err)
+					continue
+				}
+			}
 		}
 	}
 
