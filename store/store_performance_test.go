@@ -10,11 +10,12 @@ import (
 	"github.com/dgraph-io/badger/v3"
 	"github.com/sirupsen/logrus"
 	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/opt"
 )
 
 var (
 	speedDir       = "/tmp/speed"
-	speedValuesNum = 1111111
+	speedValuesNum = 111
 )
 
 func cleanDir() {
@@ -32,10 +33,37 @@ func cleanDir() {
 	}
 }
 
-func TestSpeedBadger(t *testing.T) {
+func TestSpeedBadgerSingle(t *testing.T) {
 	cleanDir()
 
-	defer trackTime(time.Now(), 0, "TestSpeedBadger")
+	defer trackTime(time.Now(), 0, "TestSpeedBadgerSingle")
+	opts := badger.DefaultOptions(speedDir)
+	opts.Logger = nil
+	db, err := badger.Open(opts)
+	if err != nil {
+		logrus.Fatal(err)
+	}
+	defer db.Close()
+
+	// Write 1000 key-value pairs to the database
+	for i := 0; i < speedValuesNum; i++ {
+		key := "key" + strconv.Itoa(i)
+		value := "value" + strconv.Itoa(i)
+
+		err := db.Update(func(txn *badger.Txn) error {
+			return txn.Set([]byte(key), []byte(value))
+		})
+		if err != nil {
+			logrus.Fatal(err)
+		}
+
+	}
+}
+
+func TestSpeedBadgerBatch(t *testing.T) {
+	cleanDir()
+
+	defer trackTime(time.Now(), 0, "TestSpeedBadgerBatch")
 	opts := badger.DefaultOptions(speedDir)
 	opts.Logger = nil
 	db, err := badger.Open(opts)
@@ -62,6 +90,8 @@ func TestSpeedBadger(t *testing.T) {
 			if err != nil {
 				logrus.Fatal(err)
 			}
+		} else if err != nil {
+			logrus.Fatal(err)
 		}
 	}
 	err = txn.Commit()
@@ -70,9 +100,12 @@ func TestSpeedBadger(t *testing.T) {
 	}
 }
 
-func TestSpeedLevelDB(t *testing.T) {
+func TestSpeedLevelDBSingle(t *testing.T) {
 	cleanDir()
-	defer trackTime(time.Now(), 0, "TestSpeedLevelDB")
+	defer trackTime(time.Now(), 0, "TestSpeedLevelDBSingle")
+
+	writeOpts := &opt.WriteOptions{}
+	writeOpts.Sync = false
 
 	db, err := leveldb.OpenFile(speedDir, nil)
 	if err != nil {
@@ -84,9 +117,36 @@ func TestSpeedLevelDB(t *testing.T) {
 		key := "key" + strconv.Itoa(i)
 		value := "value" + strconv.Itoa(i)
 
-		err := db.Put([]byte(key), []byte(value), nil)
+		err := db.Put([]byte(key), []byte(value), writeOpts)
 		if err != nil {
 			logrus.Fatal(err)
 		}
+	}
+}
+
+func TestSpeedLevelDBBatch(t *testing.T) {
+	cleanDir()
+	defer trackTime(time.Now(), 0, "TestSpeedLevelDBBatch")
+
+	writeOpts := &opt.WriteOptions{}
+	writeOpts.Sync = false
+
+	db, err := leveldb.OpenFile(speedDir, nil)
+	if err != nil {
+		logrus.Fatal(err)
+	}
+	defer db.Close()
+
+	batch := new(leveldb.Batch)
+
+	// Add operations to the batch
+	for i := 0; i < speedValuesNum; i++ {
+		key := "key" + strconv.Itoa(i)
+		value := "value" + strconv.Itoa(i)
+		batch.Put([]byte(key), []byte(value))
+	}
+	err = db.Write(batch, nil)
+	if err != nil {
+		logrus.Fatal(err)
 	}
 }
