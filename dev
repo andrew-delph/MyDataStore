@@ -4,7 +4,7 @@
 set -e
 
 # Check for required argument
-if [ "$#" -ne 1 ]; then
+if [ "$#" -lt 1 ]; then
     echo "Usage: $0 <arg>"
     exit 1
 fi
@@ -37,7 +37,10 @@ case $1 in
         k6 run test.js
         ;;
     test)
-        ibazel test --test_output=errors //store:go_default_test
+        ibazel test --test_output=errors //store:go_default_test --test_arg=-test.run=$2
+        ;;
+    rtest)
+        ibazel run --test_output=errors //store:go_default_test --test_arg=-test.run=$2
         ;;
     deps)
         ./update_deps.sh
