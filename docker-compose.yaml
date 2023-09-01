@@ -53,6 +53,7 @@ services:
     image: docker.io/andrew-delph/store:store_image
     environment:
       - PROFILE_SERVER=true
+      - BOOTSTRAP_TIMEOUT=1
     ports:
       - "6060:6060"
     depends_on:
