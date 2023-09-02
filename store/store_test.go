@@ -20,7 +20,7 @@ func testValue(key, value string, epoch int) *datap.Value {
 }
 
 func TestGoCacheStore(t *testing.T) {
-	conf, delegate, events = GetMemberlistConf()
+	conf, delegate, events = CreateMemberlistConf()
 
 	store = NewGoCacheStore()
 	defer store.Close()
@@ -48,7 +48,7 @@ func TestGoCacheStore(t *testing.T) {
 var NumTestValues = 100
 
 func TestGoCacheStoreSpeed(t *testing.T) {
-	conf, delegate, events = GetMemberlistConf()
+	conf, delegate, events = CreateMemberlistConf()
 
 	store = NewGoCacheStore()
 	defer store.Close()

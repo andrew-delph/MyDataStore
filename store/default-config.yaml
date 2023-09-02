@@ -1,0 +1,14 @@
+manager:
+  replica_count: 3
+  read_quorum: 2
+  write_quorum: 2
+  partition_count: 100
+  partition_buckets: 500
+raft:
+  epoch_time: 100
+  data_path: "/store"
+  enable_logs: false
+  auto_bootstrap: true
+  bootstrap_timeout: 30
+memberlist:
+  init_members: "store:8081"

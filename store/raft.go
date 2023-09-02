@@ -138,7 +138,7 @@ var (
 	snapshotStore *raft.FileSnapshotStore
 )
 
-func SetupRaft() {
+func SetupRaft(raftConfig RaftConfig) {
 	hostname, exists := os.LookupEnv("HOSTNAME")
 	if !exists {
 		logrus.Fatal("hostname env not set.")
@@ -146,17 +146,7 @@ func SetupRaft() {
 		logrus.Infof("hostname='%s'", hostname)
 	}
 
-	// localIp, err := getLocalIP()
-	// if err != nil {
-	// 	logrus.Fatal("getLocalIP failed", err)
-	// } else {
-	// 	logrus.Warnf("localIp='%s'", localIp)
-	// }
-
-	raftDir = fmt.Sprintf("/store/raft/raft_%s", hostname)
-
-	// Clean up the previous state
-	// os.RemoveAll(raftDir)
+	raftDir = fmt.Sprintf("%s/%s", raftConfig.DataPath, hostname)
 
 	// Create the 'raft-data' directory if it doesn't exist
 	if err := os.MkdirAll(raftDir, 0o700); err != nil {
@@ -187,7 +177,7 @@ func SetupRaft() {
 	}
 
 	// Create a configuration for raftNode1
-	raftConf = GetRaftConf()
+	raftConf = CreateRaftConf()
 
 	if trans != nil {
 		err = trans.Close()

@@ -23,6 +23,8 @@ var globalEpoch int64 = 0
 
 func main() {
 	var err error
+	config := GetConfig()
+	logrus.Info(config)
 
 	Init()
 	// logrus.Warn("sleeping 1000 seconds.")
@@ -40,11 +42,11 @@ func main() {
 
 	store.InitStore()
 
-	SetupRaft()
+	SetupRaft(config.Raft)
 
 	logrus.Infof("starting! %s", hostname)
 
-	conf, delegate, events = GetMemberlistConf()
+	conf, delegate, events = CreateMemberlistConf()
 
 	clusterNodes, err = memberlist.Create(conf)
 

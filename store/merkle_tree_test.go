@@ -14,7 +14,7 @@ import (
 
 func TestGoCacheStoreMerkleTree(t *testing.T) {
 	hostname = randomString(5)
-	conf, delegate, events = GetMemberlistConf()
+	conf, delegate, events = CreateMemberlistConf()
 
 	store = NewGoCacheStore()
 	defer store.Close()
@@ -60,7 +60,7 @@ func TestGoCacheStoreMerkleTree(t *testing.T) {
 func TestLevelDbStoreRawMerkleTree(t *testing.T) {
 	hostname = randomString(5)
 
-	conf, delegate, events = GetMemberlistConf()
+	conf, delegate, events = CreateMemberlistConf()
 
 	var err error
 	store, err = NewLevelDbStore()

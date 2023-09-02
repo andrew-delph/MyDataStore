@@ -1,0 +1,14 @@
+manager:
+  replica_count: 9
+  write_quorum: 99
+  read_quorum: 999
+  partition_count: 9999
+  partition_buckets: 99999
+raft:
+  epoch_time: 9
+  data_path: "/tmp/store"
+  enable_logs: true
+  auto_bootstrap: false
+  bootstrap_timeout: 1
+memberlist:
+  init_members: "test:999"

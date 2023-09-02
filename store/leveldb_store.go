@@ -47,7 +47,7 @@ func NewLevelDbPartition(db *leveldb.DB, partitionId int) Partition {
 }
 
 func NewLevelDbStore() (*LevelDbStore, error) {
-	storeFile := fmt.Sprintf("%s/data/%s", dataPath, hostname)
+	storeFile := fmt.Sprintf("%s/data/level/%s", dataPath, hostname)
 	db, err := leveldb.OpenFile(storeFile, nil)
 	if err != nil {
 		return nil, err
