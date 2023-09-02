@@ -21,7 +21,6 @@ func (h hasher) Sum64(data []byte) uint64 {
 
 type HashRingMember struct {
 	name string
-	addr string
 }
 
 func (m HashRingMember) String() string {
@@ -34,7 +33,7 @@ func GetHashRing() *consistent.Consistent {
 }
 
 func AddNode(hashring *consistent.Consistent, node *memberlist.Node) {
-	member := HashRingMember{name: node.Name, addr: node.Addr.String()}
+	member := HashRingMember{name: node.Name}
 	hashring.Add(member)
 }
 

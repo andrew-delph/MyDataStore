@@ -21,6 +21,7 @@
 ./dev test
 
 ibazel run --test_output=errors //store:go_default_test --test_arg=-test.run=TestStore
+// ibazel run --test_output=errors //store:go_default_test --test_arg=-test.run=TestSpeed --verbose_failures --test_strategy=standalone
 
 # EDITOR SETUP
 

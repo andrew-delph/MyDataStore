@@ -33,18 +33,38 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     ports:
-      - "80:80"
+      - "8080:80"
     restart: always
 
   store:
+    # hostname: store
     image: docker.io/andrew-delph/store:store_image
     scale: 4
     depends_on:
       # - zookeeper
       - nginx
     restart: always
-    volumes:
-      - /tmp/store_data:/store
+    # tmpfs:
+    #   - /store:size=300m,mode=1777
+    # volumes:
+    #   - /tmp/store_data:/store
+
+  store-profile:
+    hostname: store
+    # scale: 1
+    image: docker.io/andrew-delph/store:store_image
+    environment:
+      - PROFILE_SERVER=true
+      - BOOTSTRAP_TIMEOUT=1
+    ports:
+      - "6060:6060"
+    depends_on:
+      - nginx
+    restart: always
+    # tmpfs:
+    #   - /store:size=300m,mode=1777
+    # volumes:
+    #   - /tmp/store_data:/store
 
   prometheus:
     image: prom/prometheus

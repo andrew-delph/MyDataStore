@@ -4,7 +4,7 @@
 set -e
 
 # Check for required argument
-if [ "$#" -ne 1 ]; then
+if [ "$#" -lt 1 ]; then
     echo "Usage: $0 <arg>"
     exit 1
 fi
@@ -30,14 +30,24 @@ case $1 in
     k8!)
         tmux kill-session -t k8_dev
         ;;
-    e2e)
+    k8-e2e)
+        k6 run -e ADDRESS="192.168.49.2:30000" test.js
+        ;;
+    dc-e2e)
         k6 run test.js
         ;;
     test)
-        ibazel test --test_output=errors //store:go_default_test
+        ibazel test --test_output=errors //store:go_default_test --test_arg=-test.run=$2
+        ;;
+    rtest)
+        ibazel run --test_output=errors //store:go_default_test --test_arg=-test.run=$2
         ;;
     deps)
         ./update_deps.sh
+        ;;
+    dc-pprof)
+        go tool pprof -http=:6001 http://localhost:6060/debug/pprof/profile 
+        # go tool pprof http://localhost:6060/debug/pprof/profile 
         ;;
     *)
         echo "Invalid argument."

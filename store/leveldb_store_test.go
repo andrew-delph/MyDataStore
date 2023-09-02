@@ -95,6 +95,8 @@ func TestExampleLevelDbIndex(t *testing.T) {
 }
 
 func TestLevelDbStoreSingle(t *testing.T) {
+	Init()
+	hostname = randomString(5)
 	conf, delegate, events = GetMemberlistConf()
 	var err error
 	store, err = NewLevelDbStore()

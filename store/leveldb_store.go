@@ -169,7 +169,7 @@ func (store LevelDbStore) SetValue(value *datap.Value) error {
 		return err
 	}
 
-	existingValue, exists, err := store.GetValue(key)
+	existingValue, exists, err := partition.GetPartitionValue(key)
 	if exists && value.Epoch < existingValue.Epoch {
 		return fmt.Errorf("cannot set value with a lower Epoch. set = %d existing = %d", value.Epoch, existingValue.Epoch)
 	}

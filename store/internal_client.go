@@ -13,23 +13,22 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func GetClient(addr string) (*grpc.ClientConn, datap.InternalNodeServiceClient, error) {
+func GetClient(addr string) (*grpc.ClientConn, *datap.InternalNodeServiceClient, error) {
 	conn, err := grpc.Dial(fmt.Sprintf("%s:%d", addr, port), grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		return nil, nil, err
 	}
 	internalClient := datap.NewInternalNodeServiceClient(conn)
 
-	return conn, internalClient, nil
+	return conn, &internalClient, nil
 }
 
-func SendSetMessageNode(addr string, setReqMsg *datap.Value, responseCh chan *datap.StandardResponse, errorCh chan error) {
-	conn, client, err := GetClient(addr)
+func SendSetMessageNode(nodeName string, setReqMsg *datap.Value, responseCh chan *datap.StandardResponse, errorCh chan error) {
+	client, err := events.GetNodeClient(nodeName)
 	if err != nil {
-		logrus.Errorf("GetClient for node %s", addr)
+		logrus.Errorf("GetClient for node %s", nodeName)
 		errorCh <- err
 	}
-	defer conn.Close()
 
 	// Create a new context for the goroutine
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -37,11 +36,11 @@ func SendSetMessageNode(addr string, setReqMsg *datap.Value, responseCh chan *da
 
 	r, err := client.SetRequest(ctx, setReqMsg)
 	if err != nil {
-		logrus.Errorf("Failed SetRequest for node %s err = %v", addr, err)
+		logrus.Errorf("Failed SetRequest for node %s err = %v", nodeName, err)
 		errorCh <- err
 	} else {
 		responseCh <- r
-		logrus.Debugf("SetRequest %s worked. msg ='%s'", addr, r.Message)
+		logrus.Debugf("SetRequest %s worked. msg ='%s'", nodeName, r.Message)
 	}
 }
 
@@ -58,7 +57,7 @@ func SendSetMessage(key, value string) error {
 	errorCh := make(chan error, ReplicaCount)
 
 	for _, node := range nodes {
-		go SendSetMessageNode(node.addr, setReqMsg, responseCh, errorCh)
+		go SendSetMessageNode(node.name, setReqMsg, responseCh, errorCh)
 	}
 
 	timeout := time.After(defaultTimeout)
@@ -89,20 +88,19 @@ func SendGetMessage(key string) (string, error) {
 
 	type Res struct {
 		Value *datap.Value
-		Addr  string
+		Name  string
 	}
 
 	resCh := make(chan *Res, len(nodes))
 	errorCh := make(chan error, len(nodes))
 
 	for i, node := range nodes {
-		go func(i int, addr string) {
-			conn, client, err := GetClient(addr)
+		go func(i int, node HashRingMember) {
+			client, err := events.GetNodeClient(node.name)
 			if err != nil {
 				errorCh <- err
 				return
 			}
-			defer conn.Close()
 
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 			defer cancel()
@@ -111,9 +109,9 @@ func SendGetMessage(key string) (string, error) {
 			if err != nil {
 				errorCh <- err
 			} else {
-				resCh <- &Res{Value: res, Addr: addr}
+				resCh <- &Res{Value: res, Name: node.name}
 			}
-		}(i, node.addr)
+		}(i, node)
 	}
 
 	timeout := time.After(defaultTimeout)
@@ -132,7 +130,7 @@ func SendGetMessage(key string) (string, error) {
 					logrus.Debugf("setting recentValue nil.")
 					recentValue = res.Value
 				} else if recentValue.Epoch <= res.Value.Epoch && recentValue.UnixTimestamp < res.Value.UnixTimestamp {
-					logrus.Debugf("update recentValue addr = %s value = %v", res.Addr, res.Value.Value)
+					logrus.Debugf("update recentValue name = %s value = %v", res.Name, res.Value.Value)
 					recentValue = res.Value
 				} else {
 					logrus.Debugf("compare %v %v %v %v %v  %v %v....", recentValue.Epoch, res.Value.Epoch, recentValue.Epoch < res.Value.Epoch, recentValue.UnixTimestamp, res.Value.UnixTimestamp, recentValue.UnixTimestamp < res.Value.UnixTimestamp, res.Value.Value)
@@ -153,7 +151,7 @@ func SendGetMessage(key string) (string, error) {
 			// logrus.Warnf("Read Repair addr = %s recentValue = %v value = %v", res.Addr, recentValue.Value, res.Value.Value)
 			if proto.Equal(res.Value, recentValue) == false {
 				readRepairCount++
-				go SendSetMessageNode(res.Addr, recentValue, make(chan *datap.StandardResponse), make(chan error))
+				go SendSetMessageNode(res.Name, recentValue, make(chan *datap.StandardResponse), make(chan error))
 			}
 		}
 		if readRepairCount > 0 {
@@ -169,7 +167,7 @@ func SendGetMessage(key string) (string, error) {
 				logrus.Debugf("setting recentValue nil.")
 				recentValue = res.Value
 			} else if recentValue.Epoch <= res.Value.Epoch && recentValue.UnixTimestamp < res.Value.UnixTimestamp {
-				logrus.Debugf("update recentValue addr = %s value = %v", res.Addr, res.Value.Value)
+				logrus.Debugf("update recentValue name = %s value = %v", res.Name, res.Value.Value)
 				recentValue = res.Value
 			} else {
 				logrus.Debugf("compare %v %v %v %v %v  %v %v....", recentValue.Epoch, res.Value.Epoch, recentValue.Epoch < res.Value.Epoch, recentValue.UnixTimestamp, res.Value.UnixTimestamp, recentValue.UnixTimestamp < res.Value.UnixTimestamp, res.Value.Value)
@@ -193,13 +191,13 @@ func SendGetMessage(key string) (string, error) {
 	return "", fmt.Errorf("value not found. expected = %d recievedCount= %d", ReadQuorum, len(resList))
 }
 
-func StreamBuckets(addr string, buckets *[]int32, lowerEpoch, upperEpoch int64, partitionId int) error {
-	conn, client, err := GetClient(addr)
+func StreamBuckets(nodeName string, buckets *[]int32, lowerEpoch, upperEpoch int64, partitionId int) error {
+	client, err := events.GetNodeClient(nodeName)
 	if err != nil {
 		logrus.Errorf("CLIENT StreamBuckets err = %v", err)
 		return err
 	}
-	defer conn.Close()
+
 	req := &datap.StreamBucketsRequest{Buckets: *buckets, LowerEpoch: int64(lowerEpoch), UpperEpoch: int64(upperEpoch), Partition: int32(partitionId)}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
@@ -231,12 +229,11 @@ func StreamBuckets(addr string, buckets *[]int32, lowerEpoch, upperEpoch int64, 
 	}
 }
 
-func GetPartitionEpochObject(addr string, epoch int64, partitionId int) (*datap.PartitionEpochObject, error) {
-	conn, client, err := GetClient(addr)
+func GetPartitionEpochObject(nodeName string, epoch int64, partitionId int) (*datap.PartitionEpochObject, error) {
+	client, err := events.GetNodeClient(nodeName)
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
 
 	// Create a new context for the goroutine
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"net"
 	"testing"
 
 	"github.com/hashicorp/memberlist"
@@ -53,17 +52,17 @@ func TestHashRing2(t *testing.T) {
 	c1 := GetHashRing()
 	c2 := GetHashRing()
 
-	node1 := &memberlist.Node{Name: "node1", Addr: net.ParseIP("192.168.1.1")}
+	node1 := &memberlist.Node{Name: "node1"}
 
 	AddNode(c1, node1)
 	AddNode(c2, node1)
 
-	node2 := &memberlist.Node{Name: "node2", Addr: net.ParseIP("192.168.1.2")}
+	node2 := &memberlist.Node{Name: "node2"}
 
 	AddNode(c1, node2)
 	AddNode(c2, node2)
 
-	node3 := &memberlist.Node{Name: "node3", Addr: net.ParseIP("192.168.1.3")}
+	node3 := &memberlist.Node{Name: "node3"}
 	AddNode(c1, node3)
 	AddNode(c2, node3)
 
@@ -111,7 +110,6 @@ func TestHashRing2(t *testing.T) {
 	next := closestN[0]
 
 	assert.EqualValues(t, "node1", next.name, "should be the correct name")
-	assert.EqualValues(t, "192.168.1.1", next.addr, "should be the correct addr")
 }
 
 func TestPartitions(t *testing.T) {
@@ -123,7 +121,7 @@ func TestPartitions(t *testing.T) {
 	c := GetHashRing()
 
 	for i := 0; i < 8; i++ {
-		AddNode(c, &memberlist.Node{Name: fmt.Sprintf("node%d", i), Addr: net.ParseIP(fmt.Sprintf("192.168.1.%d", i))})
+		AddNode(c, &memberlist.Node{Name: fmt.Sprintf("node%d", i)})
 	}
 
 	// Store current layout of partitions
@@ -132,7 +130,7 @@ func TestPartitions(t *testing.T) {
 		owners[partID] = c.GetPartitionOwner(partID).String()
 	}
 
-	AddNode(c, &memberlist.Node{Name: fmt.Sprintf("node%d", 9), Addr: net.ParseIP(fmt.Sprintf("192.168.1.%d", 9))})
+	AddNode(c, &memberlist.Node{Name: fmt.Sprintf("node%d", 9)})
 
 	// Get the new layout and compare with the previous
 	var changed int

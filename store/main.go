@@ -1,9 +1,6 @@
 package main
 
 import (
-	"os"
-	"strings"
-	"sync"
 	"time"
 
 	"github.com/hashicorp/memberlist"
@@ -16,52 +13,28 @@ var (
 	delegate     *MyDelegate
 	events       *MyEventDelegate
 	conf         *memberlist.Config
-	ackMap       sync.Map
 )
 
-func setAckChannel(key string, ch chan *MessageHolder) {
-	ackMap.Store(key, ch)
-}
-
-func getAckChannel(key string) (chan *MessageHolder, bool) {
-	if value, ok := ackMap.Load(key); ok {
-		return value.(chan *MessageHolder), true
-	}
-	return nil, false
-}
-
-func deleteAckChannel(key string) {
-	ackMap.Delete(key)
-}
-
-var (
-	hostname   string
-	myPartions []int
-)
+var myPartions []int
 
 var store Store
 
 var globalEpoch int64 = 0
 
 func main() {
+	var err error
+
+	Init()
 	// logrus.Warn("sleeping 1000 seconds.")
 	// time.Sleep(1000 * time.Second)
-
+	go StartProfileServer()
 	go StartInterGrpcServer()
 	logrus.SetLevel(logrus.WarnLevel)
 	// logrus.SetFormatter(&logrus.JSONFormatter{})
 
-	data, err2 := os.ReadFile("/etc/hostname")
-	if err2 != nil {
-		logrus.Errorf("Error reading /etc/hostname: %v", err2)
-		return
-	}
-
-	hostname = strings.TrimSpace(string(data))
-
-	store, err2 = NewLevelDbStore()
-	if err2 != nil {
-		logrus.Fatalf("NewLevelDbStore: %v", err2)
+	store, err = NewLevelDbStore()
+	if err != nil {
+		logrus.Fatalf("NewLevelDbStore err = %v", err)
 	}
 	defer store.Close()
 
@@ -73,7 +46,6 @@ func main() {
 
 	conf, delegate, events = GetMemberlistConf()
 
-	var err error
 	clusterNodes, err = memberlist.Create(conf)
 
 	if err != nil {
@@ -88,12 +60,11 @@ func main() {
 		logrus.Info("n", n)
 
 		if err == nil {
-			logrus.Debug("JOINED MEMBERLIST CLUSTER")
+			logrus.Info("JOINED MEMBERLIST CLUSTER")
 			break
 		}
 		time.Sleep(5 * time.Second)
 		logrus.Errorf("Failed to join cluster: my_addr = %v err = %v", clusterNodes.LocalNode().Addr, err)
-
 	}
 
 	// Ask for members of the cluster
@@ -127,16 +98,12 @@ func main() {
 			}
 			err = UpdateEpoch()
 			if err != nil {
-				logrus.Warnf("UpdateEpoch err = %v", err)
+				logrus.Errorf("UpdateEpoch err = %v", err)
 				continue
 			}
 
-		case data := <-delegate.msgCh:
-			messageHolder, message, err := DecodeMessageHolder(data)
-			if err != nil {
-				logrus.Fatal(err)
-			}
-			message.Handle(messageHolder)
+		case _ = <-delegate.msgCh:
+			// handle memberlist message
 
 		case isLeader := <-raftNode.LeaderCh():
 			logrus.Debugf("leader change. %t %s %d", isLeader, raftNode.State(), globalEpoch)
@@ -144,6 +111,13 @@ func main() {
 				continue
 			}
 			AddAllMembers()
+			if globalEpoch == 0 {
+				err = UpdateEpoch()
+				if err != nil {
+					logrus.Errorf("UpdateEpoch err = %v", err)
+					continue
+				}
+			}
 		}
 	}
 

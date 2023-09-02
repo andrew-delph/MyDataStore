@@ -225,7 +225,7 @@ func handlePartitionEpochItem() {
 		// NOTE: possibly cool down node if streamed recently
 		// this is asking everyone and will shlow things down.
 		for _, unsyncedNode := range unsyncedBuckets {
-			err = StreamBuckets(unsyncedNode.Addr, unsyncedNode.Diff, item.epoch, item.epoch+1, item.partitionId)
+			err = StreamBuckets(unsyncedNode.NodeName, unsyncedNode.Diff, item.epoch, item.epoch+1, item.partitionId)
 			if err != nil {
 				logrus.Errorf("handlePartitionEpochItem RawPartitionMerkleTree err = %v", err)
 			}
@@ -277,9 +277,9 @@ func handlePartitionEpochItem() {
 }
 
 type UnsyncedBuckets struct {
-	Addr    string
-	Diff    *[]int32
-	Buckets *[][]byte
+	NodeName string
+	Diff     *[]int32
+	Buckets  *[][]byte
 }
 
 func verifyPartitionEpochTree(partitionEpochObject *datap.PartitionEpochObject) ([]*UnsyncedBuckets, error) {
@@ -297,8 +297,8 @@ func verifyPartitionEpochTree(partitionEpochObject *datap.PartitionEpochObject) 
 	validCh := make(chan bool, len(nodes))
 	errorCh := make(chan error, len(nodes))
 	for _, node := range nodes {
-		go func(addr string) {
-			otherPartitionEpochObject, err := GetPartitionEpochObject(addr, partitionEpochObject.Epoch, int(partitionEpochObject.Partition))
+		go func(nodeName string) {
+			otherPartitionEpochObject, err := GetPartitionEpochObject(nodeName, partitionEpochObject.Epoch, int(partitionEpochObject.Partition))
 			if err != nil {
 				logrus.Debug(err)
 				errorCh <- err
@@ -317,9 +317,9 @@ func verifyPartitionEpochTree(partitionEpochObject *datap.PartitionEpochObject) 
 				validCh <- true
 			} else {
 				logrus.Debug("bucketsDiff ", bucketsDiff)
-				unsyncedCh <- &UnsyncedBuckets{Addr: addr, Diff: &bucketsDiff, Buckets: &otherPartitionEpochObject.Buckets}
+				unsyncedCh <- &UnsyncedBuckets{NodeName: nodeName, Diff: &bucketsDiff, Buckets: &otherPartitionEpochObject.Buckets}
 			}
-		}(node.addr)
+		}(node.name)
 	}
 
 	timeout := time.After(time.Second * 40)
