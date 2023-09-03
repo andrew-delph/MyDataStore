@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"os"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -35,7 +36,24 @@ func AllStorage(t *testing.T, storageCallback StorageCallback) {
 	var storage Storage
 	var err error
 	c := config.GetConfig()
+
+	err = os.RemoveAll(c.Storage.DataPath)
+	if err != nil {
+		logrus.Fatal(err)
+	}
+
 	storage = NewLevelDbStorage(c.Storage)
+	storageCallback(t, storage)
+	err = storage.Close()
+	if err != nil {
+		logrus.Fatal(err)
+	}
+
+	err = os.RemoveAll(c.Storage.DataPath)
+	if err != nil {
+		logrus.Fatal(err)
+	}
+	storage = NewBadgerStorage(c.Storage)
 	storageCallback(t, storage)
 	err = storage.Close()
 	if err != nil {

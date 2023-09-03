@@ -24,6 +24,7 @@ gazelle(
 go_library(
     name = "go_default_library",
     srcs = [
+        "badger_storage.go",
         "leveldb_storage.go",
         "storage.go",
     ],
