@@ -75,7 +75,6 @@ func TestExampleLevelDbIndex(t *testing.T) {
 	// Create an Iterator to iterate through the keys within the range
 	iter := db.NewIterator(rng, nil)
 	defer iter.Release()
-
 	// Iterate through the keys within the range
 	count := 0
 	for iter.Next() {

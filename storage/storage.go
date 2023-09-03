@@ -13,6 +13,7 @@ func Value() string {
 	badgerTest()
 	leveldbTest()
 	cacheTest()
+	NewLevelDbStorage(nil)
 
 	return "test"
 }
@@ -35,4 +36,18 @@ func leveldbTest() {
 
 func cacheTest() {
 	cache.New(0*time.Minute, 1*time.Minute)
+}
+
+type Store interface {
+	WriteValue(key []byte, value []byte) error
+	ReadValue(key []byte) ([]byte, bool, error)
+	Iterate(Start []byte, Limit []byte) Iterator
+}
+
+type Iterator interface {
+	First() bool
+	Next() bool
+	isDone() bool
+	Key() []byte
+	Value() []byte
 }

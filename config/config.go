@@ -49,7 +49,7 @@ type MemberListConfig struct {
 	InitMembers []string `mapstructure:"INIT_MEMBERS"`
 }
 
-type StoreConfig struct {
+type StorageConfig struct {
 	DataPath string `mapstructure:"DATA_PATH"`
 }
 
@@ -57,7 +57,7 @@ type Config struct {
 	Manager    ManagerConfig    `mapstructure:"MANAGER"`
 	Raft       RaftConfig       `mapstructure:"RAFT"`
 	MemberList MemberListConfig `mapstructure:"MEMBERLIST"`
-	Store      StoreConfig      `mapstructure:"STORE"`
+	Storage    StorageConfig    `mapstructure:"STORAGE"`
 }
 
 func GetConfig(allow_override bool) Config {
