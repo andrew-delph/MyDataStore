@@ -27,13 +27,13 @@ func (storage LevelDbStorage) Put(key []byte, value []byte) error {
 	return storage.db.Put(key, value, writeOpts)
 }
 
-func (storage LevelDbStorage) Get(key []byte) ([]byte, bool, error) {
+func (storage LevelDbStorage) Get(key []byte) ([]byte, error) {
 	readOpts := &opt.ReadOptions{}
 	value, err := storage.db.Get(key, readOpts)
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
-	return value, true, nil
+	return value, nil
 }
 
 func (storage LevelDbStorage) NewIterator(Start []byte, Limit []byte) Iterator {
@@ -42,6 +42,10 @@ func (storage LevelDbStorage) NewIterator(Start []byte, Limit []byte) Iterator {
 
 func (storage LevelDbStorage) Close() error {
 	return storage.db.Close()
+}
+
+func (storage LevelDbStorage) NewTransaction(update bool) Transaction {
+	return LevelDbTransaction{storage: storage}
 }
 
 type LevelDbIterator struct{}
@@ -68,4 +72,24 @@ func (LevelDbIterator) Value() []byte {
 
 func (LevelDbIterator) Release() {
 	panic("not implemented") // TODO: Implement
+}
+
+type LevelDbTransaction struct {
+	storage LevelDbStorage
+}
+
+func (LevelDbTransaction) Discard() {
+	return
+}
+
+func (LevelDbTransaction) Commit() error {
+	return nil
+}
+
+func (trx LevelDbTransaction) Set(key []byte, value []byte) error {
+	return trx.storage.Put(key, value)
+}
+
+func (trx LevelDbTransaction) Get(key []byte) (value []byte, err error) {
+	return trx.storage.Get(key)
 }

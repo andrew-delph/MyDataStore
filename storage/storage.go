@@ -3,18 +3,14 @@ package storage
 import (
 	"time"
 
-	"github.com/dgraph-io/badger"
 	"github.com/patrickmn/go-cache"
-	"github.com/sirupsen/logrus"
-	"github.com/syndtr/goleveldb/leveldb"
-
-	"github.com/andrew-delph/my-key-store/config"
 )
 
 type Storage interface {
 	Put(key []byte, value []byte) error
-	Get(key []byte) ([]byte, bool, error)
+	Get(key []byte) ([]byte, error)
 	NewIterator(Start []byte, Limit []byte) Iterator
+	NewTransaction(update bool) Transaction
 	Close() error
 }
 
@@ -27,30 +23,11 @@ type Iterator interface {
 	Release()
 }
 
-func Value() string {
-	c := config.GetConfig()
-	badgerTest()
-	leveldbTest()
-	cacheTest()
-	NewLevelDbStorage(c.Storage)
-
-	return "test"
-}
-
-func badgerTest() {
-	db, err := badger.Open(badger.DefaultOptions("/tmp/badger"))
-	defer db.Close()
-	if err != nil {
-		logrus.Fatal(err)
-	}
-}
-
-func leveldbTest() {
-	db, err := leveldb.OpenFile("/tmp/level", nil)
-	defer db.Close()
-	if err != nil {
-		logrus.Fatal(err)
-	}
+type Transaction interface {
+	Discard()
+	Commit() error
+	Set(key []byte, value []byte) error
+	Get(key []byte) (value []byte, err error)
 }
 
 func cacheTest() {

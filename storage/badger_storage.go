@@ -31,25 +31,30 @@ func (storage BadgerStorage) Put(key []byte, value []byte) error {
 	return txn.Commit()
 }
 
-func (storage BadgerStorage) Get(key []byte) ([]byte, bool, error) {
+func (storage BadgerStorage) Get(key []byte) ([]byte, error) {
 	txn := storage.db.NewTransaction(false)
 	defer txn.Discard()
 
 	item, err := txn.Get(key)
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
 	value, err := item.ValueCopy(nil)
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
-	return value, true, nil
+	return value, nil
 }
 
 func (storage BadgerStorage) NewIterator(Start []byte, Limit []byte) Iterator {
 	return LevelDbIterator{}
+}
+
+func (storage BadgerStorage) NewTransaction(update bool) Transaction {
+	trx := storage.db.NewTransaction(update)
+	return BadgerTransaction{trx: trx}
 }
 
 func (storage BadgerStorage) Close() error {
@@ -80,4 +85,33 @@ func (BadgerIterator) Value() []byte {
 
 func (BadgerIterator) Release() {
 	panic("not implemented") // TODO: Implement
+}
+
+type BadgerTransaction struct {
+	trx *badger.Txn
+}
+
+func (transaction BadgerTransaction) Discard() {
+	transaction.trx.Discard()
+}
+
+func (transaction BadgerTransaction) Commit() error {
+	return transaction.trx.Commit()
+}
+
+func (transaction BadgerTransaction) Set(key []byte, value []byte) error {
+	return transaction.trx.Set(key, value)
+}
+
+func (transaction BadgerTransaction) Get(key []byte) ([]byte, error) {
+	item, err := transaction.trx.Get(key)
+	if err != nil {
+		return nil, err
+	}
+
+	value, err := item.ValueCopy(nil)
+	if err != nil {
+		return nil, err
+	}
+	return value, nil
 }

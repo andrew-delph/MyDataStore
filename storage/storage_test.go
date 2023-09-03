@@ -10,6 +10,37 @@ import (
 	"github.com/andrew-delph/my-key-store/config"
 )
 
+type StorageCallback func(t *testing.T, storage Storage)
+
+func AllStorage(t *testing.T, storageCallback StorageCallback) {
+	var storage Storage
+	var err error
+	c := config.GetConfig()
+
+	err = os.RemoveAll(c.Storage.DataPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	storage = NewLevelDbStorage(c.Storage)
+	storageCallback(t, storage)
+	err = storage.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = os.RemoveAll(c.Storage.DataPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	storage = NewBadgerStorage(c.Storage)
+	storageCallback(t, storage)
+	err = storage.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestStorageSetGet(t *testing.T) {
 	AllStorage(t, storageSetGet)
 }
@@ -21,42 +52,39 @@ func storageSetGet(t *testing.T, storage Storage) {
 	if err != nil {
 		t.Error(err)
 	}
-	res, exists, err := storage.Get(key)
+	res, err := storage.Get(key)
 	if err != nil {
 		t.Error(err)
 	}
-	assert.Equal(t, true, exists, "value should exist")
 	assert.EqualValues(t, value, res, "value should be equal")
 	logrus.Info("value is equal")
 }
 
-type StorageCallback func(t *testing.T, storage Storage)
+func TestStorageTransaction(t *testing.T) {
+	AllStorage(t, storageTransaction)
+}
 
-func AllStorage(t *testing.T, storageCallback StorageCallback) {
-	var storage Storage
-	var err error
-	c := config.GetConfig()
+func storageTransaction(t *testing.T, storage Storage) {
+	key := []byte("testkey")
+	value := []byte("testvalue")
 
-	err = os.RemoveAll(c.Storage.DataPath)
-	if err != nil {
-		logrus.Fatal(err)
-	}
+	trx := storage.NewTransaction(true)
+	defer trx.Discard()
 
-	storage = NewLevelDbStorage(c.Storage)
-	storageCallback(t, storage)
-	err = storage.Close()
+	err := trx.Set(key, value)
 	if err != nil {
-		logrus.Fatal(err)
+		t.Error(err)
 	}
+	err = trx.Commit()
+	if err != nil {
+		t.Error(err)
+	}
+	trx = storage.NewTransaction(false)
+	defer trx.Discard()
 
-	err = os.RemoveAll(c.Storage.DataPath)
+	res, err := trx.Get(key)
 	if err != nil {
-		logrus.Fatal(err)
+		t.Error(err)
 	}
-	storage = NewBadgerStorage(c.Storage)
-	storageCallback(t, storage)
-	err = storage.Close()
-	if err != nil {
-		logrus.Fatal(err)
-	}
+	assert.EqualValues(t, value, res, "value should be equal")
 }
