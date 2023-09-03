@@ -7,7 +7,5 @@ import (
 )
 
 func TestSpeedBadgerSingle(t *testing.T) {
-	logrus.Info("Value()", Value())
+	logrus.Info("Value(): ", Value())
 }
-
-

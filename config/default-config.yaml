@@ -14,3 +14,5 @@ raft:
 memberlist:
   init_members:
     - "store:8081"
+storage:
+  data_path: "/store/data"

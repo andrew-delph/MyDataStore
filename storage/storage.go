@@ -7,13 +7,18 @@ import (
 	"github.com/patrickmn/go-cache"
 	"github.com/sirupsen/logrus"
 	"github.com/syndtr/goleveldb/leveldb"
+
+	"github.com/andrew-delph/my-key-store/config"
 )
 
 func Value() string {
+	c := config.GetConfig()
 	badgerTest()
 	leveldbTest()
 	cacheTest()
-	NewLevelDbStorage(nil)
+	NewLevelDbStorage(c.Storage)
+
+	logrus.Warn(">>> ", c.Manager.DataPath)
 
 	return "test"
 }
@@ -50,4 +55,5 @@ type Iterator interface {
 	isDone() bool
 	Key() []byte
 	Value() []byte
+	Release()
 }

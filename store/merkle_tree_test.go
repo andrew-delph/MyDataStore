@@ -17,7 +17,7 @@ import (
 func TestGoCacheStoreMerkleTree(t *testing.T) {
 	t.Error("todo fix.")
 	return
-	config := config.GetConfig(true)
+	config := config.GetConfig()
 	config.Manager.Hostname = randomString(5)
 
 	var err error
@@ -64,7 +64,7 @@ func TestGoCacheStoreMerkleTree(t *testing.T) {
 
 func TestLevelDbStoreRawMerkleTreeTODOFIX(t *testing.T) {
 	t.Error("todo fix.")
-	// config := config.GetConfig(true)
+	// config := config.GetConfig()
 	// config.Hostname = randomString(5)
 
 	// var err error

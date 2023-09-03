@@ -60,7 +60,15 @@ type Config struct {
 	Storage    StorageConfig    `mapstructure:"STORAGE"`
 }
 
-func GetConfig(allow_override bool) Config {
+func GetConfig() Config {
+	return getConfigOverride(true)
+}
+
+func GetDefaultConfig() Config {
+	return getConfigOverride(false)
+}
+
+func getConfigOverride(allow_override bool) Config {
 	viper.SetConfigName(filepath.Join(os.Getenv("CONFIG_PATH"), "default-config"))
 
 	viper.AddConfigPath(".")

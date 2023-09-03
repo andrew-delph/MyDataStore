@@ -19,7 +19,7 @@ var theManager *Manager
 
 func main() {
 	var err error
-	config := config.GetConfig(true)
+	config := config.GetConfig()
 
 	theManager, err = CreateManager(config)
 	if err != nil {

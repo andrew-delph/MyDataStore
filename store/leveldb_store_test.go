@@ -101,7 +101,7 @@ func TestLevelDbStoreSingle(t *testing.T) {
 	t.Error("todo fix.")
 	return
 
-	config := config.GetConfig(true)
+	config := config.GetConfig()
 	config.Manager.Hostname = randomString(5)
 
 	// theManager, err = CreateManager(config)
@@ -142,7 +142,7 @@ func TestLevelDbStoreSpeed(t *testing.T) {
 	t.Error("todo fix.")
 	return
 
-	config := config.GetConfig(true)
+	config := config.GetConfig()
 	config.Manager.Hostname = randomString(5)
 
 	var err error
@@ -166,7 +166,7 @@ func TestLevelDbStoreSpeed(t *testing.T) {
 func TestLevelDbIndex(t *testing.T) {
 	t.Error("todo fix.")
 	return
-	config := config.GetConfig(true)
+	config := config.GetConfig()
 	config.Manager.Hostname = randomString(5)
 
 	var err error
@@ -237,7 +237,7 @@ func TestLevelDbIndex(t *testing.T) {
 }
 
 func TestLevelDbPartitionEpochObject(t *testing.T) {
-	config := config.GetConfig(true)
+	config := config.GetConfig()
 	config.Manager.Hostname = randomString(5)
 
 	var err error

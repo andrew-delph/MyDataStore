@@ -50,7 +50,7 @@ func TestHashRing2(t *testing.T) {
 			t.Error("Recovered from panic:", r)
 		}
 	}()
-	config := config.GetConfig(true)
+	config := config.GetConfig()
 	c1 := GetHashRing(config.Manager)
 	c2 := GetHashRing(config.Manager)
 
@@ -120,7 +120,7 @@ func TestPartitions(t *testing.T) {
 			t.Error("Recovered from panic:", r)
 		}
 	}()
-	config := config.GetConfig(true)
+	config := config.GetConfig()
 	ring := GetHashRing(config.Manager)
 
 	for i := 0; i < 8; i++ {

@@ -15,3 +15,5 @@ memberlist:
   init_members:
     - "test:1"
     - "test:2"
+storage:
+  data_path: "/tmp/store/data"

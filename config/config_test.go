@@ -35,7 +35,7 @@ import (
 // }
 
 func TestConfigDefault(t *testing.T) {
-	config := GetConfig(false)
+	config := GetDefaultConfig()
 
 	// manager config
 	assert.Equal(t, 3, config.Manager.ReplicaCount, "ReplicaCount wrong value")
@@ -54,13 +54,15 @@ func TestConfigDefault(t *testing.T) {
 
 	// memberlist config
 	assert.Equal(t, []string{"store:8081"}, config.MemberList.InitMembers, "InitMembers wrong value")
+
+	assert.Equal(t, "/store/data", config.Storage.DataPath, "DataPath wrong value")
 }
 
 func TestConfigOverwrite(t *testing.T) {
 	CopyFile("test-config.yaml", "config.yaml")
 	defer DeleteFile("config.yaml")
 
-	config := GetConfig(true)
+	config := GetConfig()
 
 	// manager config
 	assert.Equal(t, 9, config.Manager.ReplicaCount, "ReplicaCount wrong value")
@@ -79,6 +81,8 @@ func TestConfigOverwrite(t *testing.T) {
 
 	// memberlist config
 	assert.Equal(t, []string{"test:1", "test:2"}, config.MemberList.InitMembers, "InitMembers wrong value")
+
+	assert.Equal(t, "/tmp/store/data", config.Storage.DataPath, "DataPath wrong value")
 }
 
 func TestErrors(t *testing.T) {
