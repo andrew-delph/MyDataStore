@@ -113,7 +113,7 @@ func (m Manager) handleEpochUpdate(handleEpoch int64) error {
 	if handleEpoch-2 < 0 {
 		return nil
 	}
-	myPartions, err := m.hashRing.GetMemberPartions(m.Config.Hostname)
+	myPartions, err := m.hashRing.GetMemberPartions(m.Config.Manager.Hostname)
 	if err != nil {
 		logrus.Error(err)
 		return err
@@ -146,8 +146,8 @@ func (m Manager) handleEpochUpdate(handleEpoch int64) error {
 			healthyCount++
 		}
 	}
-	healthyPartitionsGauge.WithLabelValues(hostname).Set(float64(healthyCount))
-	unhealthyPartitionsGauge.WithLabelValues(hostname).Set(float64(unhealthyCount))
+	healthyPartitionsGauge.WithLabelValues(theManager.Config.Manager.Hostname).Set(float64(healthyCount))
+	unhealthyPartitionsGauge.WithLabelValues(theManager.Config.Manager.Hostname).Set(float64(unhealthyCount))
 	return nil
 }
 

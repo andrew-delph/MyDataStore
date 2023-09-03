@@ -9,8 +9,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-var hostname string
-
 // var (
 // 	ReplicaCount     int           = 3
 // 	WriteQuorum      int           = 2
@@ -36,6 +34,7 @@ type ManagerConfig struct {
 	PartitionBuckets int    `mapstructure:"PARTITION_BUCKETS"`
 	PartitionCount   int    `mapstructure:"PARTITION_COUNT"`
 	DataPath         string `mapstructure:"DATA_PATH"`
+	Hostname         string
 }
 
 type RaftConfig struct {
@@ -55,7 +54,6 @@ type StoreConfig struct {
 }
 
 type Config struct {
-	Hostname   string
 	Manager    ManagerConfig    `mapstructure:"MANAGER"`
 	Raft       RaftConfig       `mapstructure:"RAFT"`
 	MemberList MemberListConfig `mapstructure:"MEMBERLIST"`
@@ -69,7 +67,6 @@ func GetConfig() Config {
 	if err := viper.ReadInConfig(); err != nil {
 		logrus.Fatalf("Error reading default config file, %s", err)
 	}
-
 	// Override with configuration from config.yaml
 	viper.SetConfigName(filepath.Join(os.Getenv("CONFIG_PATH"), "config"))
 	if err := viper.MergeInConfig(); err != nil {
@@ -88,7 +85,7 @@ func GetConfig() Config {
 	if err != nil {
 		logrus.Fatal(err)
 	}
-	config.Hostname = hostname
+	config.Manager.Hostname = hostname
 
 	return config
 }

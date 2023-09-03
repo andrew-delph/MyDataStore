@@ -39,7 +39,7 @@ func main() {
 
 	SetupRaft(config.Raft)
 
-	logrus.Infof("starting! %s", hostname)
+	logrus.Infof("starting! %s", theManager.Config.Manager.Hostname)
 
 	if err != nil {
 		logrus.Panic("Failed to create memberlist: " + err.Error())

@@ -16,7 +16,7 @@ func TestGoCacheStoreMerkleTree(t *testing.T) {
 	t.Error("todo fix.")
 	return
 	config := GetConfig()
-	config.Hostname = randomString(5)
+	config.Manager.Hostname = randomString(5)
 
 	var err error
 	store, err = NewLevelDbStore(config.Manager)

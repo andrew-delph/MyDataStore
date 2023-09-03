@@ -15,12 +15,12 @@ import (
 )
 
 func baseHandler(w http.ResponseWriter, r *http.Request) {
-	logrus.Debugf("handling / for %s", hostname)
+	logrus.Debugf("handling / for %s", theManager.Config.Manager.Hostname)
 	fmt.Fprint(w, "server is running")
 }
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
-	logrus.Debugf("handling /health for %s validFSM = %v", hostname, validFSM)
+	logrus.Debugf("handling /health for %s validFSM = %v", theManager.Config.Manager.Hostname, validFSM)
 	// if validFSM && raftNode.Leader() != "" {
 	// if raftNode.Leader() != "" {
 	if (raftNode.State() == raft.Follower || raftNode.State() == raft.Leader) && raftNode.Leader() != "" && validFSM {

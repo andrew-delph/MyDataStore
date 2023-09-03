@@ -193,7 +193,7 @@ func (store GoCacheStore) InitStore() {
 
 func (store GoCacheStore) LoadPartitions(partitions []int) {
 	for _, partitionId := range partitions {
-		partitionFileName := fmt.Sprintf("%s/%s_%s.json", "TODO FIX THIS.", hostname, strconv.Itoa(partitionId))
+		partitionFileName := fmt.Sprintf("%s/%s_%s.json", "TODO FIX THIS.", theManager.Config.Manager.Hostname, strconv.Itoa(partitionId))
 		partition, err := store.getPartition(partitionId)
 		if err != nil {
 			logrus.Debugf("failed getPartition: %v , %v", partitionId, err)
@@ -214,11 +214,11 @@ func (store GoCacheStore) LoadPartitions(partitions []int) {
 }
 
 func (store GoCacheStore) saveStore() {
-	logrus.Debugf("Saving store: %s", hostname)
+	logrus.Debugf("Saving store: %s", theManager.Config.Manager.Hostname)
 
 	for partitionId, value := range store.partitionStore.Items() {
 		partition := value.Object.(*cache.Cache)
-		partitionFileName := fmt.Sprintf("/store/%s_%s.json", hostname, partitionId)
+		partitionFileName := fmt.Sprintf("/store/%s_%s.json", theManager.Config.Manager.Hostname, partitionId)
 		logrus.Debugf("saving partition to file %s", partitionFileName)
 		err := partition.SaveFile(partitionFileName)
 		if err != nil {

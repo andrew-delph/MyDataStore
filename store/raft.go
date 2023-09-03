@@ -141,7 +141,7 @@ var (
 
 func CreateRaftConf(raftConfig RaftConfig) *raft.Config {
 	conf := raft.DefaultConfig()
-	conf.LocalID = raft.ServerID(hostname)
+	conf.LocalID = raft.ServerID(theManager.Config.Manager.Hostname)
 	// conf.SnapshotInterval = time.Second * 1
 	// conf.SnapshotThreshold = 1
 	logrus.Infof("conf.ElectionTimeout %v", conf.ElectionTimeout)

@@ -98,7 +98,8 @@ func TestLevelDbStoreSingle(t *testing.T) {
 	t.Error("todo fix.")
 	return
 	config := GetConfig()
-	config.Hostname = randomString(5)
+	config.Manager.Hostname = randomString(5)
+	config.Manager.DataPath = "/tmp/store/data"
 
 	var err error
 	store, err = NewLevelDbStore(config.Manager)
@@ -106,11 +107,11 @@ func TestLevelDbStoreSingle(t *testing.T) {
 		t.Error(fmt.Sprintf("NewLevelDbStore: %v", err))
 	}
 	defer store.Close()
-
 	err = store.SetValue(testValue("keyz", "value1", 1))
 	if err != nil {
 		t.Error(fmt.Sprintf("SetValue error: %v", err))
 	}
+	return
 
 	value, exists, err := store.GetValue("keyz")
 
@@ -132,7 +133,7 @@ func TestLevelDbStoreSpeed(t *testing.T) {
 	return
 
 	config := GetConfig()
-	config.Hostname = randomString(5)
+	config.Manager.Hostname = randomString(5)
 
 	var err error
 	store, err = NewLevelDbStore(config.Manager)
@@ -154,7 +155,7 @@ func TestLevelDbStoreSpeed(t *testing.T) {
 
 func TestLevelDbIndex(t *testing.T) {
 	config := GetConfig()
-	config.Hostname = randomString(5)
+	config.Manager.Hostname = randomString(5)
 
 	var err error
 	store, err = NewLevelDbStore(config.Manager)
@@ -225,7 +226,7 @@ func TestLevelDbIndex(t *testing.T) {
 
 func TestLevelDbPartitionEpochObject(t *testing.T) {
 	config := GetConfig()
-	config.Hostname = randomString(5)
+	config.Manager.Hostname = randomString(5)
 
 	var err error
 	store, err = NewLevelDbStore(config.Manager)

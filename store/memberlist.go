@@ -45,7 +45,7 @@ func CreateMemberList(managerConfig ManagerConfig) (*GossipCluster, error) {
 	conf.AdvertisePort = 8081
 	conf.Delegate = &cluster
 	conf.Events = &cluster
-	conf.Name = hostname
+	conf.Name = theManager.Config.Manager.Hostname
 
 	clusterNodes, err := memberlist.Create(conf)
 	if err != nil {
