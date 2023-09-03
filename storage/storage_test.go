@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -87,4 +88,46 @@ func storageTransaction(t *testing.T, storage Storage) {
 		t.Error(err)
 	}
 	assert.EqualValues(t, value, res, "value should be equal")
+}
+
+func TestStorageIterator(t *testing.T) {
+	AllStorage(t, storageIterator)
+}
+
+func storageIterator(t *testing.T, storage Storage) {
+	trx := storage.NewTransaction(true)
+	defer trx.Discard()
+
+	for i := 0; i < 100; i++ {
+		key := []byte(fmt.Sprintf("testkey%d", i))
+		value := []byte(fmt.Sprintf("testvalue%d", i))
+		err := trx.Set(key, value)
+		if err != nil {
+			t.Error(err)
+		}
+	}
+
+	err := trx.Commit()
+	if err != nil {
+		t.Error(err)
+	}
+
+	it := storage.NewIterator([]byte("testkey0"), []byte("zzz"))
+
+	assert.EqualValues(t, true, it.First(), "it.First() should be true")
+	logrus.Warn()
+	logrus.Warn("starting it.")
+	logrus.Warn()
+
+	for !it.isDone() {
+		// key := []byte(fmt.Sprintf("testkey%d", i))
+		// value := []byte(fmt.Sprintf("testvalue%d", i))
+		// seekKey := it.Key()
+		// seekValue := it.Value()
+		// assert.EqualValues(t, key, seekKey, "seekKey should be equal")
+		// assert.EqualValues(t, value, seekValue, "seekValue should be equal")
+		logrus.Warn("key= ", string(it.Key()))
+		it.Next()
+		// assert.EqualValues(t, true, it.Next(), "it.Next() should be true")
+	}
 }

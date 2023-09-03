@@ -3,7 +3,9 @@ package storage
 import (
 	"github.com/sirupsen/logrus"
 	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"github.com/syndtr/goleveldb/leveldb/opt"
+	"github.com/syndtr/goleveldb/leveldb/util"
 
 	"github.com/andrew-delph/my-key-store/config"
 )
@@ -37,7 +39,13 @@ func (storage LevelDbStorage) Get(key []byte) ([]byte, error) {
 }
 
 func (storage LevelDbStorage) NewIterator(Start []byte, Limit []byte) Iterator {
-	return LevelDbIterator{}
+	rng := &util.Range{Start: Start, Limit: Limit}
+
+	// Create an Iterator to iterate through the keys within the range
+	readOpts := &opt.ReadOptions{}
+	iter := storage.db.NewIterator(rng, readOpts)
+
+	return LevelDbIterator{it: iter}
 }
 
 func (storage LevelDbStorage) Close() error {
@@ -48,30 +56,30 @@ func (storage LevelDbStorage) NewTransaction(update bool) Transaction {
 	return LevelDbTransaction{storage: storage}
 }
 
-type LevelDbIterator struct{}
+type LevelDbIterator struct{ it iterator.Iterator }
 
-func (LevelDbIterator) First() bool {
-	panic("not implemented") // TODO: Implement
+func (iterator LevelDbIterator) First() bool {
+	return iterator.it.First()
 }
 
-func (LevelDbIterator) Next() bool {
-	panic("not implemented") // TODO: Implement
+func (iterator LevelDbIterator) Next() bool {
+	return iterator.it.Next()
 }
 
-func (LevelDbIterator) isDone() bool {
-	panic("not implemented") // TODO: Implement
+func (iterator LevelDbIterator) isDone() bool {
+	return !iterator.it.Valid()
 }
 
-func (LevelDbIterator) Key() []byte {
-	panic("not implemented") // TODO: Implement
+func (iterator LevelDbIterator) Key() []byte {
+	return iterator.it.Key()
 }
 
-func (LevelDbIterator) Value() []byte {
-	panic("not implemented") // TODO: Implement
+func (iterator LevelDbIterator) Value() []byte {
+	return iterator.it.Value()
 }
 
-func (LevelDbIterator) Release() {
-	panic("not implemented") // TODO: Implement
+func (iterator LevelDbIterator) Release() {
+	iterator.it.Release()
 }
 
 type LevelDbTransaction struct {

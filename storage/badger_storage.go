@@ -1,6 +1,8 @@
 package storage
 
 import (
+	"bytes"
+
 	"github.com/dgraph-io/badger"
 	"github.com/sirupsen/logrus"
 
@@ -12,7 +14,9 @@ type BadgerStorage struct {
 }
 
 func NewBadgerStorage(conf config.StorageConfig) BadgerStorage {
-	db, err := badger.Open(badger.DefaultOptions(conf.DataPath))
+	ops := badger.DefaultOptions(conf.DataPath)
+	ops.Logger = nil
+	db, err := badger.Open(ops)
 	if err != nil {
 		logrus.Fatal(err)
 	}
@@ -49,7 +53,10 @@ func (storage BadgerStorage) Get(key []byte) ([]byte, error) {
 }
 
 func (storage BadgerStorage) NewIterator(Start []byte, Limit []byte) Iterator {
-	return LevelDbIterator{}
+	trx := storage.db.NewTransaction(false)
+	it := trx.NewIterator(badger.DefaultIteratorOptions)
+	it.Seek(Start)
+	return BadgerIterator{it: it, trx: trx, Start: Start, Limit: Limit}
 }
 
 func (storage BadgerStorage) NewTransaction(update bool) Transaction {
@@ -61,30 +68,44 @@ func (storage BadgerStorage) Close() error {
 	return storage.db.Close()
 }
 
-type BadgerIterator struct{}
-
-func (BadgerIterator) First() bool {
-	panic("not implemented") // TODO: Implement
+type BadgerIterator struct {
+	it    *badger.Iterator
+	trx   *badger.Txn
+	Start []byte
+	Limit []byte
 }
 
-func (BadgerIterator) Next() bool {
-	panic("not implemented") // TODO: Implement
+func (iterator BadgerIterator) First() bool {
+	iterator.it.Seek(iterator.Start)
+	return iterator.it.Valid()
 }
 
-func (BadgerIterator) isDone() bool {
-	panic("not implemented") // TODO: Implement
+func (iterator BadgerIterator) Next() bool {
+	iterator.it.Next()
+	return !iterator.isDone()
 }
 
-func (BadgerIterator) Key() []byte {
-	panic("not implemented") // TODO: Implement
+func (iterator BadgerIterator) isDone() bool {
+	return !iterator.it.Valid() || bytes.Compare(iterator.it.Item().Key(), iterator.Limit) >= 0
 }
 
-func (BadgerIterator) Value() []byte {
-	panic("not implemented") // TODO: Implement
+func (iterator BadgerIterator) Key() []byte {
+	item := iterator.it.Item()
+	return item.Key()
 }
 
-func (BadgerIterator) Release() {
-	panic("not implemented") // TODO: Implement
+func (iterator BadgerIterator) Value() []byte {
+	item := iterator.it.Item()
+	value, err := item.ValueCopy(nil)
+	if err != nil {
+		logrus.Fatal(err)
+	}
+	return value
+}
+
+func (iterator BadgerIterator) Release() {
+	iterator.trx.Discard()
+	iterator.it.Close()
 }
 
 type BadgerTransaction struct {
