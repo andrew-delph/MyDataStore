@@ -6,13 +6,6 @@ import (
 	"github.com/hashicorp/memberlist"
 )
 
-var hashRingConf = consistent.Config{
-	PartitionCount:    partitionCount,
-	ReplicationFactor: 13,
-	Load:              1.2,
-	Hasher:            hasher{},
-}
-
 type hasher struct{}
 
 func (h hasher) Sum64(data []byte) uint64 {
@@ -27,29 +20,40 @@ func (m HashRingMember) String() string {
 	return string(m.name)
 }
 
-func GetHashRing() *consistent.Consistent {
-	hashring := consistent.New(nil, hashRingConf)
-	return hashring
+type HashRing struct {
+	Config     consistent.Config
+	Consistent *consistent.Consistent
 }
 
-func AddNode(hashring *consistent.Consistent, node *memberlist.Node) {
+func GetHashRing(managerConfig ManagerConfig) *HashRing {
+	Config := consistent.Config{
+		PartitionCount:    managerConfig.PartitionCount,
+		ReplicationFactor: 13,
+		Load:              1.2,
+		Hasher:            hasher{},
+	}
+	Consistent := consistent.New(nil, Config)
+	return &HashRing{Config: Config, Consistent: Consistent}
+}
+
+func (ring HashRing) AddNode(node *memberlist.Node) {
 	member := HashRingMember{name: node.Name}
-	hashring.Add(member)
+	ring.Consistent.Add(member)
 }
 
-func RemoveNode(hashring *consistent.Consistent, node *memberlist.Node) {
-	hashring.Remove(node.Name)
+func (ring HashRing) RemoveNode(node *memberlist.Node) {
+	ring.Consistent.Remove(node.Name)
 }
 
-func FindPartitionID(hashring *consistent.Consistent, key string) int {
+func (ring HashRing) FindPartitionID(key string) int {
 	keyBytes := []byte(key)
-	return hashring.FindPartitionID(keyBytes)
+	return ring.Consistent.FindPartitionID(keyBytes)
 }
 
-func GetMemberPartions(hashring *consistent.Consistent, member string) ([]int, error) {
+func (ring HashRing) GetMemberPartions(member string) ([]int, error) {
 	var belongsTo []int
-	for partID := 0; partID < hashRingConf.PartitionCount; partID++ {
-		members, err := hashring.GetClosestNForPartition(partID, ReplicaCount)
+	for partID := 0; partID < ring.Config.PartitionCount; partID++ {
+		members, err := ring.Consistent.GetClosestNForPartition(partID, ring.Config.PartitionCount)
 		if err != nil {
 			return nil, err
 		}
@@ -63,14 +67,14 @@ func GetMemberPartions(hashring *consistent.Consistent, member string) ([]int, e
 	return belongsTo, nil
 }
 
-func GetMembers(hashring *consistent.Consistent) []HashRingMember {
-	return ConvertHashRingMemberArray(hashring.GetMembers())
+func (ring HashRing) GetMembers() []HashRingMember {
+	return ConvertHashRingMemberArray(ring.Consistent.GetMembers())
 }
 
-func GetClosestN(hashring *consistent.Consistent, key string, count int) ([]HashRingMember, error) {
+func (ring HashRing) GetClosestN(key string, count int) ([]HashRingMember, error) {
 	keyBytes := []byte(key)
 
-	members, err := hashring.GetClosestN(keyBytes, count)
+	members, err := ring.Consistent.GetClosestN(keyBytes, count)
 	if err != nil {
 		return nil, err
 	}
@@ -78,8 +82,8 @@ func GetClosestN(hashring *consistent.Consistent, key string, count int) ([]Hash
 	return ConvertHashRingMemberArray(members), nil
 }
 
-func GetClosestNForPartition(hashring *consistent.Consistent, partitionId, count int) ([]HashRingMember, error) {
-	members, err := hashring.GetClosestNForPartition(partitionId, count)
+func (ring HashRing) GetClosestNForPartition(partitionId, count int) ([]HashRingMember, error) {
+	members, err := ring.Consistent.GetClosestNForPartition(partitionId, count)
 	if err != nil {
 		return nil, err
 	}

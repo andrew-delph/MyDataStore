@@ -11,4 +11,5 @@ raft:
   auto_bootstrap: true
   bootstrap_timeout: 30
 memberlist:
-  init_members: "store:8081"
+  init_members:
+    - "store:8081"

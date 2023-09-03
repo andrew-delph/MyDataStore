@@ -11,4 +11,6 @@ raft:
   auto_bootstrap: false
   bootstrap_timeout: 1
 memberlist:
-  init_members: "test:999"
+  init_members:
+    - "test:1"
+    - "test:2"

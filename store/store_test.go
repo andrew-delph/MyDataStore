@@ -4,11 +4,9 @@ import (
 	"fmt"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/hashicorp/raft"
 	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
 
 	datap "github.com/andrew-delph/my-key-store/datap"
 )
@@ -20,47 +18,50 @@ func testValue(key, value string, epoch int) *datap.Value {
 }
 
 func TestGoCacheStore(t *testing.T) {
-	conf, delegate, events = CreateMemberlistConf()
+	t.Error("TODO FIX.")
+	// conf, delegate, events = CreateMemberlistConf()
 
-	store = NewGoCacheStore()
-	defer store.Close()
+	// store = NewGoCacheStore()
+	// defer store.Close()
 
-	err := store.SetValue(testValue("key1", "value1", 1))
-	if err != nil {
-		t.Error(fmt.Sprintf("SetValue error: %v", err))
-	}
+	// err := store.SetValue(testValue("key1", "value1", 1))
+	// if err != nil {
+	// 	t.Error(fmt.Sprintf("SetValue error: %v", err))
+	// }
 
-	value, exists, err := store.GetValue("key1")
+	// value, exists, err := store.GetValue("key1")
 
-	if !exists {
-		t.Error(fmt.Sprintf("exists is false: %v", err))
-		return
-	}
+	// if !exists {
+	// 	t.Error(fmt.Sprintf("exists is false: %v", err))
+	// 	return
+	// }
 
-	if err != nil {
-		t.Error(fmt.Sprintf("error is not nil: %v", err))
-		return
-	}
+	// if err != nil {
+	// 	t.Error(fmt.Sprintf("error is not nil: %v", err))
+	// 	return
+	// }
 
-	assert.Equal(t, "value1", value.Value, "Both should be SetMessage")
+	// assert.Equal(t, "value1", value.Value, "Both should be SetMessage")
 }
 
 var NumTestValues = 100
 
 func TestGoCacheStoreSpeed(t *testing.T) {
-	conf, delegate, events = CreateMemberlistConf()
+	t.Error("TODO FIX.")
 
-	store = NewGoCacheStore()
-	defer store.Close()
+	// conf, delegate, events = CreateMemberlistConf()
 
-	startTime := time.Now()
+	// store = NewGoCacheStore()
+	// defer store.Close()
 
-	for i := 0; i < NumTestValues; i++ {
-		store.SetValue(testValue(fmt.Sprintf("keyz%d", i), fmt.Sprintf("value%d", i), 1))
-	}
+	// startTime := time.Now()
 
-	elapsedTime := time.Since(startTime).Seconds()
-	fmt.Printf("TestGoCacheStoreSpeed Elapsed Time: %.2f seconds\n", elapsedTime)
+	// for i := 0; i < NumTestValues; i++ {
+	// 	store.SetValue(testValue(fmt.Sprintf("keyz%d", i), fmt.Sprintf("value%d", i), 1))
+	// }
+
+	// elapsedTime := time.Since(startTime).Seconds()
+	// fmt.Printf("TestGoCacheStoreSpeed Elapsed Time: %.2f seconds\n", elapsedTime)
 }
 
 func createTestKey(key string, bucket, epoch int) string {

@@ -137,7 +137,7 @@ func RawPartitionMerkleTree(epoch int64, globalEpoch bool, partitionId int) (*me
 	upperEpoch := int(epoch + 1)
 
 	// Build content list in sorted order of keys
-	bucketList := make([]*RealMerkleBucket, partitionBuckets)
+	bucketList := make([]*RealMerkleBucket, theManager.Config.Manager.PartitionCount)
 
 	for i := range bucketList {
 		bucket := RealMerkleBucket{hasher: &CustomHash{}, BaseMerkleBucket: BaseMerkleBucket{bucketId: int32(i)}}
@@ -149,7 +149,7 @@ func RawPartitionMerkleTree(epoch int64, globalEpoch bool, partitionId int) (*me
 		bucketList[i] = &bucket
 	}
 
-	contentList := make([]merkletree.Content, partitionBuckets)
+	contentList := make([]merkletree.Content, theManager.Config.Manager.PartitionBuckets)
 	for i := range bucketList {
 		contentList[i] = bucketList[i]
 	}
@@ -165,7 +165,7 @@ func RawPartitionMerkleTree(epoch int64, globalEpoch bool, partitionId int) (*me
 }
 
 func MerkleTreeToPartitionEpochObject(tree *merkletree.MerkleTree, bucketList []*RealMerkleBucket, epoch int64, partitionId int) (*datap.PartitionEpochObject, error) {
-	bucketHashes := make([][]byte, 0, partitionBuckets)
+	bucketHashes := make([][]byte, 0, theManager.Config.Manager.PartitionBuckets)
 	for i, bucket := range bucketList {
 		hash, err := bucket.CalculateHash()
 		if err != nil {
@@ -182,7 +182,7 @@ func MerkleTreeToPartitionEpochObject(tree *merkletree.MerkleTree, bucketList []
 }
 
 func PartitionEpochObjectToMerkleTree(partitionEpochObject *datap.PartitionEpochObject) (*merkletree.MerkleTree, error) {
-	contentList := make([]merkletree.Content, 0, partitionBuckets)
+	contentList := make([]merkletree.Content, 0, theManager.Config.Manager.PartitionBuckets)
 	for i, bucketHash := range partitionEpochObject.Buckets {
 		contentList = append(contentList, &SerializedMerkleBucket{hash: bucketHash, BaseMerkleBucket: BaseMerkleBucket{bucketId: int32(i)}})
 	}

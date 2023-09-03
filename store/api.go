@@ -37,7 +37,7 @@ func setHandler(w http.ResponseWriter, r *http.Request) {
 	key := r.URL.Query().Get("key")
 	value := r.URL.Query().Get("value")
 
-	err := SendSetMessage(key, value)
+	err := theManager.SendSetMessage(key, value)
 	if err != nil {
 		errorMessage := fmt.Sprintf("Set Error: key = '%s', value = '%s'. Error = %v", key, value, err)
 		logrus.Error(errorMessage)
@@ -52,7 +52,7 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 	// Get the key from the query parameters
 	key := r.URL.Query().Get("key")
 
-	value, err := SendGetMessage(key)
+	value, err := theManager.SendGetMessage(key)
 	if err != nil {
 		errorMessage := fmt.Sprintf("Get Error: key = '%s' Error = %v", key, err)
 		logrus.Error(errorMessage)

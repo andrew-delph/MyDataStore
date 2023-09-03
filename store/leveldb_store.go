@@ -14,12 +14,13 @@ import (
 )
 
 type LevelDbStore struct {
-	db *leveldb.DB
+	db     *leveldb.DB
+	config ManagerConfig
 }
 
 type LevelDbPartition struct {
 	BasePartition
-	db *leveldb.DB
+	store *LevelDbStore
 }
 
 func IndexBucketEpoch(parition, bucket, epoch int, key string) []byte {
@@ -40,19 +41,19 @@ func IndexKey(paritionint int, key string) []byte {
 	return []byte(fmt.Sprintf("real_%04d_%s", paritionint, key))
 }
 
-func NewLevelDbPartition(db *leveldb.DB, partitionId int) Partition {
-	partition := LevelDbPartition{db: db}
+func NewLevelDbPartition(store *LevelDbStore, partitionId int) Partition {
+	partition := LevelDbPartition{store: store}
 	partition.partitionId = partitionId
 	return partition
 }
 
-func NewLevelDbStore() (*LevelDbStore, error) {
-	storeFile := fmt.Sprintf("%s/data/level/%s", dataPath, hostname)
+func NewLevelDbStore(config ManagerConfig) (*LevelDbStore, error) {
+	storeFile := fmt.Sprintf("%s/data/level/%s", config.DataPath, hostname)
 	db, err := leveldb.OpenFile(storeFile, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &LevelDbStore{db: db}, nil
+	return &LevelDbStore{db: db, config: config}, nil
 }
 
 func (partition LevelDbPartition) SetPartitionValue(value *datap.Value) error {
@@ -65,17 +66,17 @@ func (partition LevelDbPartition) SetPartitionValue(value *datap.Value) error {
 		logrus.Error("Error: ", err)
 		return err
 	}
-	err = partition.db.Put(key, data, writeOpts)
+	err = partition.store.db.Put(key, data, writeOpts)
 	if err != nil {
 		logrus.Error("Error: ", err)
 		return err
 	}
 	bucketHash := CalculateHash(value.Key)
-	bucket := bucketHash % partitionBuckets
+	bucket := bucketHash % partition.store.config.PartitionBuckets
 	logrus.Debugf("SetValue p = %v b = %v", partition.GetPartitionId(), bucket)
 	indexBytes := IndexBucketEpoch(partition.GetPartitionId(), bucket, int(value.Epoch), value.Key)
 
-	err = partition.db.Put(indexBytes, data, writeOpts)
+	err = partition.store.db.Put(indexBytes, data, writeOpts)
 	if err != nil {
 		logrus.Errorf("Error: %v", err)
 		return err
@@ -86,7 +87,7 @@ func (partition LevelDbPartition) SetPartitionValue(value *datap.Value) error {
 
 func (partition LevelDbPartition) GetPartitionValue(key string) (*datap.Value, bool, error) {
 	keyBytes := IndexKey(partition.GetPartitionId(), key)
-	valueBytes, err := partition.db.Get(keyBytes, nil)
+	valueBytes, err := partition.store.db.Get(keyBytes, nil)
 
 	if err == leveldb.ErrNotFound {
 		return nil, false, nil
@@ -118,7 +119,7 @@ func (partition LevelDbPartition) Items(bucket, lowerEpoch, upperEpoch int) map[
 
 	// Create an Iterator to iterate through the keys within the range
 	readOpts := &opt.ReadOptions{}
-	iter := partition.db.NewIterator(rng, readOpts)
+	iter := partition.store.db.NewIterator(rng, readOpts)
 
 	// iter = partition.db.NewIterator(nil, readOpts)
 	defer iter.Release()
@@ -159,8 +160,8 @@ func (store LevelDbStore) Items(partions []int, bucket, lowerEpoch, upperEpoch i
 
 // Function to set a value in the global cache
 func (store LevelDbStore) SetValue(value *datap.Value) error {
+	partitionId := theManager.hashRing.FindPartitionID(value.Key)
 	key := value.Key
-	partitionId := FindPartitionID(events.consistent, key)
 
 	logrus.Debugf("SetValue partitionId = %v", partitionId)
 
@@ -183,8 +184,7 @@ func (store LevelDbStore) SetValue(value *datap.Value) error {
 
 // Function to get a value from the global cache
 func (store LevelDbStore) GetValue(key string) (*datap.Value, bool, error) {
-	partitionId := FindPartitionID(events.consistent, key)
-
+	partitionId := theManager.hashRing.FindPartitionID(key)
 	partition, err := store.getPartition(partitionId)
 	if err != nil {
 		return nil, false, err
@@ -200,7 +200,7 @@ func (store LevelDbStore) GetValue(key string) (*datap.Value, bool, error) {
 }
 
 func (store LevelDbStore) getPartition(partitionId int) (Partition, error) {
-	return NewLevelDbPartition(store.db, partitionId), nil
+	return NewLevelDbPartition(&store, partitionId), nil
 }
 
 func (store LevelDbStore) InitStore() {
@@ -254,7 +254,7 @@ func (store LevelDbStore) Clear() {
 
 func (partition LevelDbPartition) GetPartitionEpochObject(epoch int) (*datap.PartitionEpochObject, error) {
 	keyBytes := IndexPartitionEpochObject(partition.GetPartitionId(), epoch)
-	valueBytes, err := partition.db.Get(keyBytes, nil)
+	valueBytes, err := partition.store.db.Get(keyBytes, nil)
 	if err == leveldb.ErrNotFound {
 		return nil, STORE_NOT_FOUND
 	}
@@ -282,7 +282,7 @@ func (partition LevelDbPartition) PutPartitionEpochObject(partitionEpochObject *
 		logrus.Error("Error: ", err)
 		return err
 	}
-	err = partition.db.Put(key, data, writeOpts)
+	err = partition.store.db.Put(key, data, writeOpts)
 	if err != nil {
 		logrus.Error("Error: ", err)
 		return err
@@ -296,7 +296,7 @@ func (partition LevelDbPartition) LastPartitionEpochObject() (*datap.PartitionEp
 	rng := util.BytesPrefix(keyBytes)
 	readOpts := &opt.ReadOptions{}
 
-	iter := partition.db.NewIterator(rng, readOpts)
+	iter := partition.store.db.NewIterator(rng, readOpts)
 
 	defer iter.Release()
 

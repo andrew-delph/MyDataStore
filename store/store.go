@@ -125,7 +125,7 @@ func (store GoCacheStore) Items(partions []int, bucket, lowerEpoch, upperEpoch i
 // Function to set a value in the global cache
 func (store GoCacheStore) SetValue(value *datap.Value) error {
 	key := value.Key
-	partitionId := FindPartitionID(events.consistent, key)
+	partitionId := theManager.hashRing.FindPartitionID(key)
 	partition, err := store.getPartition(partitionId)
 	if partition == nil && err != nil {
 		return err
@@ -145,7 +145,7 @@ func (store GoCacheStore) SetValue(value *datap.Value) error {
 
 // Function to get a value from the global cache
 func (store GoCacheStore) GetValue(key string) (*datap.Value, bool, error) {
-	partitionId := FindPartitionID(events.consistent, key)
+	partitionId := theManager.hashRing.FindPartitionID(key)
 
 	partition, err := store.getPartition(partitionId)
 	if err != nil {
@@ -179,9 +179,9 @@ func (store GoCacheStore) getPartition(partitionId int) (Partition, error) {
 }
 
 func (store GoCacheStore) InitStore() {
-	ticker := time.NewTicker(saveInterval)
+	ticker := time.NewTicker(1) // TODO fix this.
 
-	logrus.Debugf("store saveInterval %v", saveInterval)
+	logrus.Debugf("store saveInterval %v", 1)
 
 	// Periodically save the cache to a file
 	go func() {
@@ -193,7 +193,7 @@ func (store GoCacheStore) InitStore() {
 
 func (store GoCacheStore) LoadPartitions(partitions []int) {
 	for _, partitionId := range partitions {
-		partitionFileName := fmt.Sprintf("%s/%s_%s.json", dataPath, hostname, strconv.Itoa(partitionId))
+		partitionFileName := fmt.Sprintf("%s/%s_%s.json", "TODO FIX THIS.", hostname, strconv.Itoa(partitionId))
 		partition, err := store.getPartition(partitionId)
 		if err != nil {
 			logrus.Debugf("failed getPartition: %v , %v", partitionId, err)

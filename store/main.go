@@ -3,16 +3,8 @@ package main
 import (
 	"time"
 
-	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
 	"github.com/sirupsen/logrus"
-)
-
-var (
-	clusterNodes *memberlist.Memberlist
-	delegate     *MyDelegate
-	events       *MyEventDelegate
-	conf         *memberlist.Config
 )
 
 var myPartions []int
@@ -21,20 +13,23 @@ var store Store
 
 var globalEpoch int64 = 0
 
+var theManager *Manager
+
 func main() {
 	var err error
 	config := GetConfig()
-	logrus.Info(config)
 
-	Init()
-	// logrus.Warn("sleeping 1000 seconds.")
-	// time.Sleep(1000 * time.Second)
+	theManager, err = CreateManager(config)
+	if err != nil {
+		logrus.Fatal(err)
+	}
+
 	go StartProfileServer()
 	go StartInterGrpcServer()
 	logrus.SetLevel(logrus.WarnLevel)
 	// logrus.SetFormatter(&logrus.JSONFormatter{})
 
-	store, err = NewLevelDbStore()
+	store, err = NewLevelDbStore(config.Manager)
 	if err != nil {
 		logrus.Fatalf("NewLevelDbStore err = %v", err)
 	}
@@ -46,10 +41,6 @@ func main() {
 
 	logrus.Infof("starting! %s", hostname)
 
-	conf, delegate, events = CreateMemberlistConf()
-
-	clusterNodes, err = memberlist.Create(conf)
-
 	if err != nil {
 		logrus.Panic("Failed to create memberlist: " + err.Error())
 	}
@@ -58,7 +49,7 @@ func main() {
 
 	// Join an existing cluster by specifying at least one known member.
 	for true {
-		n, err := clusterNodes.Join(clusterJoinList)
+		n, err := theManager.gossipCluster.cluster.Join(config.MemberList.InitMembers)
 		logrus.Info("n", n)
 
 		if err == nil {
@@ -66,16 +57,16 @@ func main() {
 			break
 		}
 		time.Sleep(5 * time.Second)
-		logrus.Errorf("Failed to join cluster: my_addr = %v err = %v", clusterNodes.LocalNode().Addr, err)
+		logrus.Errorf("Failed to join cluster: my_addr = %v err = %v", theManager.gossipCluster.cluster.LocalNode().Addr, err)
 	}
 
 	// Ask for members of the cluster
-	for _, member := range clusterNodes.Members() {
+	for _, member := range theManager.gossipCluster.cluster.Members() {
 		logrus.Infof("Member: %s %s\n", member.Name, member.Addr)
 	}
 
-	epochTick := time.NewTicker(epochTime)
-	managerInit()
+	epochTick := time.NewTicker(time.Duration(config.Raft.EpochTime))
+	theManager.Run(config)
 
 	tick := time.NewTicker(15 * time.Second)
 	run := true
@@ -104,7 +95,7 @@ func main() {
 				continue
 			}
 
-		case _ = <-delegate.msgCh:
+		case _ = <-theManager.gossipCluster.msgCh:
 			// handle memberlist message
 
 		case isLeader := <-raftNode.LeaderCh():

@@ -48,23 +48,23 @@ func TestHashRing2(t *testing.T) {
 			t.Error("Recovered from panic:", r)
 		}
 	}()
-
-	c1 := GetHashRing()
-	c2 := GetHashRing()
+	config := GetConfig()
+	c1 := GetHashRing(config.Manager)
+	c2 := GetHashRing(config.Manager)
 
 	node1 := &memberlist.Node{Name: "node1"}
 
-	AddNode(c1, node1)
-	AddNode(c2, node1)
+	c1.AddNode(node1)
+	c2.AddNode(node1)
 
 	node2 := &memberlist.Node{Name: "node2"}
 
-	AddNode(c1, node2)
-	AddNode(c2, node2)
+	c1.AddNode(node2)
+	c2.AddNode(node2)
 
 	node3 := &memberlist.Node{Name: "node3"}
-	AddNode(c1, node3)
-	AddNode(c2, node3)
+	c1.AddNode(node3)
+	c2.AddNode(node3)
 
 	nodeCount1 := make(map[string]int)
 	nodeCount2 := make(map[string]int)
@@ -73,35 +73,35 @@ func TestHashRing2(t *testing.T) {
 		// nodeName, _ := hashRing.GetNode(randomString(7))
 		// key := []byte(fmt.Sprintf("key%d", i))
 		key := []byte(randomString(7))
-		nodeName1 := c1.LocateKey(key)
+		nodeName1 := c1.Consistent.LocateKey(key)
 		nodeCount1[nodeName1.String()]++
-		nodeName2 := c2.LocateKey(key)
+		nodeName2 := c2.Consistent.LocateKey(key)
 		nodeCount2[nodeName2.String()]++
 	}
 
 	logrus.Info("nodeCount1", nodeCount1)
 	logrus.Info("nodeCount2", nodeCount2)
-	assert.EqualValues(t, len(GetMembers(c1)), 3, "c1 should have len 3")
-	assert.EqualValues(t, len(GetMembers(c1)), len(GetMembers(c2)), "nodeCount1 and nodeCount2 should be equal")
+	assert.EqualValues(t, len(c1.GetMembers()), 3, "c1 should have len 3")
+	assert.EqualValues(t, len(c1.GetMembers()), len(c2.GetMembers()), "nodeCount1 and nodeCount2 should be equal")
 
 	for node, count := range nodeCount1 {
 		percentage := float64(count) / float64(totalKeys) * 100
 		logrus.Infof("Node: %s, Keys: %d, Percentage: %.2f%%", node, count, percentage)
 	}
 
-	logrus.Info(GetMembers(c1))
+	logrus.Info(c1.GetMembers())
 
 	removeMember := node2
 
 	logrus.Info("removeMember: ", removeMember)
 
-	RemoveNode(c1, removeMember)
+	c1.RemoveNode(removeMember)
 
-	assert.EqualValues(t, len(GetMembers(c1))+1, len(GetMembers(c2)), "c1 should have 1 less than c2")
+	assert.EqualValues(t, len(c1.GetMembers())+1, len(c2.GetMembers()), "c1 should have 1 less than c2")
 
-	logrus.Info(GetMembers(c1))
+	logrus.Info(c1.GetMembers())
 
-	closestN, err := GetClosestN(c1, "test", 1)
+	closestN, err := c1.GetClosestN("test", 1)
 	if err != nil {
 		t.Error(err)
 	}
@@ -118,28 +118,29 @@ func TestPartitions(t *testing.T) {
 			t.Error("Recovered from panic:", r)
 		}
 	}()
-	c := GetHashRing()
+	config := GetConfig()
+	ring := GetHashRing(config.Manager)
 
 	for i := 0; i < 8; i++ {
-		AddNode(c, &memberlist.Node{Name: fmt.Sprintf("node%d", i)})
+		ring.AddNode(&memberlist.Node{Name: fmt.Sprintf("node%d", i)})
 	}
 
 	// Store current layout of partitions
 	owners := make(map[int]string)
-	for partID := 0; partID < hashRingConf.PartitionCount; partID++ {
-		owners[partID] = c.GetPartitionOwner(partID).String()
+	for partID := 0; partID < config.Manager.PartitionCount; partID++ {
+		owners[partID] = ring.Consistent.GetPartitionOwner(partID).String()
 	}
 
-	AddNode(c, &memberlist.Node{Name: fmt.Sprintf("node%d", 9)})
+	ring.AddNode(&memberlist.Node{Name: fmt.Sprintf("node%d", 9)})
 
 	// Get the new layout and compare with the previous
 	var changed int
 	for partID, member := range owners {
-		owner := c.GetPartitionOwner(partID)
+		owner := ring.Consistent.GetPartitionOwner(partID)
 		if member != owner.String() {
 			changed++
 			fmt.Printf("partID: %3d moved to %s from %s\n", partID, owner.String(), member)
 		}
 	}
-	fmt.Printf("\n%d%% of the partitions are relocated\n", (100*changed)/hashRingConf.PartitionCount)
+	fmt.Printf("\n%d%% of the partitions are relocated\n", (100*changed)/config.Manager.PartitionCount)
 }

@@ -13,10 +13,13 @@ import (
 )
 
 func TestGoCacheStoreMerkleTree(t *testing.T) {
-	hostname = randomString(5)
-	conf, delegate, events = CreateMemberlistConf()
+	t.Error("todo fix.")
+	return
+	config := GetConfig()
+	config.Hostname = randomString(5)
 
-	store = NewGoCacheStore()
+	var err error
+	store, err = NewLevelDbStore(config.Manager)
 	defer store.Close()
 
 	for i := 0; i < NumTestValues; i++ {
@@ -57,113 +60,113 @@ func TestGoCacheStoreMerkleTree(t *testing.T) {
 	fmt.Printf("GoCache Elapsed Time: %.2f seconds\n", elapsedTime)
 }
 
-func TestLevelDbStoreRawMerkleTree(t *testing.T) {
-	hostname = randomString(5)
+func TestLevelDbStoreRawMerkleTreeTODOFIX(t *testing.T) {
+	t.Error("todo fix.")
+	// config := GetConfig()
+	// config.Hostname = randomString(5)
 
-	conf, delegate, events = CreateMemberlistConf()
+	// var err error
+	// store, err = NewLevelDbStore(config.Manager)
+	// if err != nil {
+	// 	t.Error(fmt.Sprintf("NewLevelDbStore: %v", err))
+	// }
+	// defer store.Close()
+	// extraKey := "Extra"
+	// extraPartition := FindPartitionID(events.consistent, extraKey)
+	// setEpoch := 5
 
-	var err error
-	store, err = NewLevelDbStore()
-	if err != nil {
-		t.Error(fmt.Sprintf("NewLevelDbStore: %v", err))
-	}
-	defer store.Close()
-	extraKey := "Extra"
-	extraPartition := FindPartitionID(events.consistent, extraKey)
-	setEpoch := 5
+	// for i := 0; i < 100; i++ {
+	// 	err := store.SetValue(testValue(fmt.Sprintf("keyz%d", i), fmt.Sprintf("value%d", i), setEpoch))
+	// 	if err != nil {
+	// 		t.Fatal(err)
+	// 	}
+	// }
 
-	for i := 0; i < 100; i++ {
-		err := store.SetValue(testValue(fmt.Sprintf("keyz%d", i), fmt.Sprintf("value%d", i), setEpoch))
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
+	// startTime := time.Now()
 
-	startTime := time.Now()
-
-	tree1, buckets1, err := RawPartitionMerkleTree(int64(setEpoch), false, extraPartition)
-	if err != nil {
-		t.Error(err)
-	}
-
-	tree2, _, err := RawPartitionMerkleTree(int64(setEpoch), false, extraPartition)
-	if err != nil {
-		t.Error(err)
-	}
-	assert.EqualValues(t, tree1.Root.Hash, tree2.Root.Hash, "Tree hashes don't match")
-
-	// _, err = tree1.VerifyTree()
+	// tree1, buckets1, err := RawPartitionMerkleTree(int64(setEpoch), false, extraPartition)
 	// if err != nil {
 	// 	t.Error(err)
 	// }
 
-	err = store.SetValue(testValue(extraKey, "Extra2", 1))
-	if err != nil {
-		t.Fatal(err)
-	}
+	// tree2, _, err := RawPartitionMerkleTree(int64(setEpoch), false, extraPartition)
+	// if err != nil {
+	// 	t.Error(err)
+	// }
+	// assert.EqualValues(t, tree1.Root.Hash, tree2.Root.Hash, "Tree hashes don't match")
 
-	tree3, _, err := RawPartitionMerkleTree(int64(setEpoch), true, extraPartition)
-	if err != nil {
-		t.Error(err)
-	}
+	// // _, err = tree1.VerifyTree()
+	// // if err != nil {
+	// // 	t.Error(err)
+	// // }
 
-	assert.NotEqual(t, tree1.Root.Hash, tree3.Root.Hash, "Tree hashes match")
-	assert.NotEqual(t, tree2.Root.Hash, tree3.Root.Hash, "Tree hashes match")
+	// err = store.SetValue(testValue(extraKey, "Extra2", 1))
+	// if err != nil {
+	// 	t.Fatal(err)
+	// }
 
-	diff1 := DifferentMerkleTreeBuckets(tree1, tree3)
-	diff2 := DifferentMerkleTreeBuckets(tree3, tree1)
-
-	// serialize the tree and unserialize...
-
-	partitionEpochObject, err := MerkleTreeToPartitionEpochObject(tree1, buckets1, int64(setEpoch), extraPartition)
-	if err != nil {
-		t.Error(err)
-	}
-	serializeTree1, err := PartitionEpochObjectToMerkleTree(partitionEpochObject)
-	if err != nil {
-		t.Error(err)
-	}
-
-	diff3 := DifferentMerkleTreeBuckets(tree3, serializeTree1)
-	diff4 := DifferentMerkleTreeBuckets(serializeTree1, tree3)
-
-	assert.EqualValues(t, diff1, diff2, "diffs dont match")
-	assert.EqualValues(t, diff2, diff3, "diffs dont match")
-	assert.EqualValues(t, diff3, diff4, "diffs dont match")
-
-	// Test global
-	tree4, _, err := RawPartitionMerkleTree(2, true, extraPartition)
-	if err != nil {
-		t.Error(err)
-	}
-
-	tree5, _, err := RawPartitionMerkleTree(1, false, extraPartition)
-	if err != nil {
-		t.Error(err)
-	}
-
-	assert.EqualValues(t, tree4.Root.Hash, tree5.Root.Hash, "Tree hashes don't match")
-
-	tree6, _, err := RawPartitionMerkleTree(2, false, extraPartition)
-	if err != nil {
-		t.Error(err)
-	}
-
-	tree7, _, err := RawPartitionMerkleTree(1, false, extraPartition)
-	if err != nil {
-		t.Error(err)
-	}
-
-	assert.NotEqual(t, tree6.Root.Hash, tree7.Root.Hash, "Tree hashes don't match")
-
-	// tree6, err := PartitionMerkleTree(int64(setEpoch), true, extraPartition)
+	// tree3, _, err := RawPartitionMerkleTree(int64(setEpoch), true, extraPartition)
 	// if err != nil {
 	// 	t.Error(err)
 	// }
 
-	elapsedTime := time.Since(startTime).Seconds()
+	// assert.NotEqual(t, tree1.Root.Hash, tree3.Root.Hash, "Tree hashes match")
+	// assert.NotEqual(t, tree2.Root.Hash, tree3.Root.Hash, "Tree hashes match")
 
-	fmt.Printf("LevelDb Elapsed Time: %.2f seconds\n", elapsedTime)
+	// diff1 := DifferentMerkleTreeBuckets(tree1, tree3)
+	// diff2 := DifferentMerkleTreeBuckets(tree3, tree1)
+
+	// // serialize the tree and unserialize...
+
+	// partitionEpochObject, err := MerkleTreeToPartitionEpochObject(tree1, buckets1, int64(setEpoch), extraPartition)
+	// if err != nil {
+	// 	t.Error(err)
+	// }
+	// serializeTree1, err := PartitionEpochObjectToMerkleTree(partitionEpochObject)
+	// if err != nil {
+	// 	t.Error(err)
+	// }
+
+	// diff3 := DifferentMerkleTreeBuckets(tree3, serializeTree1)
+	// diff4 := DifferentMerkleTreeBuckets(serializeTree1, tree3)
+
+	// assert.EqualValues(t, diff1, diff2, "diffs dont match")
+	// assert.EqualValues(t, diff2, diff3, "diffs dont match")
+	// assert.EqualValues(t, diff3, diff4, "diffs dont match")
+
+	// // Test global
+	// tree4, _, err := RawPartitionMerkleTree(2, true, extraPartition)
+	// if err != nil {
+	// 	t.Error(err)
+	// }
+
+	// tree5, _, err := RawPartitionMerkleTree(1, false, extraPartition)
+	// if err != nil {
+	// 	t.Error(err)
+	// }
+
+	// assert.EqualValues(t, tree4.Root.Hash, tree5.Root.Hash, "Tree hashes don't match")
+
+	// tree6, _, err := RawPartitionMerkleTree(2, false, extraPartition)
+	// if err != nil {
+	// 	t.Error(err)
+	// }
+
+	// tree7, _, err := RawPartitionMerkleTree(1, false, extraPartition)
+	// if err != nil {
+	// 	t.Error(err)
+	// }
+
+	// assert.NotEqual(t, tree6.Root.Hash, tree7.Root.Hash, "Tree hashes don't match")
+
+	// // tree6, err := PartitionMerkleTree(int64(setEpoch), true, extraPartition)
+	// // if err != nil {
+	// // 	t.Error(err)
+	// // }
+
+	// elapsedTime := time.Since(startTime).Seconds()
+
+	// fmt.Printf("LevelDb Elapsed Time: %.2f seconds\n", elapsedTime)
 }
 
 func BFS(root *merkletree.Node) []*merkletree.Node {

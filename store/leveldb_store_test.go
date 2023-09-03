@@ -95,11 +95,13 @@ func TestExampleLevelDbIndex(t *testing.T) {
 }
 
 func TestLevelDbStoreSingle(t *testing.T) {
-	Init()
-	hostname = randomString(5)
-	conf, delegate, events = CreateMemberlistConf()
+	t.Error("todo fix.")
+	return
+	config := GetConfig()
+	config.Hostname = randomString(5)
+
 	var err error
-	store, err = NewLevelDbStore()
+	store, err = NewLevelDbStore(config.Manager)
 	if err != nil {
 		t.Error(fmt.Sprintf("NewLevelDbStore: %v", err))
 	}
@@ -126,12 +128,14 @@ func TestLevelDbStoreSingle(t *testing.T) {
 }
 
 func TestLevelDbStoreSpeed(t *testing.T) {
-	hostname = randomString(5)
+	t.Error("todo fix.")
+	return
 
-	conf, delegate, events = CreateMemberlistConf()
+	config := GetConfig()
+	config.Hostname = randomString(5)
 
 	var err error
-	store, err = NewLevelDbStore()
+	store, err = NewLevelDbStore(config.Manager)
 	if err != nil {
 		t.Error(fmt.Sprintf("NewLevelDbStore: %v", err))
 	}
@@ -149,12 +153,11 @@ func TestLevelDbStoreSpeed(t *testing.T) {
 }
 
 func TestLevelDbIndex(t *testing.T) {
-	hostname = randomString(5)
-
-	conf, delegate, events = CreateMemberlistConf()
+	config := GetConfig()
+	config.Hostname = randomString(5)
 
 	var err error
-	store, err = NewLevelDbStore()
+	store, err = NewLevelDbStore(config.Manager)
 	if err != nil {
 		t.Error(fmt.Sprintf("NewLevelDbStore: %v", err))
 		return
@@ -179,9 +182,9 @@ func TestLevelDbIndex(t *testing.T) {
 		}
 	}
 
-	partitions := make([]int, partitionCount)
+	partitions := make([]int, config.Manager.PartitionCount)
 
-	for i := 0; i < partitionCount; i++ {
+	for i := 0; i < config.Manager.PartitionCount; i++ {
 		partitions[i] = i
 	}
 
@@ -189,7 +192,7 @@ func TestLevelDbIndex(t *testing.T) {
 
 	allItemsMap := make(map[string]*datap.Value)
 
-	for bucket := 0; bucket < partitionBuckets; bucket++ {
+	for bucket := 0; bucket < config.Manager.PartitionBuckets; bucket++ {
 		// for bucket := 0; bucket < 1; bucket++ {
 		items := store.Items(partitions, bucket, 2, 3)
 		// logrus.Infof("bucket = %d Number of items: %d", bucket, len(items))
@@ -203,7 +206,7 @@ func TestLevelDbIndex(t *testing.T) {
 
 	allItemsMap = make(map[string]*datap.Value)
 
-	for bucket := 0; bucket < partitionBuckets; bucket++ {
+	for bucket := 0; bucket < config.Manager.PartitionBuckets; bucket++ {
 		// for bucket := 0; bucket < 1; bucket++ {
 		items := store.Items(partitions, bucket, 5, 20)
 		// logrus.Infof("bucket = %d Number of items: %d", bucket, len(items))
@@ -221,12 +224,11 @@ func TestLevelDbIndex(t *testing.T) {
 }
 
 func TestLevelDbPartitionEpochObject(t *testing.T) {
-	hostname = randomString(5)
-
-	conf, delegate, events = CreateMemberlistConf()
+	config := GetConfig()
+	config.Hostname = randomString(5)
 
 	var err error
-	store, err = NewLevelDbStore()
+	store, err = NewLevelDbStore(config.Manager)
 	if err != nil {
 		t.Error(fmt.Sprintf("NewLevelDbStore: %v", err))
 		return

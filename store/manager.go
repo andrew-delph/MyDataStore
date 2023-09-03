@@ -13,14 +13,33 @@ import (
 )
 
 var (
-	partitionEpochSynced = make([]int64, partitionBuckets)
-	validFSM             = false
+	partitionEpochSynced []int64
+	validFSM             bool
 )
 var partitionEpochQueue *PartitionEpochQueue
 
 var checkQueueTick = make(chan struct{}, 5)
 
-func managerInit() {
+type Manager struct {
+	Config        Config
+	hashRing      HashRing
+	gossipCluster *GossipCluster
+	store         Store
+}
+
+func CreateManager(config Config) (*Manager, error) {
+	gossipCluster, err := CreateMemberList(config.Manager)
+	if err != nil {
+		return nil, err
+	}
+
+	m := Manager{Config: config, gossipCluster: gossipCluster}
+	return &m, nil
+}
+
+func (m Manager) Run(config Config) {
+	partitionEpochSynced = make([]int64, m.Config.Manager.PartitionBuckets)
+	validFSM = false
 	partitionEpochQueue = &PartitionEpochQueue{}
 	heap.Init(partitionEpochQueue)
 	logrus.Debug("managerInit")
@@ -44,7 +63,7 @@ func managerInit() {
 					}
 					validFSM = false
 				}
-				err := UpdateNodeHealth(validFSMUpdate)
+				err := m.gossipCluster.UpdateNodeHealth(validFSMUpdate)
 				if err != nil {
 					logrus.Errorf("UpdateNodeHealth err = %v", err)
 				}
@@ -53,7 +72,7 @@ func managerInit() {
 			// 	checkQueueTick <- struct{}{}
 			case <-checkQueueTick:
 				if partitionEpochQueue.Len() > 0 {
-					handlePartitionEpochItem()
+					m.handlePartitionEpochItem()
 
 					// sleep for the next item.
 					item := partitionEpochQueue.PeekItem()
@@ -87,15 +106,14 @@ func managerInit() {
 // update the global merkletree bucket
 // verify merkle trees are in sync with R nodes. (recent cache and global)
 // if out of sync. it will call appropiate sync functions
-func handleEpochUpdate(handleEpoch int64) error {
+func (m Manager) handleEpochUpdate(handleEpoch int64) error {
 	defer trackTime(time.Now(), time.Second, fmt.Sprintf("handleEpochUpdate handleEpoch %d", handleEpoch))
 
 	// if the current epoch is not passed the commited range, skip.
 	if handleEpoch-2 < 0 {
 		return nil
 	}
-
-	myPartions, err := GetMemberPartions(events.consistent, conf.Name)
+	myPartions, err := m.hashRing.GetMemberPartions(m.Config.Hostname)
 	if err != nil {
 		logrus.Error(err)
 		return err
@@ -111,14 +129,14 @@ func handleEpochUpdate(handleEpoch int64) error {
 	unhealthyCount := 0
 	for _, partitionId := range myPartions {
 
-		lowerEpoch, err := queuePartitionEpochItem(partitionId, handleEpoch)
+		lowerEpoch, err := m.queuePartitionEpochItem(partitionId, handleEpoch)
 		if err != nil {
 			logrus.Errorf("queuePartitionEpochItem err = %v", err)
 		}
 		minValidEpoch = min(minValidEpoch, int(lowerEpoch))
 		// queue all invalid epochs up to the current
 		for otherEpoch := lowerEpoch + 1; otherEpoch < handleEpoch-2; otherEpoch++ {
-			queuePartitionEpochItem(partitionId, otherEpoch)
+			m.queuePartitionEpochItem(partitionId, otherEpoch)
 		}
 		if lowerEpoch < handleEpoch-2 {
 			// unhealthy
@@ -133,7 +151,7 @@ func handleEpochUpdate(handleEpoch int64) error {
 	return nil
 }
 
-func queuePartitionEpochItem(partitionId int, handleEpoch int64) (int64, error) {
+func (m Manager) queuePartitionEpochItem(partitionId int, handleEpoch int64) (int64, error) {
 	defer trackTime(time.Now(), time.Second, fmt.Sprintf("queuePartitionEpochItem handleEpoch %d partitionId %d", handleEpoch, partitionId))
 	defer func() { checkQueueTick <- struct{}{} }()
 
@@ -182,7 +200,7 @@ func queuePartitionEpochItem(partitionId int, handleEpoch int64) (int64, error) 
 	return lowerEpoch, nil
 }
 
-func handlePartitionEpochItem() {
+func (m Manager) handlePartitionEpochItem() {
 	item := partitionEpochQueue.NextItem()
 
 	if item == nil {
@@ -215,7 +233,7 @@ func handlePartitionEpochItem() {
 		return
 	}
 
-	unsyncedBuckets, err := verifyPartitionEpochTree(partitionEpochObject)
+	unsyncedBuckets, err := m.verifyPartitionEpochTree(partitionEpochObject)
 	if err != nil {
 		logrus.Debugf("verifyPartitionEpochTree partion = %d epoch = %d err = %v", item.partitionId, item.epoch, err)
 	}
@@ -225,7 +243,7 @@ func handlePartitionEpochItem() {
 		// NOTE: possibly cool down node if streamed recently
 		// this is asking everyone and will shlow things down.
 		for _, unsyncedNode := range unsyncedBuckets {
-			err = StreamBuckets(unsyncedNode.NodeName, unsyncedNode.Diff, item.epoch, item.epoch+1, item.partitionId)
+			err = m.StreamBuckets(unsyncedNode.NodeName, unsyncedNode.Diff, item.epoch, item.epoch+1, item.partitionId)
 			if err != nil {
 				logrus.Errorf("handlePartitionEpochItem RawPartitionMerkleTree err = %v", err)
 			}
@@ -282,13 +300,13 @@ type UnsyncedBuckets struct {
 	Buckets  *[][]byte
 }
 
-func verifyPartitionEpochTree(partitionEpochObject *datap.PartitionEpochObject) ([]*UnsyncedBuckets, error) {
+func (m Manager) verifyPartitionEpochTree(partitionEpochObject *datap.PartitionEpochObject) ([]*UnsyncedBuckets, error) {
 	tree, err := PartitionEpochObjectToMerkleTree(partitionEpochObject)
 	if err != nil {
 		logrus.Error(err)
 		return nil, err
 	}
-	nodes, err := GetClosestNForPartition(events.consistent, int(partitionEpochObject.Partition), ReplicaCount)
+	nodes, err := m.hashRing.GetClosestNForPartition(int(partitionEpochObject.Partition), m.Config.Manager.ReplicaCount)
 	if err != nil {
 		logrus.Error(err)
 		return nil, err
@@ -298,7 +316,7 @@ func verifyPartitionEpochTree(partitionEpochObject *datap.PartitionEpochObject) 
 	errorCh := make(chan error, len(nodes))
 	for _, node := range nodes {
 		go func(nodeName string) {
-			otherPartitionEpochObject, err := GetPartitionEpochObject(nodeName, partitionEpochObject.Epoch, int(partitionEpochObject.Partition))
+			otherPartitionEpochObject, err := m.GetPartitionEpochObject(nodeName, partitionEpochObject.Epoch, int(partitionEpochObject.Partition))
 			if err != nil {
 				logrus.Debug(err)
 				errorCh <- err
@@ -337,7 +355,7 @@ func verifyPartitionEpochTree(partitionEpochObject *datap.PartitionEpochObject) 
 		case <-timeout:
 			return unsyncedBucketsList, fmt.Errorf("timed out waiting for responses")
 		}
-		if responseCount >= ReadQuorum {
+		if responseCount >= m.Config.Manager.ReadQuorum {
 			return nil, nil
 		}
 	}

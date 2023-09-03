@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
 	raftboltdb "github.com/hashicorp/raft-boltdb"
@@ -40,7 +41,7 @@ func UpdateEpoch() error {
 		logrus.Errorf("EncodeInt64ToBytes Err= %v", err)
 		return err
 	}
-	logEntry := raftNode.Apply(epochBytes, defaultTimeout)
+	logEntry := raftNode.Apply(epochBytes, 0)
 	err = logEntry.Error()
 
 	if err == nil {
@@ -62,7 +63,7 @@ func (fsm *FSM) Apply(logEntry *raft.Log) interface{} {
 	}
 	fsm.Epoch = epoch
 
-	logrus.Debugf("E= %d state= %s name= %s", epoch, raftNode.State(), conf.Name)
+	logrus.Debugf("E= %d state= %s name= %s", epoch, raftNode.State(), "TODO FIX.")
 
 	if logEntry.Index == raftNode.AppliedIndex() {
 		validFSMObserver <- true
@@ -138,6 +139,30 @@ var (
 	snapshotStore *raft.FileSnapshotStore
 )
 
+func CreateRaftConf(raftConfig RaftConfig) *raft.Config {
+	conf := raft.DefaultConfig()
+	conf.LocalID = raft.ServerID(hostname)
+	// conf.SnapshotInterval = time.Second * 1
+	// conf.SnapshotThreshold = 1
+	logrus.Infof("conf.ElectionTimeout %v", conf.ElectionTimeout)
+	logrus.Infof("conf.HeartbeatTimeout %v", conf.HeartbeatTimeout)
+	logrus.Infof("conf.LeaderLeaseTimeout %v", conf.LeaderLeaseTimeout)
+	logrus.Infof("conf.CommitTimeout %v", conf.CommitTimeout)
+	logrus.Infof("conf.SnapshotInterval %v", conf.SnapshotInterval)
+	logrus.Infof("conf.SnapshotThreshold %v", conf.SnapshotThreshold)
+
+	if !raftConfig.EnableLogs {
+		raftLogger := hclog.New(&hclog.LoggerOptions{
+			Name:   "discard",
+			Output: io.Discard,
+			Level:  hclog.NoLevel,
+		})
+		conf.Logger = raftLogger
+		conf.LogLevel = "ERROR"
+	}
+	return conf
+}
+
 func SetupRaft(raftConfig RaftConfig) {
 	hostname, exists := os.LookupEnv("HOSTNAME")
 	if !exists {
@@ -177,7 +202,7 @@ func SetupRaft(raftConfig RaftConfig) {
 	}
 
 	// Create a configuration for raftNode1
-	raftConf = CreateRaftConf()
+	raftConf = CreateRaftConf(raftConfig)
 
 	if trans != nil {
 		err = trans.Close()
@@ -199,22 +224,10 @@ func SetupRaft(raftConfig RaftConfig) {
 		logrus.Fatal(err)
 	}
 
-	// updates := make(chan raft.Observation, 10) // Buffered channel
-	// // 2. Create a goroutine to listen to this channel
-	// go func() {
-	// 	for update := range updates {
-	// 		// Do something with the update
-	// 		// For now, just print it
-	// 		logrus.Warn("Received update:", update)
-	// 	}
-	// }()
-	// obs := raft.NewObserver(updates, true, nil)
-	// raftNode.RegisterObserver(obs)
-
 	logrus.Infof("after SetupRaft state = %s", raftNode.State())
-	if autoBootstrap {
+	if raftConfig.AutoBootstrap {
 		go func() {
-			time.Sleep(bootstrapTimeout)
+			time.Sleep(time.Duration(raftConfig.BootstrapTimeout))
 			if (raftNode.State() != raft.Leader && raftNode.State() != raft.Follower) || raftNode.Leader() == "" {
 				err := RaftTryLead()
 				if err != nil {
@@ -248,7 +261,7 @@ func RaftTryLead() error {
 	}
 	logrus.Warn("BOOTSTRAP SUCCESS")
 	succ := ""
-	for i, node := range clusterNodes.Members() {
+	for i, node := range theManager.gossipCluster.cluster.Members() {
 		// logrus.Warnf("node name = %s addr = %s", node.Name, node.Addr.String())
 		// go func(node *memberlist.Node) {
 		err := AddVoter(node)
@@ -312,7 +325,7 @@ func Snapshot() error {
 }
 
 func AddAllMembers() {
-	for _, node := range clusterNodes.Members() {
+	for _, node := range theManager.gossipCluster.cluster.Members() {
 		err := AddVoter(node)
 		if err != nil {
 			logrus.Errorf("LeaderCh AddVoter: %v", err)

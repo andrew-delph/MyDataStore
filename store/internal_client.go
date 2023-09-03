@@ -23,8 +23,8 @@ func GetClient(addr string) (*grpc.ClientConn, *datap.InternalNodeServiceClient,
 	return conn, &internalClient, nil
 }
 
-func SendSetMessageNode(nodeName string, setReqMsg *datap.Value, responseCh chan *datap.StandardResponse, errorCh chan error) {
-	client, err := events.GetNodeClient(nodeName)
+func (m Manager) SendSetMessageNode(nodeName string, setReqMsg *datap.Value, responseCh chan *datap.StandardResponse, errorCh chan error) {
+	client, err := m.gossipCluster.GetNodeClient(nodeName)
 	if err != nil {
 		logrus.Errorf("GetClient for node %s", nodeName)
 		errorCh <- err
@@ -44,26 +44,26 @@ func SendSetMessageNode(nodeName string, setReqMsg *datap.Value, responseCh chan
 	}
 }
 
-func SendSetMessage(key, value string) error {
+func (m Manager) SendSetMessage(key, value string) error {
 	unixTimestamp := time.Now().Unix()
 	setReqMsg := &datap.Value{Key: key, Value: value, Epoch: int64(globalEpoch), UnixTimestamp: unixTimestamp}
 
-	nodes, err := GetClosestN(events.consistent, key, ReplicaCount)
+	nodes, err := m.hashRing.GetClosestN(key, m.Config.Manager.ReplicaCount)
 	if err != nil {
 		return err
 	}
 
-	responseCh := make(chan *datap.StandardResponse, ReplicaCount)
-	errorCh := make(chan error, ReplicaCount)
+	responseCh := make(chan *datap.StandardResponse, m.Config.Manager.ReplicaCount)
+	errorCh := make(chan error, m.Config.Manager.ReplicaCount)
 
 	for _, node := range nodes {
-		go SendSetMessageNode(node.name, setReqMsg, responseCh, errorCh)
+		go m.SendSetMessageNode(node.name, setReqMsg, responseCh, errorCh)
 	}
 
-	timeout := time.After(defaultTimeout)
+	timeout := time.After(m.Config.Manager.DefaultTimeout)
 	responseCount := 0
 
-	for responseCount < WriteQuorum {
+	for responseCount < m.Config.Manager.WriteQuorum {
 		select {
 		case <-responseCh:
 			responseCount++
@@ -78,10 +78,10 @@ func SendSetMessage(key, value string) error {
 	return nil
 }
 
-func SendGetMessage(key string) (string, error) {
+func (m Manager) SendGetMessage(key string) (string, error) {
 	getReqMsg := &datap.GetRequestMessage{Key: key}
 
-	nodes, err := GetClosestN(events.consistent, key, ReplicaCount)
+	nodes, err := m.hashRing.GetClosestN(key, m.Config.Manager.ReplicaCount)
 	if err != nil {
 		return "", err
 	}
@@ -96,7 +96,7 @@ func SendGetMessage(key string) (string, error) {
 
 	for i, node := range nodes {
 		go func(i int, node HashRingMember) {
-			client, err := events.GetNodeClient(node.name)
+			client, err := m.gossipCluster.GetNodeClient(node.name)
 			if err != nil {
 				errorCh <- err
 				return
@@ -114,7 +114,7 @@ func SendGetMessage(key string) (string, error) {
 		}(i, node)
 	}
 
-	timeout := time.After(defaultTimeout)
+	timeout := time.After(m.Config.Manager.DefaultTimeout)
 
 	var recentValue *datap.Value
 
@@ -151,7 +151,7 @@ func SendGetMessage(key string) (string, error) {
 			// logrus.Warnf("Read Repair addr = %s recentValue = %v value = %v", res.Addr, recentValue.Value, res.Value.Value)
 			if proto.Equal(res.Value, recentValue) == false {
 				readRepairCount++
-				go SendSetMessageNode(res.Name, recentValue, make(chan *datap.StandardResponse), make(chan error))
+				go m.SendSetMessageNode(res.Name, recentValue, make(chan *datap.StandardResponse), make(chan error))
 			}
 		}
 		if readRepairCount > 0 {
@@ -159,7 +159,7 @@ func SendGetMessage(key string) (string, error) {
 		}
 	}()
 
-	for len(resList) < ReadQuorum {
+	for len(resList) < m.Config.Manager.ReadQuorum {
 		select {
 		case res := <-resCh:
 
@@ -181,18 +181,18 @@ func SendGetMessage(key string) (string, error) {
 			return "", fmt.Errorf("timed out waiting for responses")
 		}
 	}
-	if len(resList) >= ReadQuorum {
+	if len(resList) >= m.Config.Manager.ReadQuorum {
 		if recentValue == nil {
 			return "", fmt.Errorf("Value doesnt exist.")
 		} else {
 			return recentValue.Value, nil
 		}
 	}
-	return "", fmt.Errorf("value not found. expected = %d recievedCount= %d", ReadQuorum, len(resList))
+	return "", fmt.Errorf("value not found. expected = %d recievedCount= %d", m.Config.Manager.ReadQuorum, len(resList))
 }
 
-func StreamBuckets(nodeName string, buckets *[]int32, lowerEpoch, upperEpoch int64, partitionId int) error {
-	client, err := events.GetNodeClient(nodeName)
+func (m Manager) StreamBuckets(nodeName string, buckets *[]int32, lowerEpoch, upperEpoch int64, partitionId int) error {
+	client, err := m.gossipCluster.GetNodeClient(nodeName)
 	if err != nil {
 		logrus.Errorf("CLIENT StreamBuckets err = %v", err)
 		return err
@@ -229,8 +229,8 @@ func StreamBuckets(nodeName string, buckets *[]int32, lowerEpoch, upperEpoch int
 	}
 }
 
-func GetPartitionEpochObject(nodeName string, epoch int64, partitionId int) (*datap.PartitionEpochObject, error) {
-	client, err := events.GetNodeClient(nodeName)
+func (m Manager) GetPartitionEpochObject(nodeName string, epoch int64, partitionId int) (*datap.PartitionEpochObject, error) {
+	client, err := m.gossipCluster.GetNodeClient(nodeName)
 	if err != nil {
 		return nil, err
 	}

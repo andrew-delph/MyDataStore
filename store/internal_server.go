@@ -14,6 +14,7 @@ import (
 var port = 7070
 
 type internalServer struct {
+	manager Manager
 	datap.InternalNodeServiceServer
 }
 
@@ -44,27 +45,27 @@ func (s *internalServer) TestRequest(ctx context.Context, in *datap.StandardResp
 	return &datap.StandardResponse{Message: "This is the server."}, nil
 }
 
-func (s *internalServer) SetRequest(ctx context.Context, m *datap.Value) (*datap.StandardResponse, error) {
-	logrus.Debugf("Handling SetRequest: key=%s value=%s epoch=%d", m.Key, m.Value, m.Epoch)
+func (s *internalServer) SetRequest(ctx context.Context, value *datap.Value) (*datap.StandardResponse, error) {
+	logrus.Debugf("Handling SetRequest: key=%s value=%s epoch=%d", value.Key, value.Value, value.Epoch)
 
-	if m.Epoch > globalEpoch+1 || m.Epoch < globalEpoch-1 {
-		err := fmt.Errorf("Epoch out of sync. currEpoch = %d requested = %d", globalEpoch, m.Epoch)
+	if value.Epoch > globalEpoch+1 || value.Epoch < globalEpoch-1 {
+		err := fmt.Errorf("Epoch out of sync. currEpoch = %d requested = %d", globalEpoch, value.Epoch)
 		logrus.Error(err)
 		return nil, err
 	}
 
-	err := store.SetValue(m)
+	err := store.SetValue(value)
 	if err != nil {
-		logrus.Errorf("failed to set %s : %s error= %v", m.Key, m.Value, err)
+		logrus.Errorf("failed to set %s : %s error= %v", value.Key, value.Value, err)
 		return nil, err
 	} else {
 		return &datap.StandardResponse{Message: "Value set."}, nil
 	}
 }
 
-func (s *internalServer) GetRequest(ctx context.Context, m *datap.GetRequestMessage) (*datap.Value, error) {
-	logrus.Debugf("Handling GetRequest: key=%s ", m.Key)
-	value, exists, err := store.GetValue(m.Key)
+func (s *internalServer) GetRequest(ctx context.Context, req *datap.GetRequestMessage) (*datap.Value, error) {
+	logrus.Debugf("Handling GetRequest: key=%s ", req.Key)
+	value, exists, err := store.GetValue(req.Key)
 
 	if exists {
 		return value, nil

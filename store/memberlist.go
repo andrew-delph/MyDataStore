@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
 	"sync"
 
 	"github.com/buraksezer/consistent"
@@ -17,32 +19,59 @@ type NodeState struct {
 	Health bool
 }
 
-type MyDelegate struct {
-	msgCh chan []byte
-	state *NodeState
+type NodeClient struct {
+	conn   *grpc.ClientConn
+	client *datap.InternalNodeServiceClient
 }
 
-func GetMyDelegate() *MyDelegate {
-	delegate := &MyDelegate{state: &NodeState{Health: validFSM}}
-	delegate.msgCh = make(chan []byte)
-	return delegate
+type GossipCluster struct {
+	conf     *memberlist.Config
+	cluster  *memberlist.Memberlist
+	hashring *HashRing
+	msgCh    chan []byte
+	state    *NodeState
+
+	consistent *consistent.Consistent
+	nodes      map[string]NodeClient
+	mu         sync.RWMutex
 }
 
-func UpdateNodeHealth(health bool) error {
+func CreateMemberList(managerConfig ManagerConfig) (*GossipCluster, error) {
+	cluster := GossipCluster{}
+
+	conf := memberlist.DefaultLocalConfig()
+	conf.Logger = log.New(io.Discard, "", 0)
+	conf.BindPort = 8081
+	conf.AdvertisePort = 8081
+	conf.Delegate = &cluster
+	conf.Events = &cluster
+	conf.Name = hostname
+
+	clusterNodes, err := memberlist.Create(conf)
+	if err != nil {
+		return nil, err
+	}
+
+	cluster.cluster = clusterNodes
+	cluster.hashring = GetHashRing(managerConfig)
+	return &cluster, nil
+}
+
+func (d *GossipCluster) UpdateNodeHealth(health bool) error {
 	logrus.Debug("UpdateNodeHealth >> ", health)
-	delegate.state.Health = health
-	err := clusterNodes.UpdateNode(0)
+	d.state.Health = health
+	err := d.cluster.UpdateNode(0)
 	if err != nil {
 		logrus.Errorf("UpdateNode err = %v", err)
 	}
 	return err
 }
 
-func (d *MyDelegate) NotifyMsg(msg []byte) {
+func (d *GossipCluster) NotifyMsg(msg []byte) {
 	d.msgCh <- msg
 }
 
-func (d *MyDelegate) NodeMeta(limit int) []byte {
+func (d *GossipCluster) NodeMeta(limit int) []byte {
 	data, err := json.Marshal(d.state)
 	if err != nil {
 		logrus.Errorf("NodeMeta err = %v", err)
@@ -52,41 +81,23 @@ func (d *MyDelegate) NodeMeta(limit int) []byte {
 	return data
 }
 
-func (d *MyDelegate) LocalState(join bool) []byte {
+func (d *GossipCluster) LocalState(join bool) []byte {
 	// not use, noop
 	return []byte("")
 }
 
-func (d *MyDelegate) GetBroadcasts(overhead, limit int) [][]byte {
+func (d *GossipCluster) GetBroadcasts(overhead, limit int) [][]byte {
 	// not use, noop
 	return nil
 }
 
-func (d *MyDelegate) MergeRemoteState(buf []byte, join bool) {
+func (d *GossipCluster) MergeRemoteState(buf []byte, join bool) {
 	// not use
-}
-
-type MyEventDelegate struct {
-	consistent *consistent.Consistent
-	nodes      map[string]NodeClient
-	mu         sync.RWMutex
-}
-
-type NodeClient struct {
-	conn   *grpc.ClientConn
-	client *datap.InternalNodeServiceClient
 }
 
 var partitionVerified = make(map[int]bool)
 
-func GetMyEventDelegate() *MyEventDelegate {
-	events := new(MyEventDelegate)
-	events.consistent = GetHashRing()
-	events.nodes = make(map[string]NodeClient)
-	return events
-}
-
-func (events *MyEventDelegate) GetNodeClient(nodeName string) (datap.InternalNodeServiceClient, error) {
+func (events *GossipCluster) GetNodeClient(nodeName string) (datap.InternalNodeServiceClient, error) {
 	events.mu.RLock()
 	defer events.mu.RUnlock()
 	nodeClient, exists := events.nodes[nodeName]
@@ -96,13 +107,13 @@ func (events *MyEventDelegate) GetNodeClient(nodeName string) (datap.InternalNod
 	return *nodeClient.client, nil
 }
 
-func (events *MyEventDelegate) NotifyJoin(node *memberlist.Node) {
+func (events *GossipCluster) NotifyJoin(node *memberlist.Node) {
 	var err error
 	logrus.Infof("join %s", node.Name)
 	events.mu.Lock()
 	defer events.mu.Unlock()
 
-	err = HandleNotifyUpdate(node)
+	err = events.HandleNotifyUpdate(node)
 	if err != nil {
 		logrus.Errorf("NotifyLeave err = %v", err)
 		return
@@ -118,30 +129,21 @@ func (events *MyEventDelegate) NotifyJoin(node *memberlist.Node) {
 	if err != nil {
 		logrus.Errorf("add voter err = %v", err)
 	}
-
-	// myPartions, err = GetMemberPartions(events.consistent, conf.Name)
-	// if err != nil {
-	// 	logrus.Error(err)
-	// 	return
-	// }
-
-	// logrus.Debugf("myPartions %v", myPartions)
-	// store.LoadPartitions(myPartions)
 }
 
-func (events *MyEventDelegate) NotifyLeave(node *memberlist.Node) {
+func (events *GossipCluster) NotifyLeave(node *memberlist.Node) {
 	var err error
 	logrus.Infof("leave %s", node.Name)
 	events.mu.Lock()
 	defer events.mu.Unlock()
 
-	err = HandleNotifyUpdate(node)
+	err = events.HandleNotifyUpdate(node)
 	if err != nil {
 		logrus.Errorf("NotifyLeave err = %v", err)
 		return
 	}
 
-	RemoveNode(events.consistent, node)
+	events.hashring.RemoveNode(node)
 
 	nodeClient, exists := events.nodes[node.Name]
 	if exists {
@@ -158,25 +160,17 @@ func (events *MyEventDelegate) NotifyLeave(node *memberlist.Node) {
 		logrus.Errorf("remove server err = %v", err)
 		return
 	}
-
-	// myPartions, err = GetMemberPartions(events.consistent, conf.Name)
-	// if err != nil {
-	// 	logrus.Error(err)
-	// 	return
-	// }
-	// logrus.Debugf("myPartions %v", myPartions)
-	// store.LoadPartitions(myPartions)
 }
 
-func (events *MyEventDelegate) NotifyUpdate(node *memberlist.Node) {
-	err := HandleNotifyUpdate(node)
+func (events *GossipCluster) NotifyUpdate(node *memberlist.Node) {
+	err := events.HandleNotifyUpdate(node)
 	if err != nil {
 		logrus.Errorf("NotifyUpdate err = %v", err)
 		return
 	}
 }
 
-func HandleNotifyUpdate(node *memberlist.Node) error {
+func (events *GossipCluster) HandleNotifyUpdate(node *memberlist.Node) error {
 	var otherNode NodeState
 	err := json.Unmarshal(node.Meta, &otherNode)
 	if err != nil {
@@ -185,10 +179,10 @@ func HandleNotifyUpdate(node *memberlist.Node) error {
 	}
 
 	if otherNode.Health {
-		AddNode(events.consistent, node)
+		events.hashring.AddNode(node)
 	} else {
 		logrus.Warnf("HandleNotifyUpdate name = %s Health = %v", node.Name, otherNode.Health)
-		RemoveNode(events.consistent, node)
+		events.hashring.RemoveNode(node)
 	}
 
 	return nil
