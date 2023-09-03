@@ -38,7 +38,7 @@
       "-store/datap"
     ],
     "formatting.gofumpt": true,
-    "formatting.local": "github.com/andrew-delph",
+    "formatting.local": "github.com/andrew-delph/my-key-store",
     "ui.completion.usePlaceholders": true,
     "ui.semanticTokens": true,
     "ui.codelenses": {

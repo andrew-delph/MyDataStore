@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"os"
@@ -60,7 +60,7 @@ type Config struct {
 	Store      StoreConfig      `mapstructure:"STORE"`
 }
 
-func GetConfig() Config {
+func GetConfig(allow_override bool) Config {
 	viper.SetConfigName(filepath.Join(os.Getenv("CONFIG_PATH"), "default-config"))
 
 	viper.AddConfigPath(".")
@@ -68,11 +68,11 @@ func GetConfig() Config {
 		logrus.Fatalf("Error reading default config file, %s", err)
 	}
 	// Override with configuration from config.yaml
-	viper.SetConfigName(filepath.Join(os.Getenv("CONFIG_PATH"), "config"))
-	if err := viper.MergeInConfig(); err != nil {
-		logrus.Infof("No config file found. Using Defaults.")
-	} else {
-		logrus.Infof("Config file found.")
+	if allow_override {
+		viper.SetConfigName(filepath.Join(os.Getenv("CONFIG_PATH"), "config"))
+		if err := viper.MergeInConfig(); err != nil {
+			logrus.Fatalf("Error reading user defined config file, %s", err)
+		}
 	}
 
 	var config Config

@@ -10,12 +10,14 @@ import (
 
 	"github.com/cbergoon/merkletree"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/andrew-delph/my-key-store/config"
 )
 
 func TestGoCacheStoreMerkleTree(t *testing.T) {
 	t.Error("todo fix.")
 	return
-	config := GetConfig()
+	config := config.GetConfig(true)
 	config.Manager.Hostname = randomString(5)
 
 	var err error
@@ -62,7 +64,7 @@ func TestGoCacheStoreMerkleTree(t *testing.T) {
 
 func TestLevelDbStoreRawMerkleTreeTODOFIX(t *testing.T) {
 	t.Error("todo fix.")
-	// config := GetConfig()
+	// config := config.GetConfig(true)
 	// config.Hostname = randomString(5)
 
 	// var err error

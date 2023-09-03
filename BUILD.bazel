@@ -1,5 +1,6 @@
 load("@bazel_gazelle//:def.bzl", "gazelle")
 
+# gazelle:default_visibility public
 # gazelle:prefix github.com/andrew-delph/my-key-store
 gazelle(
     name = "gazelle",

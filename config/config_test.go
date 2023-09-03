@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"errors"
@@ -35,7 +35,7 @@ import (
 // }
 
 func TestConfigDefault(t *testing.T) {
-	config := GetConfig()
+	config := GetConfig(false)
 
 	// manager config
 	assert.Equal(t, 3, config.Manager.ReplicaCount, "ReplicaCount wrong value")
@@ -60,7 +60,7 @@ func TestConfigOverwrite(t *testing.T) {
 	CopyFile("test-config.yaml", "config.yaml")
 	defer DeleteFile("config.yaml")
 
-	config := GetConfig()
+	config := GetConfig(true)
 
 	// manager config
 	assert.Equal(t, 9, config.Manager.ReplicaCount, "ReplicaCount wrong value")

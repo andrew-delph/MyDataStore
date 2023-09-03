@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/andrew-delph/my-key-store/config"
+
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/syndtr/goleveldb/leveldb"
@@ -95,17 +97,26 @@ func TestExampleLevelDbIndex(t *testing.T) {
 }
 
 func TestLevelDbStoreSingle(t *testing.T) {
+	var err error
+
 	t.Error("todo fix.")
 	return
-	config := GetConfig()
-	config.Manager.Hostname = randomString(5)
-	config.Manager.DataPath = "/tmp/store/data"
 
-	var err error
+	config := config.GetConfig(true)
+	config.Manager.Hostname = randomString(5)
+
+	// theManager, err = CreateManager(config)
+	// if err != nil {
+	// 	t.Error(fmt.Sprintf("CreateManager error: %v", err))
+	// }
+	// config.Manager.DataPath = "/tmp/store/data"
+
+	logrus.Warn("config.Manager.DataPath: ", config.Manager.DataPath)
 	store, err = NewLevelDbStore(config.Manager)
 	if err != nil {
 		t.Error(fmt.Sprintf("NewLevelDbStore: %v", err))
 	}
+
 	defer store.Close()
 	err = store.SetValue(testValue("keyz", "value1", 1))
 	if err != nil {
@@ -132,7 +143,7 @@ func TestLevelDbStoreSpeed(t *testing.T) {
 	t.Error("todo fix.")
 	return
 
-	config := GetConfig()
+	config := config.GetConfig(true)
 	config.Manager.Hostname = randomString(5)
 
 	var err error
@@ -154,7 +165,9 @@ func TestLevelDbStoreSpeed(t *testing.T) {
 }
 
 func TestLevelDbIndex(t *testing.T) {
-	config := GetConfig()
+	t.Error("todo fix.")
+	return
+	config := config.GetConfig(true)
 	config.Manager.Hostname = randomString(5)
 
 	var err error
@@ -225,7 +238,7 @@ func TestLevelDbIndex(t *testing.T) {
 }
 
 func TestLevelDbPartitionEpochObject(t *testing.T) {
-	config := GetConfig()
+	config := config.GetConfig(true)
 	config.Manager.Hostname = randomString(5)
 
 	var err error

@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 
+	"github.com/andrew-delph/my-key-store/config"
 	datap "github.com/andrew-delph/my-key-store/datap"
 )
 
@@ -36,7 +37,7 @@ type GossipCluster struct {
 	mu         sync.RWMutex
 }
 
-func CreateMemberList(managerConfig ManagerConfig) (*GossipCluster, error) {
+func CreateMemberList(managerConfig config.ManagerConfig) (*GossipCluster, error) {
 	cluster := GossipCluster{}
 
 	conf := memberlist.DefaultLocalConfig()
@@ -45,7 +46,7 @@ func CreateMemberList(managerConfig ManagerConfig) (*GossipCluster, error) {
 	conf.AdvertisePort = 8081
 	conf.Delegate = &cluster
 	conf.Events = &cluster
-	conf.Name = theManager.Config.Manager.Hostname
+	conf.Name = managerConfig.Hostname
 
 	clusterNodes, err := memberlist.Create(conf)
 	if err != nil {

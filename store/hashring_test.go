@@ -8,6 +8,8 @@ import (
 	"github.com/serialx/hashring"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/andrew-delph/my-key-store/config"
 )
 
 var totalKeys = 1000
@@ -48,7 +50,7 @@ func TestHashRing2(t *testing.T) {
 			t.Error("Recovered from panic:", r)
 		}
 	}()
-	config := GetConfig()
+	config := config.GetConfig(true)
 	c1 := GetHashRing(config.Manager)
 	c2 := GetHashRing(config.Manager)
 
@@ -118,7 +120,7 @@ func TestPartitions(t *testing.T) {
 			t.Error("Recovered from panic:", r)
 		}
 	}()
-	config := GetConfig()
+	config := config.GetConfig(true)
 	ring := GetHashRing(config.Manager)
 
 	for i := 0; i < 8; i++ {

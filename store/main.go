@@ -3,6 +3,8 @@ package main
 import (
 	"time"
 
+	"github.com/andrew-delph/my-key-store/config"
+
 	"github.com/hashicorp/raft"
 	"github.com/sirupsen/logrus"
 )
@@ -17,7 +19,7 @@ var theManager *Manager
 
 func main() {
 	var err error
-	config := GetConfig()
+	config := config.GetConfig(true)
 
 	theManager, err = CreateManager(config)
 	if err != nil {

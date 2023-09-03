@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/andrew-delph/my-key-store/config"
+
 	"github.com/sirupsen/logrus"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/opt"
@@ -15,7 +17,7 @@ import (
 
 type LevelDbStore struct {
 	db     *leveldb.DB
-	config ManagerConfig
+	config config.ManagerConfig
 }
 
 type LevelDbPartition struct {
@@ -47,7 +49,7 @@ func NewLevelDbPartition(store *LevelDbStore, partitionId int) Partition {
 	return partition
 }
 
-func NewLevelDbStore(config ManagerConfig) (*LevelDbStore, error) {
+func NewLevelDbStore(config config.ManagerConfig) (*LevelDbStore, error) {
 	storeFile := fmt.Sprintf("%s/level/%s", config.DataPath, config.Hostname)
 	db, err := leveldb.OpenFile(storeFile, nil)
 	if err != nil {

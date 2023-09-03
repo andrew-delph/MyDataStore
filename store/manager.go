@@ -9,6 +9,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/andrew-delph/my-key-store/config"
 	"github.com/andrew-delph/my-key-store/datap"
 )
 
@@ -21,13 +22,13 @@ var partitionEpochQueue *PartitionEpochQueue
 var checkQueueTick = make(chan struct{}, 5)
 
 type Manager struct {
-	Config        Config
+	Config        config.Config
 	hashRing      HashRing
 	gossipCluster *GossipCluster
 	store         Store
 }
 
-func CreateManager(config Config) (*Manager, error) {
+func CreateManager(config config.Config) (*Manager, error) {
 	gossipCluster, err := CreateMemberList(config.Manager)
 	if err != nil {
 		return nil, err
@@ -37,7 +38,7 @@ func CreateManager(config Config) (*Manager, error) {
 	return &m, nil
 }
 
-func (m Manager) Run(config Config) {
+func (m Manager) Run(config config.Config) {
 	partitionEpochSynced = make([]int64, m.Config.Manager.PartitionBuckets)
 	validFSM = false
 	partitionEpochQueue = &PartitionEpochQueue{}

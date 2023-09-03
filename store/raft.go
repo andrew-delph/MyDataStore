@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/andrew-delph/my-key-store/config"
+
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
@@ -139,7 +141,7 @@ var (
 	snapshotStore *raft.FileSnapshotStore
 )
 
-func CreateRaftConf(raftConfig RaftConfig) *raft.Config {
+func CreateRaftConf(raftConfig config.RaftConfig) *raft.Config {
 	conf := raft.DefaultConfig()
 	conf.LocalID = raft.ServerID(theManager.Config.Manager.Hostname)
 	// conf.SnapshotInterval = time.Second * 1
@@ -163,7 +165,7 @@ func CreateRaftConf(raftConfig RaftConfig) *raft.Config {
 	return conf
 }
 
-func SetupRaft(raftConfig RaftConfig) {
+func SetupRaft(raftConfig config.RaftConfig) {
 	hostname, exists := os.LookupEnv("HOSTNAME")
 	if !exists {
 		logrus.Fatal("hostname env not set.")

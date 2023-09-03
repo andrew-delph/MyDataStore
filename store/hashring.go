@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/andrew-delph/my-key-store/config"
+
 	"github.com/buraksezer/consistent"
 	"github.com/cespare/xxhash"
 	"github.com/hashicorp/memberlist"
@@ -25,7 +27,7 @@ type HashRing struct {
 	Consistent *consistent.Consistent
 }
 
-func GetHashRing(managerConfig ManagerConfig) *HashRing {
+func GetHashRing(managerConfig config.ManagerConfig) *HashRing {
 	Config := consistent.Config{
 		PartitionCount:    managerConfig.PartitionCount,
 		ReplicationFactor: 13,
