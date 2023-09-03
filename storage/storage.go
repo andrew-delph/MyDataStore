@@ -11,14 +11,28 @@ import (
 	"github.com/andrew-delph/my-key-store/config"
 )
 
+type Storage interface {
+	Put(key []byte, value []byte) error
+	Get(key []byte) ([]byte, bool, error)
+	NewIterator(Start []byte, Limit []byte) Iterator
+	Close() error
+}
+
+type Iterator interface {
+	First() bool
+	Next() bool
+	isDone() bool
+	Key() []byte
+	Value() []byte
+	Release()
+}
+
 func Value() string {
 	c := config.GetConfig()
 	badgerTest()
 	leveldbTest()
 	cacheTest()
 	NewLevelDbStorage(c.Storage)
-
-	logrus.Warn(">>> ", c.Manager.DataPath)
 
 	return "test"
 }
@@ -41,19 +55,4 @@ func leveldbTest() {
 
 func cacheTest() {
 	cache.New(0*time.Minute, 1*time.Minute)
-}
-
-type Store interface {
-	WriteValue(key []byte, value []byte) error
-	ReadValue(key []byte) ([]byte, bool, error)
-	Iterate(Start []byte, Limit []byte) Iterator
-}
-
-type Iterator interface {
-	First() bool
-	Next() bool
-	isDone() bool
-	Key() []byte
-	Value() []byte
-	Release()
 }
