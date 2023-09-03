@@ -43,10 +43,11 @@ func TestConfigDefault(t *testing.T) {
 	assert.Equal(t, 2, config.Manager.ReadQuorum, "ReadQuorum wrong value")
 	assert.Equal(t, 500, config.Manager.PartitionBuckets, "PartitionBuckets wrong value")
 	assert.Equal(t, 100, config.Manager.PartitionCount, "PartitionCount wrong value")
+	assert.Equal(t, "/store/data", config.Manager.DataPath, "DataPath wrong value")
 
 	// raft config
 	assert.Equal(t, 100, config.Raft.EpochTime, "EpochTime wrong value")
-	assert.Equal(t, "/store", config.Raft.DataPath, "DataPath wrong value")
+	assert.Equal(t, "/store/raft", config.Raft.DataPath, "DataPath wrong value")
 	assert.Equal(t, false, config.Raft.EnableLogs, "EnableLogs wrong value")
 	assert.Equal(t, true, config.Raft.AutoBootstrap, "AutoBootstrap wrong value")
 	assert.Equal(t, 30, config.Raft.BootstrapTimeout, "BootstrapTimeout wrong value")
@@ -67,10 +68,11 @@ func TestConfigOverwrite(t *testing.T) {
 	assert.Equal(t, 999, config.Manager.ReadQuorum, "ReadQuorum wrong value")
 	assert.Equal(t, 9999, config.Manager.PartitionCount, "PartitionCount wrong value")
 	assert.Equal(t, 99999, config.Manager.PartitionBuckets, "PartitionBuckets wrong value")
+	assert.Equal(t, "/tmp/store/data", config.Manager.DataPath, "DataPath wrong value")
 
 	// raft config
 	assert.Equal(t, 9, config.Raft.EpochTime, "EpochTime wrong value")
-	assert.Equal(t, "/tmp/store", config.Raft.DataPath, "DataPath wrong value")
+	assert.Equal(t, "/tmp/store/raft", config.Raft.DataPath, "DataPath wrong value")
 	assert.Equal(t, true, config.Raft.EnableLogs, "EnableLogs wrong value")
 	assert.Equal(t, false, config.Raft.AutoBootstrap, "AutoBootstrap wrong value")
 	assert.Equal(t, 1, config.Raft.BootstrapTimeout, "BootstrapTimeout wrong value")

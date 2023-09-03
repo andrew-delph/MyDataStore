@@ -4,9 +4,10 @@ manager:
   read_quorum: 999
   partition_count: 9999
   partition_buckets: 99999
+  data_path: "/tmp/store/data"
 raft:
   epoch_time: 9
-  data_path: "/tmp/store"
+  data_path: "/tmp/store/raft"
   enable_logs: true
   auto_bootstrap: false
   bootstrap_timeout: 1
