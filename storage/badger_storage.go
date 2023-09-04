@@ -104,8 +104,8 @@ func (iterator BadgerIterator) Value() []byte {
 }
 
 func (iterator BadgerIterator) Release() {
-	iterator.trx.Discard()
 	iterator.it.Close()
+	iterator.trx.Discard()
 }
 
 type BadgerTransaction struct {

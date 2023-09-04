@@ -3,6 +3,7 @@ package storage
 import (
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -94,12 +95,19 @@ func TestStorageIterator(t *testing.T) {
 	AllStorage(t, storageIterator)
 }
 
+func testIndex(i int) string {
+	indexStr := fmt.Sprintf("%d", i)
+	indexStr = fmt.Sprintf("testkey%s%s", strings.Repeat("0", 4-len(indexStr)), indexStr)
+	return indexStr
+}
+
 func storageIterator(t *testing.T, storage Storage) {
 	trx := storage.NewTransaction(true)
 	defer trx.Discard()
 
-	for i := 0; i < 100; i++ {
-		key := []byte(fmt.Sprintf("testkey%d", i))
+	insertNum := 99
+	for i := 0; i < insertNum; i++ {
+		key := []byte(testIndex(i))
 		value := []byte(fmt.Sprintf("testvalue%d", i))
 		err := trx.Set(key, value)
 		if err != nil {
@@ -112,22 +120,29 @@ func storageIterator(t *testing.T, storage Storage) {
 		t.Error(err)
 	}
 
-	it := storage.NewIterator([]byte("testkey0"), []byte("zzz"))
-
+	it := storage.NewIterator([]byte(testIndex(0)), []byte(testIndex(insertNum)))
 	assert.EqualValues(t, true, it.First(), "it.First() should be true")
-	logrus.Warn()
-	logrus.Warn("starting it.")
-	logrus.Warn()
+
+	count := 0
 
 	for !it.isDone() {
-		// key := []byte(fmt.Sprintf("testkey%d", i))
-		// value := []byte(fmt.Sprintf("testvalue%d", i))
-		// seekKey := it.Key()
-		// seekValue := it.Value()
-		// assert.EqualValues(t, key, seekKey, "seekKey should be equal")
-		// assert.EqualValues(t, value, seekValue, "seekValue should be equal")
-		logrus.Warn("key= ", string(it.Key()))
 		it.Next()
-		// assert.EqualValues(t, true, it.Next(), "it.Next() should be true")
+		count++
 	}
+	it.Release()
+	assert.EqualValues(t, insertNum, count, "Should have iterated all inserted keys")
+
+	startRange := 11
+	endRange := 25
+	it = storage.NewIterator([]byte(testIndex(startRange)), []byte(testIndex(endRange)))
+	assert.EqualValues(t, true, it.First(), "it.First() should be true")
+
+	count = 0
+	for !it.isDone() {
+		// logrus.Warn("key= ", string(it.Key()))
+		it.Next()
+		count++
+	}
+	it.Release()
+	assert.EqualValues(t, endRange-startRange, count, "Should have iterated the range")
 }

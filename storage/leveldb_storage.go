@@ -15,7 +15,6 @@ type LevelDbStorage struct {
 }
 
 func NewLevelDbStorage(conf config.StorageConfig) LevelDbStorage {
-	logrus.Warnf("Storage DataPath %s", conf.DataPath)
 	db, err := leveldb.OpenFile(conf.DataPath, nil)
 	if err != nil {
 		logrus.Fatal(err)
