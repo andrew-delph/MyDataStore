@@ -20,12 +20,13 @@ func mainTest() {
 
 type Manager struct {
 	reqCh chan interface{}
-	db    storage.LevelDbStorage
+	db    storage.Storage
 }
 
 func NewManager() Manager {
 	c := config.GetConfig()
-	db := storage.NewLevelDbStorage(c.Storage)
+	db := storage.NewBadgerStorage(c.Storage)
+	// db := storage.NewLevelDbStorage(c.Storage)
 	ch := make(chan interface{})
 	return Manager{reqCh: ch, db: db}
 }
@@ -57,7 +58,7 @@ func (m Manager) startWorker() {
 
 			switch task := data.(type) {
 			case http.SetTask:
-				logrus.Infof("worker task: %+v", task)
+				logrus.Debugf("worker task: %+v", task)
 				err := m.db.Put([]byte(task.Key), []byte(task.Value))
 				if err != nil {
 					task.ResCh <- err
@@ -66,7 +67,7 @@ func (m Manager) startWorker() {
 				}
 
 			case http.GetTask:
-				logrus.Infof("worker task: %+v", task)
+				logrus.Debugf("worker task: %+v", task)
 				value, err := m.db.Get([]byte(task.Key))
 				if err != nil {
 					task.ResCh <- err

@@ -22,6 +22,6 @@ export default function () {
 }
 
 export const options = {
-  vus: 10,
+  vus: 100,
   duration: "10s",
 };
