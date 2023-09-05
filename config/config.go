@@ -79,7 +79,7 @@ func getConfigOverride(allow_override bool) Config {
 	if allow_override {
 		viper.SetConfigName(filepath.Join(os.Getenv("CONFIG_PATH"), "config"))
 		if err := viper.MergeInConfig(); err != nil {
-			logrus.Fatalf("Error reading user defined config file, %s", err)
+			logrus.Errorf("Error reading user defined config file, %s", err)
 		}
 	}
 

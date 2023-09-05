@@ -4,9 +4,12 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/sirupsen/logrus"
+
+	"github.com/andrew-delph/my-key-store/config"
+	"github.com/andrew-delph/my-key-store/http"
+	"github.com/andrew-delph/my-key-store/storage"
 )
 
 var numWorkers = 10
@@ -17,15 +20,18 @@ func mainTest() {
 
 type Manager struct {
 	reqCh chan interface{}
+	db    storage.LevelDbStorage
 }
 
 func NewManager() Manager {
+	c := config.GetConfig()
+	db := storage.NewLevelDbStorage(c.Storage)
 	ch := make(chan interface{})
-	return Manager{reqCh: ch}
+	return Manager{reqCh: ch, db: db}
 }
 
 func (m Manager) StartManager() {
-	httpServer := NewHttpServer(m.reqCh)
+	httpServer := http.NewHttpServer(m.reqCh)
 	go httpServer.StartHttp()
 
 	for i := 0; i < numWorkers; i++ {
@@ -50,14 +56,23 @@ func (m Manager) startWorker() {
 			}
 
 			switch task := data.(type) {
-			case SetTask:
+			case http.SetTask:
 				logrus.Infof("worker task: %+v", task)
-				time.Sleep(1 * time.Millisecond)
-				task.resCh <- task.Value
-			case GetTask:
+				err := m.db.Put([]byte(task.Key), []byte(task.Value))
+				if err != nil {
+					task.ResCh <- err
+				} else {
+					task.ResCh <- true
+				}
+
+			case http.GetTask:
 				logrus.Infof("worker task: %+v", task)
-				time.Sleep(1 * time.Millisecond)
-				task.resCh <- task.Key
+				value, err := m.db.Get([]byte(task.Key))
+				if err != nil {
+					task.ResCh <- err
+				} else {
+					task.ResCh <- value
+				}
 			default:
 				logrus.Fatal("worker unkown task type")
 			}

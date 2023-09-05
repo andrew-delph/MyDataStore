@@ -3,4 +3,6 @@ go 1.20
 use ./store
 use ./config
 use ./storage
+use ./http
+use ./main
 
