@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/andrew-delph/my-key-store/config"
@@ -59,7 +58,6 @@ func storageSetGet(t *testing.T, storage Storage) {
 		t.Error(err)
 	}
 	assert.EqualValues(t, value, res, "value should be equal")
-	logrus.Info("value is equal")
 }
 
 func TestStorageTransaction(t *testing.T) {
