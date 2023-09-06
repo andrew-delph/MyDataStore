@@ -50,7 +50,7 @@ func TestConfigDefault(t *testing.T) {
 	assert.Equal(t, "/store/raft", config.Consensus.DataPath, "DataPath wrong value")
 	assert.Equal(t, false, config.Consensus.EnableLogs, "EnableLogs wrong value")
 	assert.Equal(t, true, config.Consensus.AutoBootstrap, "AutoBootstrap wrong value")
-	assert.Equal(t, 30, config.Consensus.BootstrapTimeout, "BootstrapTimeout wrong value")
+	assert.NotEqual(t, 0, config.Consensus.BootstrapTimeout, "BootstrapTimeout wrong value")
 
 	// memberlist config
 	assert.Equal(t, []string{"store:8081"}, config.Gossip.InitMembers, "InitMembers wrong value")

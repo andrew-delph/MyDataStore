@@ -26,6 +26,7 @@ type ConsensusConfig struct {
 	EnableLogs       bool   `mapstructure:"ENABLE_LOGS"`
 	AutoBootstrap    bool   `mapstructure:"AUTO_BOOTSTRAP"`
 	BootstrapTimeout int    `mapstructure:"BOOTSTRAP_TIMEOUT"`
+	Name             string
 }
 
 type GossipConfig struct {
@@ -38,10 +39,10 @@ type StorageConfig struct {
 }
 
 type Config struct {
-	Manager ManagerConfig `mapstructure:"MANAGER"`
-	Consensus    ConsensusConfig    `mapstructure:"CONSENSUS"`
-	Gossip  GossipConfig  `mapstructure:"GOSSIP"`
-	Storage StorageConfig `mapstructure:"STORAGE"`
+	Manager   ManagerConfig   `mapstructure:"MANAGER"`
+	Consensus ConsensusConfig `mapstructure:"CONSENSUS"`
+	Gossip    GossipConfig    `mapstructure:"GOSSIP"`
+	Storage   StorageConfig   `mapstructure:"STORAGE"`
 }
 
 func GetConfig() Config {
@@ -79,6 +80,7 @@ func getConfigOverride(allow_override bool) Config {
 	}
 	config.Manager.Hostname = hostname
 	config.Gossip.Name = hostname
+	config.Consensus.Name = hostname
 
 	return config
 }

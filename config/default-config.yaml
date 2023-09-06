@@ -10,7 +10,7 @@ consensus:
   data_path: "/store/raft"
   enable_logs: false
   auto_bootstrap: true
-  bootstrap_timeout: 30
+  bootstrap_timeout: 1
 gossip:
   init_members:
     - "store:8081"

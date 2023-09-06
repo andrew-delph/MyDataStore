@@ -38,14 +38,19 @@ func NewManager() Manager {
 	gossipCluster := gossip.CreateGossipCluster(c.Gossip, reqCh)
 	db := storage.NewBadgerStorage(c.Storage)
 
-	consensusCluster := consensus.CreateConsensusCluster()
+	consensusCluster := consensus.CreateConsensusCluster(c.Consensus, reqCh)
 
 	return Manager{reqCh: reqCh, db: db, httpServer: httpServer, gossipCluster: gossipCluster, consensusCluster: consensusCluster}
 }
 
 func (m Manager) StartManager() {
+	var err error
 	m.startWorkers()
-	err := m.gossipCluster.Join()
+	err = m.gossipCluster.Join()
+	if err != nil {
+		logrus.Fatal(err)
+	}
+	err = m.consensusCluster.StartConsensusCluster()
 	if err != nil {
 		logrus.Fatal(err)
 	}
@@ -96,6 +101,8 @@ func (m Manager) startWorker() {
 				logrus.Warnf("worker JoinTask: %+v", task)
 			case gossip.LeaveTask:
 				logrus.Warnf("worker LeaveTask: %+v", task)
+			case consensus.LeaderChangeTask:
+				logrus.Warnf("worker LeaderChangeTask: %+v", task)
 			default:
 				logrus.Fatalf("worker unkown task type: %v", reflect.TypeOf(task))
 			}

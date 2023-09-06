@@ -174,7 +174,6 @@ func SetupRaft(raftConfig config.RaftConfig) {
 	}
 
 	raftDir = fmt.Sprintf("%s/%s", raftConfig.DataPath, hostname)
-
 	// Create the 'raft-data' directory if it doesn't exist
 	if err := os.MkdirAll(raftDir, 0o700); err != nil {
 		logrus.Fatal(err)

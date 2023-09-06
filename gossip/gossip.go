@@ -84,7 +84,6 @@ func (gossipCluster *GossipCluster) MergeRemoteState(buf []byte, join bool) {
 
 func (gossipCluster *GossipCluster) NotifyJoin(node *memberlist.Node) {
 	logrus.Warnf("join %s", node.Name)
-	defer logrus.Warnf("DONE join %s", node.Name)
 	gossipCluster.reqCh <- JoinTask{Name: node.Name}
 }
 
