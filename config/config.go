@@ -20,7 +20,7 @@ type ManagerConfig struct {
 	Hostname         string
 }
 
-type RaftConfig struct {
+type ConsensusConfig struct {
 	DataPath         string `mapstructure:"DATA_PATH"`
 	EpochTime        int    `mapstructure:"EPOCH_TIME"`
 	EnableLogs       bool   `mapstructure:"ENABLE_LOGS"`
@@ -39,7 +39,7 @@ type StorageConfig struct {
 
 type Config struct {
 	Manager ManagerConfig `mapstructure:"MANAGER"`
-	Raft    RaftConfig    `mapstructure:"RAFT"`
+	Consensus    ConsensusConfig    `mapstructure:"CONSENSUS"`
 	Gossip  GossipConfig  `mapstructure:"GOSSIP"`
 	Storage StorageConfig `mapstructure:"STORAGE"`
 }

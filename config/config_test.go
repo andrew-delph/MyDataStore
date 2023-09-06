@@ -45,12 +45,12 @@ func TestConfigDefault(t *testing.T) {
 	assert.Equal(t, 100, config.Manager.PartitionCount, "PartitionCount wrong value")
 	assert.Equal(t, "/store/data", config.Manager.DataPath, "DataPath wrong value")
 
-	// raft config
-	assert.Equal(t, 100, config.Raft.EpochTime, "EpochTime wrong value")
-	assert.Equal(t, "/store/raft", config.Raft.DataPath, "DataPath wrong value")
-	assert.Equal(t, false, config.Raft.EnableLogs, "EnableLogs wrong value")
-	assert.Equal(t, true, config.Raft.AutoBootstrap, "AutoBootstrap wrong value")
-	assert.Equal(t, 30, config.Raft.BootstrapTimeout, "BootstrapTimeout wrong value")
+	// consensus config
+	assert.Equal(t, 100, config.Consensus.EpochTime, "EpochTime wrong value")
+	assert.Equal(t, "/store/raft", config.Consensus.DataPath, "DataPath wrong value")
+	assert.Equal(t, false, config.Consensus.EnableLogs, "EnableLogs wrong value")
+	assert.Equal(t, true, config.Consensus.AutoBootstrap, "AutoBootstrap wrong value")
+	assert.Equal(t, 30, config.Consensus.BootstrapTimeout, "BootstrapTimeout wrong value")
 
 	// memberlist config
 	assert.Equal(t, []string{"store:8081"}, config.Gossip.InitMembers, "InitMembers wrong value")
@@ -72,12 +72,12 @@ func TestConfigOverwrite(t *testing.T) {
 	assert.Equal(t, 99999, config.Manager.PartitionBuckets, "PartitionBuckets wrong value")
 	assert.Equal(t, "/tmp/store/data", config.Manager.DataPath, "DataPath wrong value")
 
-	// raft config
-	assert.Equal(t, 9, config.Raft.EpochTime, "EpochTime wrong value")
-	assert.Equal(t, "/tmp/store/raft", config.Raft.DataPath, "DataPath wrong value")
-	assert.Equal(t, true, config.Raft.EnableLogs, "EnableLogs wrong value")
-	assert.Equal(t, false, config.Raft.AutoBootstrap, "AutoBootstrap wrong value")
-	assert.Equal(t, 1, config.Raft.BootstrapTimeout, "BootstrapTimeout wrong value")
+	// consensus config
+	assert.Equal(t, 9, config.Consensus.EpochTime, "EpochTime wrong value")
+	assert.Equal(t, "/tmp/store/raft", config.Consensus.DataPath, "DataPath wrong value")
+	assert.Equal(t, true, config.Consensus.EnableLogs, "EnableLogs wrong value")
+	assert.Equal(t, false, config.Consensus.AutoBootstrap, "AutoBootstrap wrong value")
+	assert.Equal(t, 1, config.Consensus.BootstrapTimeout, "BootstrapTimeout wrong value")
 
 	// memberlist config
 	assert.Equal(t, []string{"test:1", "test:2"}, config.Gossip.InitMembers, "InitMembers wrong value")

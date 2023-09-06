@@ -5,7 +5,7 @@ manager:
   partition_count: 100
   partition_buckets: 500
   data_path: "/store/data"
-raft:
+consensus:
   epoch_time: 100
   data_path: "/store/raft"
   enable_logs: false

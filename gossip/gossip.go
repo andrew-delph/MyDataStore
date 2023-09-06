@@ -21,6 +21,7 @@ type GossipCluster struct {
 	msgCh            chan []byte
 	reqCh            chan interface{}
 }
+
 type JoinTask struct {
 	Name string
 }
