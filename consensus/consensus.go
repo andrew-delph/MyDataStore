@@ -26,6 +26,7 @@ type ConsensusCluster struct {
 	reqCh           chan interface{}
 	consensusConfig config.ConsensusConfig
 	raftNode        *raft.Raft
+	epochTick       *time.Ticker
 }
 
 type LeaderChangeTask struct {
@@ -57,12 +58,14 @@ func CreateConsensusCluster(consensusConfig config.ConsensusConfig, reqCh chan i
 		raftConf.Logger = raftLogger
 		raftConf.LogLevel = "ERROR"
 	}
-	// logrus.Warn("consensusConfig ", consensusConfig.DataPath)
-	return ConsensusCluster{consensusConfig: consensusConfig, reqCh: reqCh, raftConf: raftConf, raftNode: new(raft.Raft)}
+
+	return ConsensusCluster{consensusConfig: consensusConfig, reqCh: reqCh, raftConf: raftConf, raftNode: new(raft.Raft), epochTick: new(time.Ticker)}
 }
 
 func (consensusCluster *ConsensusCluster) StartConsensusCluster() error {
 	logrus.Warn("StartConsensusCluster")
+
+	consensusCluster.epochTick = time.NewTicker(time.Duration(consensusCluster.consensusConfig.EpochTime) * time.Second)
 
 	raftDir := fmt.Sprintf("%s/%s", consensusCluster.consensusConfig.DataPath, consensusCluster.consensusConfig.Name)
 	// Create the 'raft-data' directory if it doesn't exist
@@ -133,6 +136,11 @@ func (consensusCluster *ConsensusCluster) startWorker() {
 		case isLeader := <-consensusCluster.raftNode.LeaderCh():
 			logrus.Debugf("leader change. %t %s", isLeader, consensusCluster.raftNode.State())
 			consensusCluster.reqCh <- LeaderChangeTask{IsLeader: isLeader}
+		case <-consensusCluster.epochTick.C:
+			err := consensusCluster.UpdateEpoch()
+			if err != nil {
+				logrus.Error("UpdateEpoch err = %v", err)
+			}
 		}
 	}
 }
