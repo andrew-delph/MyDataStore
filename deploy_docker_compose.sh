@@ -3,7 +3,7 @@
 # Exit on any error
 set -e
 
-bazel run //store:store_image
+bazel run //main:store_image
 
 docker-compose up --force-recreate -d store store-profile
 

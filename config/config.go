@@ -2,7 +2,6 @@ package config
 
 import (
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -69,15 +68,15 @@ func GetDefaultConfig() Config {
 }
 
 func getConfigOverride(allow_override bool) Config {
-	viper.SetConfigName(filepath.Join(os.Getenv("CONFIG_PATH"), "default-config"))
+	viper.AddConfigPath(os.Getenv("CONFIG_PATH"))
 
-	viper.AddConfigPath(".")
+	viper.SetConfigName("default-config")
 	if err := viper.ReadInConfig(); err != nil {
 		logrus.Fatalf("Error reading default config file, %s", err)
 	}
 	// Override with configuration from config.yaml
 	if allow_override {
-		viper.SetConfigName(filepath.Join(os.Getenv("CONFIG_PATH"), "config"))
+		viper.SetConfigName("config")
 		if err := viper.MergeInConfig(); err != nil {
 			logrus.Errorf("Error reading user defined config file, %s", err)
 		}

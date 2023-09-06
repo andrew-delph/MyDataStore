@@ -4,7 +4,7 @@ windows:
   - editor:
       layout: tiled
       panes:
-        - ibazel -run_command_after_success='./deploy_docker_compose.sh' build //store:store_image
+        - ibazel -run_command_after_success='./deploy_docker_compose.sh' build //main:store_image
         -
         - while true; do docker-compose logs -f --tail=10 store store-profile; done
         -

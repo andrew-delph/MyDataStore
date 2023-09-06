@@ -3,6 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 filegroup(
     name = "default-config",
     srcs = ["default-config.yaml"],
+    visibility = ["//visibility:public"],
 )
 
 go_library(
