@@ -9,6 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/andrew-delph/my-key-store/config"
+	"github.com/andrew-delph/my-key-store/consensus"
 	"github.com/andrew-delph/my-key-store/gossip"
 	"github.com/andrew-delph/my-key-store/http"
 	"github.com/andrew-delph/my-key-store/storage"
@@ -21,10 +22,11 @@ func mainTest() {
 }
 
 type Manager struct {
-	reqCh         chan interface{}
-	db            storage.Storage
-	httpServer    http.HttpServer
-	gossipCluster gossip.GossipCluster
+	reqCh            chan interface{}
+	db               storage.Storage
+	httpServer       http.HttpServer
+	gossipCluster    gossip.GossipCluster
+	consensusCluster consensus.ConsensusCluster
 }
 
 func NewManager() Manager {
@@ -36,7 +38,9 @@ func NewManager() Manager {
 	gossipCluster := gossip.CreateGossipCluster(c.Gossip, reqCh)
 	db := storage.NewBadgerStorage(c.Storage)
 
-	return Manager{reqCh: reqCh, db: db, httpServer: httpServer, gossipCluster: gossipCluster}
+	consensusCluster := consensus.CreateConsensusCluster()
+
+	return Manager{reqCh: reqCh, db: db, httpServer: httpServer, gossipCluster: gossipCluster, consensusCluster: consensusCluster}
 }
 
 func (m Manager) StartManager() {
