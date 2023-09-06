@@ -32,6 +32,10 @@ type LeaderChangeTask struct {
 	IsLeader bool
 }
 
+type EpochTask struct {
+	Epoch int64
+}
+
 func CreateConsensusCluster(consensusConfig config.ConsensusConfig, reqCh chan interface{}) ConsensusCluster {
 	raftConf := raft.DefaultConfig()
 	raftConf.LocalID = raft.ServerID(consensusConfig.Name)
@@ -94,8 +98,8 @@ func (consensusCluster *ConsensusCluster) StartConsensusCluster() error {
 		logrus.Fatal(err)
 	}
 
-	fsm := &FSM{} // Your state machine instance
-	// Create raftNode
+	fsm := &FSM{reqCh: consensusCluster.reqCh}
+
 	raftNode, err := raft.NewRaft(consensusCluster.raftConf, fsm, logStore, stableStore, snapshotStore, trans)
 	if err != nil {
 		logrus.Fatal(err)

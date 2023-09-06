@@ -41,7 +41,7 @@ func NewManager() Manager {
 	db := storage.NewBadgerStorage(c.Storage)
 	consensusCluster := consensus.CreateConsensusCluster(c.Consensus, reqCh)
 
-	epochTick := time.NewTicker(5 * time.Second)
+	epochTick := time.NewTicker(time.Duration(c.Consensus.EpochTime) * time.Second)
 	logrus.Warn("epochTick", epochTick)
 
 	return Manager{reqCh: reqCh, db: db, httpServer: &httpServer, gossipCluster: &gossipCluster, consensusCluster: &consensusCluster, epochTick: epochTick}
@@ -116,6 +116,9 @@ func (m Manager) startWorker() {
 			case gossip.LeaveTask:
 				logrus.Warnf("worker LeaveTask: %+v", task)
 				m.consensusCluster.RemoveServer(task.Name)
+			case consensus.EpochTask:
+				logrus.Warnf("E = %d", task.Epoch)
+
 			case consensus.LeaderChangeTask:
 				if !task.IsLeader {
 					continue

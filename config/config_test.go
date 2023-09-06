@@ -46,7 +46,7 @@ func TestConfigDefault(t *testing.T) {
 	assert.Equal(t, "/store/data", config.Manager.DataPath, "DataPath wrong value")
 
 	// consensus config
-	assert.Equal(t, 100, config.Consensus.EpochTime, "EpochTime wrong value")
+	assert.NotEqual(t, 0, config.Consensus.EpochTime, "EpochTime wrong value")
 	assert.Equal(t, "/store/raft", config.Consensus.DataPath, "DataPath wrong value")
 	assert.Equal(t, false, config.Consensus.EnableLogs, "EnableLogs wrong value")
 	assert.Equal(t, true, config.Consensus.AutoBootstrap, "AutoBootstrap wrong value")

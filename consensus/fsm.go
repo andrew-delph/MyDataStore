@@ -17,6 +17,7 @@ var snapshotLock sync.RWMutex
 
 type FSM struct {
 	Epoch int64
+	reqCh chan interface{}
 }
 
 func (fsm *FSM) Apply(logEntry *raft.Log) interface{} {
@@ -29,7 +30,8 @@ func (fsm *FSM) Apply(logEntry *raft.Log) interface{} {
 	}
 	fsm.Epoch = epoch
 
-	logrus.Warnf("E= %d", epoch)
+	// logrus.Warnf("E= %d", epoch)
+	fsm.reqCh <- EpochTask{Epoch: epoch}
 
 	// if logEntry.Index == raftNode.AppliedIndex() {
 	// 	validFSMObserver <- true
