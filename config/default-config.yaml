@@ -11,7 +11,7 @@ raft:
   enable_logs: false
   auto_bootstrap: true
   bootstrap_timeout: 30
-memberlist:
+gossip:
   init_members:
     - "store:8081"
 storage:

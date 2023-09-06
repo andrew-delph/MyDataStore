@@ -8,6 +8,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/andrew-delph/my-key-store/config"
+	"github.com/andrew-delph/my-key-store/gossip"
 	"github.com/andrew-delph/my-key-store/http"
 	"github.com/andrew-delph/my-key-store/storage"
 )
@@ -19,22 +20,27 @@ func mainTest() {
 }
 
 type Manager struct {
-	reqCh chan interface{}
-	db    storage.Storage
+	reqCh         chan interface{}
+	db            storage.Storage
+	httpServer    http.HttpServer
+	gossipCluster gossip.GossipCluster
 }
 
 func NewManager() Manager {
 	c := config.GetConfig()
 	db := storage.NewBadgerStorage(c.Storage)
-	// db := storage.NewLevelDbStorage(c.Storage)
-	ch := make(chan interface{})
-	return Manager{reqCh: ch, db: db}
+	gossipCluster := gossip.CreateGossipCluster(c.Gossip)
+	reqCh := make(chan interface{})
+	httpServer := http.NewHttpServer(reqCh)
+	return Manager{reqCh: reqCh, db: db, httpServer: httpServer, gossipCluster: gossipCluster}
 }
 
 func (m Manager) StartManager() {
-	httpServer := http.NewHttpServer(m.reqCh)
-	go httpServer.StartHttp()
-
+	err := m.gossipCluster.Join()
+	if err != nil {
+		logrus.Fatal(err)
+	}
+	go m.httpServer.StartHttp()
 	for i := 0; i < numWorkers; i++ {
 		go m.startWorker()
 	}
@@ -46,7 +52,7 @@ func (m Manager) StartManager() {
 }
 
 func (m Manager) startWorker() {
-	logrus.Info("starting worker")
+	logrus.Debug("starting worker")
 	defer logrus.Warn("ending worker")
 	for {
 		select {

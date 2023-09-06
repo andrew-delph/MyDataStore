@@ -51,7 +51,7 @@ func main() {
 
 	// Join an existing cluster by specifying at least one known member.
 	for true {
-		n, err := theManager.gossipCluster.cluster.Join(config.MemberList.InitMembers)
+		n, err := theManager.gossipCluster.cluster.Join(config.Gossip.InitMembers)
 		logrus.Info("n", n)
 
 		if err == nil {

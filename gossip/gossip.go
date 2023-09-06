@@ -15,63 +15,71 @@ func gossipTest() {
 }
 
 type GossipCluster struct {
-	conf    *memberlist.Config
-	cluster *memberlist.Memberlist
-	msgCh   chan []byte
+	gossipConfig     config.GossipConfig
+	memberlistConfig *memberlist.Config
+	list             *memberlist.Memberlist
+	msgCh            chan []byte
 }
 
-func CreateMemberList(managerConfig config.ManagerConfig) (*GossipCluster, error) {
-	cluster := GossipCluster{}
+func CreateGossipCluster(gossipConfig config.GossipConfig) GossipCluster {
+	gossipCluster := GossipCluster{}
 
-	conf := memberlist.DefaultLocalConfig()
-	conf.Logger = log.New(io.Discard, "", 0)
-	conf.BindPort = 8081
-	conf.AdvertisePort = 8081
-	conf.Delegate = &cluster
-	conf.Events = &cluster
-	conf.Name = managerConfig.Hostname
+	memberlistConfig := memberlist.DefaultLocalConfig()
+	memberlistConfig.Logger = log.New(io.Discard, "", 0)
+	memberlistConfig.BindPort = 8081
+	memberlistConfig.AdvertisePort = 8081
+	memberlistConfig.Delegate = &gossipCluster
+	memberlistConfig.Events = &gossipCluster
+	memberlistConfig.Name = gossipConfig.Name
 
-	clusterNodes, err := memberlist.Create(conf)
+	clusterNodes, err := memberlist.Create(memberlistConfig)
 	if err != nil {
-		return nil, err
+		logrus.Fatal(err)
 	}
 
-	cluster.cluster = clusterNodes
-
-	return &cluster, nil
+	gossipCluster.list = clusterNodes
+	gossipCluster.memberlistConfig = memberlistConfig
+	gossipCluster.gossipConfig = gossipConfig
+	return gossipCluster
 }
 
-func (d *GossipCluster) NotifyMsg(msg []byte) {
-	d.msgCh <- msg
+func (gossipCluster *GossipCluster) Join() error {
+	n, err := gossipCluster.list.Join(gossipCluster.gossipConfig.InitMembers)
+	logrus.Debugf("Join n = %d", n)
+	return err
 }
 
-func (d *GossipCluster) NodeMeta(limit int) []byte {
+func (gossipCluster *GossipCluster) NotifyMsg(msg []byte) {
+	gossipCluster.msgCh <- msg
+}
+
+func (gossipCluster *GossipCluster) NodeMeta(limit int) []byte {
 	logrus.Warn("NodeMeta")
 	return nil
 }
 
-func (d *GossipCluster) LocalState(join bool) []byte {
-	logrus.Warn("LocalState")
+func (gossipCluster *GossipCluster) LocalState(join bool) []byte {
+	logrus.Debugf("LocalState")
 	return []byte("")
 }
 
-func (d *GossipCluster) GetBroadcasts(overhead, limit int) [][]byte {
-	logrus.Warn("GetBroadcasts")
+func (gossipCluster *GossipCluster) GetBroadcasts(overhead, limit int) [][]byte {
+	logrus.Debugf("GetBroadcasts %d %d", overhead, limit)
 	return nil
 }
 
-func (d *GossipCluster) MergeRemoteState(buf []byte, join bool) {
+func (gossipCluster *GossipCluster) MergeRemoteState(buf []byte, join bool) {
 	logrus.Warn("MergeRemoteState")
 }
 
-func (events *GossipCluster) NotifyJoin(node *memberlist.Node) {
+func (gossipCluster *GossipCluster) NotifyJoin(node *memberlist.Node) {
 	logrus.Infof("join %s", node.Name)
 }
 
-func (events *GossipCluster) NotifyLeave(node *memberlist.Node) {
+func (gossipCluster *GossipCluster) NotifyLeave(node *memberlist.Node) {
 	logrus.Infof("leave %s", node.Name)
 }
 
-func (events *GossipCluster) NotifyUpdate(node *memberlist.Node) {
+func (gossipCluster *GossipCluster) NotifyUpdate(node *memberlist.Node) {
 	logrus.Infof("update %s", node.Name)
 }

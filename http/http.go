@@ -26,6 +26,10 @@ type GetTask struct {
 	ResCh chan interface{}
 }
 
+func NewHttpServer(ch chan interface{}) HttpServer {
+	return HttpServer{reqCh: ch}
+}
+
 // Define a setHandler function
 func (s HttpServer) setHandler(w http.ResponseWriter, r *http.Request) {
 	key := r.URL.Query().Get("key")
@@ -51,8 +55,4 @@ func (s HttpServer) StartHttp() {
 	http.HandleFunc("/set", s.setHandler)
 	http.HandleFunc("/get", s.getHandler)
 	http.ListenAndServe(":8080", nil)
-}
-
-func NewHttpServer(ch chan interface{}) HttpServer {
-	return HttpServer{reqCh: ch}
 }

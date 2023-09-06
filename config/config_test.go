@@ -53,7 +53,7 @@ func TestConfigDefault(t *testing.T) {
 	assert.Equal(t, 30, config.Raft.BootstrapTimeout, "BootstrapTimeout wrong value")
 
 	// memberlist config
-	assert.Equal(t, []string{"store:8081"}, config.MemberList.InitMembers, "InitMembers wrong value")
+	assert.Equal(t, []string{"store:8081"}, config.Gossip.InitMembers, "InitMembers wrong value")
 
 	assert.Equal(t, "/store/data", config.Storage.DataPath, "DataPath wrong value")
 }
@@ -80,7 +80,7 @@ func TestConfigOverwrite(t *testing.T) {
 	assert.Equal(t, 1, config.Raft.BootstrapTimeout, "BootstrapTimeout wrong value")
 
 	// memberlist config
-	assert.Equal(t, []string{"test:1", "test:2"}, config.MemberList.InitMembers, "InitMembers wrong value")
+	assert.Equal(t, []string{"test:1", "test:2"}, config.Gossip.InitMembers, "InitMembers wrong value")
 
 	assert.Equal(t, "/tmp/store/data", config.Storage.DataPath, "DataPath wrong value")
 }

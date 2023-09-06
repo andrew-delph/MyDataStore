@@ -8,22 +8,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-// var (
-// 	ReplicaCount     int           = 3
-// 	WriteQuorum      int           = 2
-// 	ReadQuorum       int           = 2
-// 	saveInterval     time.Duration = 30 * time.Second
-// 	defaultTimeout   time.Duration = 2 * time.Second
-// 	partitionBuckets int           = 500
-// 	partitionCount   int           = 100
-// 	epochTime        time.Duration = 100 * time.Second
-// 	dataPath         string        = "/tmp/store" // this will stop k8 from persist
-// 	raftLogs         bool          = false
-// 	autoBootstrap    bool          = true
-// 	bootstrapTimeout time.Duration = 30 * time.Second
-// 	clusterJoinList                = []string{"store:8081"}
-// )
-
 type ManagerConfig struct {
 	ReplicaCount     int `mapstructure:"REPLICA_COUNT"`
 	WriteQuorum      int `mapstructure:"WRITE_QUORUM"`
@@ -44,8 +28,9 @@ type RaftConfig struct {
 	BootstrapTimeout int    `mapstructure:"BOOTSTRAP_TIMEOUT"`
 }
 
-type MemberListConfig struct {
+type GossipConfig struct {
 	InitMembers []string `mapstructure:"INIT_MEMBERS"`
+	Name        string
 }
 
 type StorageConfig struct {
@@ -53,10 +38,10 @@ type StorageConfig struct {
 }
 
 type Config struct {
-	Manager    ManagerConfig    `mapstructure:"MANAGER"`
-	Raft       RaftConfig       `mapstructure:"RAFT"`
-	MemberList MemberListConfig `mapstructure:"MEMBERLIST"`
-	Storage    StorageConfig    `mapstructure:"STORAGE"`
+	Manager ManagerConfig `mapstructure:"MANAGER"`
+	Raft    RaftConfig    `mapstructure:"RAFT"`
+	Gossip  GossipConfig  `mapstructure:"GOSSIP"`
+	Storage StorageConfig `mapstructure:"STORAGE"`
 }
 
 func GetConfig() Config {
@@ -93,6 +78,7 @@ func getConfigOverride(allow_override bool) Config {
 		logrus.Fatal(err)
 	}
 	config.Manager.Hostname = hostname
+	config.Gossip.Name = hostname
 
 	return config
 }
