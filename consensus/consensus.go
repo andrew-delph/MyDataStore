@@ -93,9 +93,9 @@ func (consensusCluster *ConsensusCluster) StartConsensusCluster() error {
 		logrus.Fatal(err)
 	}
 
-	// fsm := &FSM{} // Your state machine instance
+	fsm := &FSM{} // Your state machine instance
 	// Create raftNode
-	raftNode, err := raft.NewRaft(consensusCluster.raftConf, nil, logStore, stableStore, snapshotStore, trans)
+	raftNode, err := raft.NewRaft(consensusCluster.raftConf, fsm, logStore, stableStore, snapshotStore, trans)
 	if err != nil {
 		logrus.Fatal(err)
 	}
@@ -172,4 +172,31 @@ func (consensusCluster *ConsensusCluster) RemoveServer(nodeName string) error {
 	}
 
 	return consensusCluster.raftNode.RemoveServer(raft.ServerID(nodeName), 0, 0).Error()
+}
+
+var globalEpoch = int64(1)
+
+func (consensusCluster *ConsensusCluster) UpdateEpoch() error {
+	err := consensusCluster.raftNode.VerifyLeader().Error()
+	if err != nil {
+		return nil
+	}
+	globalEpoch++
+	logrus.Warnf("Leader Update Epoch. Epoch = %d", globalEpoch)
+
+	epochBytes, err := EncodeInt64ToBytes(globalEpoch)
+	if err != nil {
+		logrus.Errorf("EncodeInt64ToBytes Err= %v", err)
+		return err
+	}
+	logEntry := consensusCluster.raftNode.Apply(epochBytes, 0)
+	err = logEntry.Error()
+
+	if err == nil {
+		// logrus.Warnf("Leader Update Epoch. Epoch = %d", currEpoch)
+	} else {
+		logrus.Warnf("update fsm Err= %v", err)
+	}
+	logrus.Debugf("Done.")
+	return err
 }

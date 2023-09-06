@@ -5,6 +5,7 @@ import (
 	"os/signal"
 	"reflect"
 	"syscall"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -28,6 +29,7 @@ type Manager struct {
 	httpServer       *http.HttpServer
 	gossipCluster    *gossip.GossipCluster
 	consensusCluster *consensus.ConsensusCluster
+	epochTick        *time.Ticker
 }
 
 func NewManager() Manager {
@@ -39,7 +41,10 @@ func NewManager() Manager {
 	db := storage.NewBadgerStorage(c.Storage)
 	consensusCluster := consensus.CreateConsensusCluster(c.Consensus, reqCh)
 
-	return Manager{reqCh: reqCh, db: db, httpServer: &httpServer, gossipCluster: &gossipCluster, consensusCluster: &consensusCluster}
+	epochTick := time.NewTicker(5 * time.Second)
+	logrus.Warn("epochTick", epochTick)
+
+	return Manager{reqCh: reqCh, db: db, httpServer: &httpServer, gossipCluster: &gossipCluster, consensusCluster: &consensusCluster, epochTick: epochTick}
 }
 
 func (m Manager) StartManager() {
@@ -72,6 +77,7 @@ func (m Manager) startWorkers() {
 func (m Manager) startWorker() {
 	logrus.Debug("starting worker")
 	defer logrus.Warn("ending worker")
+
 	for {
 		select {
 		case data, ok := <-m.reqCh:
@@ -125,8 +131,14 @@ func (m Manager) startWorker() {
 						logrus.Warn("AddVoter success")
 					}
 				}
+
 			default:
 				logrus.Fatalf("worker unkown task type: %v", reflect.TypeOf(task))
+			}
+		case <-m.epochTick.C:
+			err := m.consensusCluster.UpdateEpoch()
+			if err != nil {
+				logrus.Error("UpdateEpoch err = %v", err)
 			}
 		}
 	}
