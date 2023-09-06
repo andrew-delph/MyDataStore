@@ -35,40 +35,20 @@ func (h hasher) Sum64(data []byte) uint64 {
 	return xxhash.Sum64(data)
 }
 
-type HashRingMember struct {
-	name string
-}
-
-func (m HashRingMember) String() string {
-	return string(m.name)
-}
-
-func GetHashRing(managerConfig config.ManagerConfig) *Hashring {
-	Config := consistent.Config{
-		PartitionCount:    managerConfig.PartitionCount,
-		ReplicationFactor: 13,
-		Load:              1.2,
-		Hasher:            hasher{},
-	}
-	Consistent := consistent.New(nil, Config)
-	return &Hashring{consistentConfig: Config, consistent: Consistent}
-}
-
-func (ring Hashring) AddNode(name string) {
-	member := HashRingMember{name: name}
+func (ring *Hashring) AddNode(member consistent.Member) {
 	ring.consistent.Add(member)
 }
 
-func (ring Hashring) RemoveNode(name string) {
+func (ring *Hashring) RemoveNode(name string) {
 	ring.consistent.Remove(name)
 }
 
-func (ring Hashring) FindPartitionID(key string) int {
+func (ring *Hashring) FindPartitionID(key string) int {
 	keyBytes := []byte(key)
 	return ring.consistent.FindPartitionID(keyBytes)
 }
 
-func (ring Hashring) GetMemberPartions(member string) ([]int, error) {
+func (ring *Hashring) GetMemberPartions(member string) ([]int, error) {
 	var belongsTo []int
 	for partID := 0; partID < ring.consistentConfig.PartitionCount; partID++ {
 		members, err := ring.consistent.GetClosestNForPartition(partID, ring.consistentConfig.PartitionCount)
