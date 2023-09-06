@@ -11,6 +11,7 @@ go_library(
         "//config:go_default_library",
         "//consensus:go_default_library",
         "//gossip:go_default_library",
+        "//hashring:go_default_library",
         "//http:go_default_library",
         "//storage:go_default_library",
         "@com_github_pkg_errors//:go_default_library",

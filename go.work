@@ -8,4 +8,5 @@ use ./main
 use ./gossip
 use ./consensus
 use ./utils
+use ./hashring
 

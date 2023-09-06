@@ -12,6 +12,7 @@ import (
 	"github.com/andrew-delph/my-key-store/config"
 	"github.com/andrew-delph/my-key-store/consensus"
 	"github.com/andrew-delph/my-key-store/gossip"
+	"github.com/andrew-delph/my-key-store/hashring"
 	"github.com/andrew-delph/my-key-store/http"
 	"github.com/andrew-delph/my-key-store/storage"
 )
@@ -28,6 +29,7 @@ type Manager struct {
 	httpServer       *http.HttpServer
 	gossipCluster    *gossip.GossipCluster
 	consensusCluster *consensus.ConsensusCluster
+	ring             *hashring.Hashring
 }
 
 func NewManager() Manager {
@@ -38,8 +40,9 @@ func NewManager() Manager {
 	gossipCluster := gossip.CreateGossipCluster(c.Gossip, reqCh)
 	db := storage.NewBadgerStorage(c.Storage)
 	consensusCluster := consensus.CreateConsensusCluster(c.Consensus, reqCh)
+	ring := hashring.CreateHashring(c.Hashring)
 
-	return Manager{reqCh: reqCh, db: db, httpServer: &httpServer, gossipCluster: &gossipCluster, consensusCluster: &consensusCluster}
+	return Manager{reqCh: reqCh, db: db, httpServer: &httpServer, gossipCluster: &gossipCluster, consensusCluster: &consensusCluster, ring: &ring}
 }
 
 func (m Manager) StartManager() {

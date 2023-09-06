@@ -38,11 +38,14 @@ type StorageConfig struct {
 	DataPath string `mapstructure:"DATA_PATH"`
 }
 
+type HashringConfig struct{}
+
 type Config struct {
 	Manager   ManagerConfig   `mapstructure:"MANAGER"`
 	Consensus ConsensusConfig `mapstructure:"CONSENSUS"`
 	Gossip    GossipConfig    `mapstructure:"GOSSIP"`
 	Storage   StorageConfig   `mapstructure:"STORAGE"`
+	Hashring  HashringConfig  `mapstructure:"HASHRING"`
 }
 
 func GetConfig() Config {
