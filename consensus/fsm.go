@@ -1,15 +1,14 @@
 package consensus
 
 import (
-	"bytes"
-	"encoding/binary"
 	"encoding/json"
-	"errors"
 	"io"
 	"sync"
 
 	"github.com/hashicorp/raft"
 	"github.com/sirupsen/logrus"
+
+	"github.com/andrew-delph/my-key-store/utils"
 )
 
 var applyLock sync.RWMutex
@@ -20,33 +19,10 @@ type FSM struct {
 	Epoch int64
 }
 
-func EncodeInt64ToBytes(value int64) ([]byte, error) {
-	buf := new(bytes.Buffer)
-	err := binary.Write(buf, binary.LittleEndian, value)
-	if err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
-}
-
-func DecodeBytesToInt64(data []byte) (int64, error) {
-	if len(data) != 8 {
-		return 0, errors.New("byte slice should be 8 bytes long for int64 decoding")
-	}
-
-	buf := bytes.NewReader(data)
-	var result int64
-	err := binary.Read(buf, binary.LittleEndian, &result)
-	if err != nil {
-		return 0, err
-	}
-	return result, nil
-}
-
 func (fsm *FSM) Apply(logEntry *raft.Log) interface{} {
 	applyLock.Lock()
 	defer applyLock.Unlock()
-	epoch, err := DecodeBytesToInt64(logEntry.Data)
+	epoch, err := utils.DecodeBytesToInt64(logEntry.Data)
 	if err != nil {
 		logrus.Error("DecodeBytesToInt64 Error on Apply: %v", err)
 		return nil

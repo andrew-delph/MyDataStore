@@ -7,4 +7,5 @@ use ./http
 use ./main
 use ./gossip
 use ./consensus
+use ./utils
 

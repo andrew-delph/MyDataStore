@@ -10,6 +10,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//config:go_default_library",
+        "//utils:go_default_library",
         "@com_github_hashicorp_go_hclog//:go_default_library",
         "@com_github_hashicorp_raft//:go_default_library",
         "@com_github_hashicorp_raft_boltdb//:go_default_library",

@@ -14,6 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/andrew-delph/my-key-store/config"
+	"github.com/andrew-delph/my-key-store/utils"
 )
 
 func consensusTest() {
@@ -184,7 +185,7 @@ func (consensusCluster *ConsensusCluster) UpdateEpoch() error {
 	globalEpoch++
 	logrus.Warnf("Leader Update Epoch. Epoch = %d", globalEpoch)
 
-	epochBytes, err := EncodeInt64ToBytes(globalEpoch)
+	epochBytes, err := utils.EncodeInt64ToBytes(globalEpoch)
 	if err != nil {
 		logrus.Errorf("EncodeInt64ToBytes Err= %v", err)
 		return err
