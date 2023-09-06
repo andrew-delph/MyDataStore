@@ -38,7 +38,9 @@ type StorageConfig struct {
 	DataPath string `mapstructure:"DATA_PATH"`
 }
 
-type HashringConfig struct{}
+type HashringConfig struct {
+	PartitionCount int `mapstructure:"PARTITION_COUNT"`
+}
 
 type Config struct {
 	Manager   ManagerConfig   `mapstructure:"MANAGER"`
