@@ -30,7 +30,6 @@ func (fsm *FSM) Apply(logEntry *raft.Log) interface{} {
 	}
 	fsm.Epoch = epoch
 
-	// logrus.Warnf("E= %d", epoch)
 	fsm.reqCh <- EpochTask{Epoch: epoch}
 
 	// if logEntry.Index == raftNode.AppliedIndex() {
