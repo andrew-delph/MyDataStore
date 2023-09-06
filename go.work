@@ -6,4 +6,5 @@ use ./storage
 use ./http
 use ./main
 use ./gossip
+use ./raft
 
