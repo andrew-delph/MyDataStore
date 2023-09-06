@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"syscall"
 
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
 	"github.com/andrew-delph/my-key-store/config"
@@ -24,36 +25,36 @@ func mainTest() {
 type Manager struct {
 	reqCh            chan interface{}
 	db               storage.Storage
-	httpServer       http.HttpServer
-	gossipCluster    gossip.GossipCluster
-	consensusCluster consensus.ConsensusCluster
+	httpServer       *http.HttpServer
+	gossipCluster    *gossip.GossipCluster
+	consensusCluster *consensus.ConsensusCluster
 }
 
 func NewManager() Manager {
 	// c := config.GetConfig()
 	c := config.GetDefaultConfig()
-	reqCh := make(chan interface{})
-
+	reqCh := make(chan interface{}, 100)
 	httpServer := http.CreateHttpServer(reqCh)
 	gossipCluster := gossip.CreateGossipCluster(c.Gossip, reqCh)
 	db := storage.NewBadgerStorage(c.Storage)
-
 	consensusCluster := consensus.CreateConsensusCluster(c.Consensus, reqCh)
 
-	return Manager{reqCh: reqCh, db: db, httpServer: httpServer, gossipCluster: gossipCluster, consensusCluster: consensusCluster}
+	return Manager{reqCh: reqCh, db: db, httpServer: &httpServer, gossipCluster: &gossipCluster, consensusCluster: &consensusCluster}
 }
 
 func (m Manager) StartManager() {
 	var err error
-	m.startWorkers()
-	err = m.gossipCluster.Join()
-	if err != nil {
-		logrus.Fatal(err)
-	}
+	go m.startWorkers()
+
 	err = m.consensusCluster.StartConsensusCluster()
 	if err != nil {
 		logrus.Fatal(err)
 	}
+	err = m.gossipCluster.Join()
+	if err != nil {
+		logrus.Fatal(err)
+	}
+
 	go m.httpServer.StartHttp()
 
 	signals := make(chan os.Signal, 1)
@@ -99,10 +100,31 @@ func (m Manager) startWorker() {
 				}
 			case gossip.JoinTask:
 				logrus.Warnf("worker JoinTask: %+v", task)
+				err := m.consensusCluster.AddVoter(task.Name, task.IP)
+				if err != nil {
+					err = errors.Wrap(err, "gossip.JoinTask")
+					logrus.Error(err)
+				} else {
+					logrus.Warn("AddVoter success")
+				}
 			case gossip.LeaveTask:
 				logrus.Warnf("worker LeaveTask: %+v", task)
+				m.consensusCluster.RemoveServer(task.Name)
 			case consensus.LeaderChangeTask:
+				if !task.IsLeader {
+					continue
+				}
 				logrus.Warnf("worker LeaderChangeTask: %+v", task)
+
+				for _, member := range m.gossipCluster.GetMembers() {
+					err := m.consensusCluster.AddVoter(member.Name, member.Addr.String())
+					if err != nil {
+						err = errors.Wrap(err, "gossip.JoinTask")
+						logrus.Error(err)
+					} else {
+						logrus.Warn("AddVoter success")
+					}
+				}
 			default:
 				logrus.Fatalf("worker unkown task type: %v", reflect.TypeOf(task))
 			}
@@ -111,11 +133,11 @@ func (m Manager) startWorker() {
 }
 
 func main() {
-	defer func() {
-		if r := recover(); r != nil {
-			logrus.Warn("Recovered from panic:", r)
-		}
-	}()
+	// defer func() {
+	// 	if r := recover(); r != nil {
+	// 		logrus.Warnf("Recovered from panic: %+v", r)
+	// 	}
+	// }()
 	logrus.Info("starting")
 	manager := NewManager()
 	manager.StartManager()

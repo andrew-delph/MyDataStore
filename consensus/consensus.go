@@ -53,7 +53,7 @@ func CreateConsensusCluster(consensusConfig config.ConsensusConfig, reqCh chan i
 		raftConf.LogLevel = "ERROR"
 	}
 	// logrus.Warn("consensusConfig ", consensusConfig.DataPath)
-	return ConsensusCluster{consensusConfig: consensusConfig, reqCh: reqCh, raftConf: raftConf}
+	return ConsensusCluster{consensusConfig: consensusConfig, reqCh: reqCh, raftConf: raftConf, raftNode: new(raft.Raft)}
 }
 
 func (consensusCluster *ConsensusCluster) StartConsensusCluster() error {
@@ -151,37 +151,25 @@ func (consensusCluster *ConsensusCluster) RaftBootstrap() error {
 	return bootstrapFuture.Error()
 }
 
-func (consensusCluster *ConsensusCluster) AddVoter() error {
-	err := consensusCluster.raftNode.VerifyLeader().Error()
-	if err != nil {
-		return nil
-	}
-	return err
-	// otherRaftAddr := fmt.Sprintf("%s:7000", node.Addr)
-	// logrus.Debugf("AddVoter otherRaftAddr %s", otherRaftAddr)
-
-	// addVoterFuture := raftNode.AddVoter(raft.ServerID(node.Name), raft.ServerAddress(otherRaftAddr), 0, 0)
-	// return addVoterFuture.Error()
-}
-
-func (consensusCluster *ConsensusCluster) RemoveServer() error {
-	err := consensusCluster.raftNode.VerifyLeader().Error()
-	if err != nil {
-		return nil
-	}
-	return err
-
-	// otherRaftAddr := fmt.Sprintf("%s:7000", node.Addr)
-	// logrus.Warn("RemoveServer otherRaftAddr ", otherRaftAddr)
-
-	// raftNode.GetConfiguration().Index()
-	// err = raftNode.RemoveServer(raft.ServerID(node.Name), 0, 0).Error()
+func (consensusCluster *ConsensusCluster) AddVoter(nodeName, nodeIP string) error {
+	// err := consensusCluster.raftNode.VerifyLeader().Error()
 	// if err != nil {
-	// 	for i := 0; i < 100; i++ {
-	// 		logrus.Warn("RemoveServer ", err)
-	// 	}
+	// 	logrus.Warn("ERRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR")
 	// 	return err
 	// }
+	// logrus.Warn("leader")
+	noderRaftAddr := fmt.Sprintf("%s:7000", nodeIP)
+	logrus.Debugf("AddVoter! STATE = %s nodeName = %s noderRaftAddr = %s", consensusCluster.raftNode.State(), nodeName, noderRaftAddr)
 
-	// return err
+	addVoterFuture := consensusCluster.raftNode.AddVoter(raft.ServerID(nodeName), raft.ServerAddress(noderRaftAddr), 0, 0)
+	return addVoterFuture.Error()
+}
+
+func (consensusCluster *ConsensusCluster) RemoveServer(nodeName string) error {
+	err := consensusCluster.raftNode.VerifyLeader().Error()
+	if err != nil {
+		return nil
+	}
+
+	return consensusCluster.raftNode.RemoveServer(raft.ServerID(nodeName), 0, 0).Error()
 }

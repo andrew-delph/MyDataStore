@@ -24,6 +24,7 @@ type GossipCluster struct {
 
 type JoinTask struct {
 	Name string
+	IP   string
 }
 
 type LeaveTask struct {
@@ -31,7 +32,7 @@ type LeaveTask struct {
 }
 
 func CreateGossipCluster(gossipConfig config.GossipConfig, reqCh chan interface{}) GossipCluster {
-	gossipCluster := GossipCluster{}
+	gossipCluster := GossipCluster{list: new(memberlist.Memberlist)}
 
 	memberlistConfig := memberlist.DefaultLocalConfig()
 	memberlistConfig.Logger = log.New(io.Discard, "", 0)
@@ -59,6 +60,10 @@ func (gossipCluster *GossipCluster) Join() error {
 	return err
 }
 
+func (gossipCluster *GossipCluster) GetMembers() []*memberlist.Node {
+	return gossipCluster.list.Members()
+}
+
 func (gossipCluster *GossipCluster) NotifyMsg(msg []byte) {
 	gossipCluster.msgCh <- msg
 }
@@ -70,7 +75,7 @@ func (gossipCluster *GossipCluster) NodeMeta(limit int) []byte {
 
 func (gossipCluster *GossipCluster) LocalState(join bool) []byte {
 	logrus.Debugf("LocalState")
-	return []byte("")
+	return nil
 }
 
 func (gossipCluster *GossipCluster) GetBroadcasts(overhead, limit int) [][]byte {
@@ -83,8 +88,8 @@ func (gossipCluster *GossipCluster) MergeRemoteState(buf []byte, join bool) {
 }
 
 func (gossipCluster *GossipCluster) NotifyJoin(node *memberlist.Node) {
-	logrus.Warnf("join %s", node.Name)
-	gossipCluster.reqCh <- JoinTask{Name: node.Name}
+	logrus.Warnf("join %s num = %d %d", node.Name, len(gossipCluster.list.Members()), gossipCluster.list.NumMembers())
+	gossipCluster.reqCh <- JoinTask{Name: node.Name, IP: node.Addr.String()}
 }
 
 func (gossipCluster *GossipCluster) NotifyLeave(node *memberlist.Node) {
