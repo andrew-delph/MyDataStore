@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"os/signal"
+	"reflect"
 	"syscall"
 
 	"github.com/sirupsen/logrus"
@@ -27,28 +28,35 @@ type Manager struct {
 }
 
 func NewManager() Manager {
-	c := config.GetConfig()
-	db := storage.NewBadgerStorage(c.Storage)
-	gossipCluster := gossip.CreateGossipCluster(c.Gossip)
+	// c := config.GetConfig()
+	c := config.GetDefaultConfig()
 	reqCh := make(chan interface{})
-	httpServer := http.NewHttpServer(reqCh)
+
+	httpServer := http.CreateHttpServer(reqCh)
+	gossipCluster := gossip.CreateGossipCluster(c.Gossip, reqCh)
+	db := storage.NewBadgerStorage(c.Storage)
+
 	return Manager{reqCh: reqCh, db: db, httpServer: httpServer, gossipCluster: gossipCluster}
 }
 
 func (m Manager) StartManager() {
+	m.startWorkers()
 	err := m.gossipCluster.Join()
 	if err != nil {
 		logrus.Fatal(err)
 	}
 	go m.httpServer.StartHttp()
-	for i := 0; i < numWorkers; i++ {
-		go m.startWorker()
-	}
 
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGTERM)
 	<-signals
 	logrus.Warn("Received SIGTERM signal")
+}
+
+func (m Manager) startWorkers() {
+	for i := 0; i < numWorkers; i++ {
+		go m.startWorker()
+	}
 }
 
 func (m Manager) startWorker() {
@@ -64,7 +72,7 @@ func (m Manager) startWorker() {
 
 			switch task := data.(type) {
 			case http.SetTask:
-				logrus.Debugf("worker task: %+v", task)
+				logrus.Debugf("worker SetTask: %+v", task)
 				err := m.db.Put([]byte(task.Key), []byte(task.Value))
 				if err != nil {
 					task.ResCh <- err
@@ -73,15 +81,19 @@ func (m Manager) startWorker() {
 				}
 
 			case http.GetTask:
-				logrus.Debugf("worker task: %+v", task)
+				logrus.Debugf("worker GetTask: %+v", task)
 				value, err := m.db.Get([]byte(task.Key))
 				if err != nil {
 					task.ResCh <- err
 				} else {
 					task.ResCh <- value
 				}
+			case gossip.JoinTask:
+				logrus.Warnf("worker JoinTask: %+v", task)
+			case gossip.LeaveTask:
+				logrus.Warnf("worker LeaveTask: %+v", task)
 			default:
-				logrus.Fatal("worker unkown task type")
+				logrus.Fatalf("worker unkown task type: %v", reflect.TypeOf(task))
 			}
 		}
 	}

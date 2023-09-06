@@ -26,8 +26,8 @@ type GetTask struct {
 	ResCh chan interface{}
 }
 
-func NewHttpServer(ch chan interface{}) HttpServer {
-	return HttpServer{reqCh: ch}
+func CreateHttpServer(reqCh chan interface{}) HttpServer {
+	return HttpServer{reqCh: reqCh}
 }
 
 // Define a setHandler function

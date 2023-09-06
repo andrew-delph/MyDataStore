@@ -19,9 +19,17 @@ type GossipCluster struct {
 	memberlistConfig *memberlist.Config
 	list             *memberlist.Memberlist
 	msgCh            chan []byte
+	reqCh            chan interface{}
+}
+type JoinTask struct {
+	Name string
 }
 
-func CreateGossipCluster(gossipConfig config.GossipConfig) GossipCluster {
+type LeaveTask struct {
+	Name string
+}
+
+func CreateGossipCluster(gossipConfig config.GossipConfig, reqCh chan interface{}) GossipCluster {
 	gossipCluster := GossipCluster{}
 
 	memberlistConfig := memberlist.DefaultLocalConfig()
@@ -32,19 +40,20 @@ func CreateGossipCluster(gossipConfig config.GossipConfig) GossipCluster {
 	memberlistConfig.Events = &gossipCluster
 	memberlistConfig.Name = gossipConfig.Name
 
-	clusterNodes, err := memberlist.Create(memberlistConfig)
+	gossipCluster.memberlistConfig = memberlistConfig
+	gossipCluster.gossipConfig = gossipConfig
+	gossipCluster.reqCh = reqCh
+	return gossipCluster
+}
+
+func (gossipCluster *GossipCluster) Join() error {
+	clusterNodes, err := memberlist.Create(gossipCluster.memberlistConfig)
 	if err != nil {
 		logrus.Fatal(err)
 	}
 
 	gossipCluster.list = clusterNodes
-	gossipCluster.memberlistConfig = memberlistConfig
-	gossipCluster.gossipConfig = gossipConfig
-	return gossipCluster
-}
-
-func (gossipCluster *GossipCluster) Join() error {
-	n, err := gossipCluster.list.Join(gossipCluster.gossipConfig.InitMembers)
+	n, err := clusterNodes.Join(gossipCluster.gossipConfig.InitMembers)
 	logrus.Debugf("Join n = %d", n)
 	return err
 }
@@ -54,7 +63,7 @@ func (gossipCluster *GossipCluster) NotifyMsg(msg []byte) {
 }
 
 func (gossipCluster *GossipCluster) NodeMeta(limit int) []byte {
-	logrus.Warn("NodeMeta")
+	logrus.Debugf("NodeMeta")
 	return nil
 }
 
@@ -73,13 +82,16 @@ func (gossipCluster *GossipCluster) MergeRemoteState(buf []byte, join bool) {
 }
 
 func (gossipCluster *GossipCluster) NotifyJoin(node *memberlist.Node) {
-	logrus.Infof("join %s", node.Name)
+	logrus.Warnf("join %s", node.Name)
+	defer logrus.Warnf("DONE join %s", node.Name)
+	gossipCluster.reqCh <- JoinTask{Name: node.Name}
 }
 
 func (gossipCluster *GossipCluster) NotifyLeave(node *memberlist.Node) {
-	logrus.Infof("leave %s", node.Name)
+	logrus.Debugf("leave %s", node.Name)
+	gossipCluster.reqCh <- LeaveTask{Name: node.Name}
 }
 
 func (gossipCluster *GossipCluster) NotifyUpdate(node *memberlist.Node) {
-	logrus.Infof("update %s", node.Name)
+	logrus.Debugf("update %s", node.Name)
 }
