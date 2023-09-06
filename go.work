@@ -5,4 +5,5 @@ use ./config
 use ./storage
 use ./http
 use ./main
+use ./gossip
 

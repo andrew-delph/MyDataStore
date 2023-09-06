@@ -7,6 +7,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+func testHttp() {
+	logrus.Warn("HTTP")
+}
+
 type HttpServer struct {
 	reqCh chan interface{}
 }
