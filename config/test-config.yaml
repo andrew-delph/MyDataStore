@@ -17,3 +17,5 @@ gossip:
     - "test:2"
 storage:
   data_path: "/tmp/store/data"
+http:
+  default_timeout: 33

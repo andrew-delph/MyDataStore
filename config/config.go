@@ -75,6 +75,7 @@ func getConfigOverride(allow_override bool) Config {
 	if err := viper.ReadInConfig(); err != nil {
 		logrus.Fatalf("Error reading default config file, %s", err)
 	}
+
 	// Override with configuration from config.yaml
 	if allow_override {
 		viper.SetConfigName("config")

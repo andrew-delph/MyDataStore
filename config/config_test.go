@@ -90,6 +90,8 @@ func TestConfigOverwrite(t *testing.T) {
 	assert.Equal(t, []string{"test:1", "test:2"}, config.Gossip.InitMembers, "InitMembers wrong value")
 
 	assert.Equal(t, "/tmp/store/data", config.Storage.DataPath, "DataPath wrong value")
+
+	assert.Equal(t, 33, config.Http.DefaultTimeout, "Http.DefaultTimeout wrong value")
 }
 
 func TestErrors(t *testing.T) {

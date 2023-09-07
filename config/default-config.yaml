@@ -22,4 +22,4 @@ storage:
 rpc:
   port: 7070
 http:
-  default_timeout: 2
+  default_timeout: 1
