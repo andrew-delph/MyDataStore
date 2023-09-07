@@ -41,7 +41,7 @@ type Manager struct {
 func NewManager() Manager {
 	// c := config.GetConfig()
 	c := config.GetDefaultConfig()
-	reqCh := make(chan interface{})
+	reqCh := make(chan interface{}, c.Manager.ReqChannelSize)
 	httpServer := http.CreateHttpServer(reqCh)
 	gossipCluster := gossip.CreateGossipCluster(c.Gossip, reqCh)
 	db := storage.NewBadgerStorage(c.Storage)

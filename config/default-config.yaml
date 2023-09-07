@@ -4,6 +4,7 @@ manager:
   read_quorum: 2
   write_quorum: 2
   workers_count: 20
+  req_channel_size: 100
   partition_count: 100
   partition_buckets: 500
   data_path: "/store/data"

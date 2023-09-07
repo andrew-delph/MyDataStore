@@ -46,6 +46,7 @@ func TestConfigDefault(t *testing.T) {
 	assert.Equal(t, "/store/data", config.Manager.DataPath, "DataPath wrong value")
 	assert.NotEqual(t, 0, config.Manager.DefaultTimeout, "DefaultTimeout wrong value")
 	assert.NotEqual(t, 0, config.Manager.WokersCount, "WokersCount wrong value")
+	assert.NotEqual(t, 0, config.Manager.ReqChannelSize, "ReqChannelSize wrong value")
 
 	// consensus config
 	assert.NotEqual(t, 0, config.Consensus.EpochTime, "EpochTime wrong value")
