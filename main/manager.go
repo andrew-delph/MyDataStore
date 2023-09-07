@@ -213,7 +213,7 @@ func (m Manager) SetRequest(key, value string) error {
 	timeout := time.After(time.Second * time.Duration(m.config.Manager.DefaultTimeout))
 	responseCount := 0
 
-	for responseCount < m.config.Manager.WriteQuorum {
+	for i := 0; i < m.config.Manager.ReplicaCount && responseCount < m.config.Manager.WriteQuorum; i++ {
 		select {
 		case <-responseCh:
 			responseCount++
@@ -224,7 +224,11 @@ func (m Manager) SetRequest(key, value string) error {
 			return fmt.Errorf("timed out waiting for responses. responseCount = %d", responseCount)
 		}
 	}
-	return nil
+	if responseCount < m.config.Manager.WriteQuorum {
+		return fmt.Errorf("failed WriteQuorum. responseCount = %d", responseCount)
+	} else {
+		return nil
+	}
 }
 
 func (m Manager) GetRequest(key string) (string, error) {
@@ -258,7 +262,7 @@ func (m Manager) GetRequest(key string) (string, error) {
 	responseCount := 0
 	var recentValue *rpc.RpcValue
 	timeout := time.After(time.Second * time.Duration(m.config.Manager.DefaultTimeout))
-	for responseCount < m.config.Manager.ReadQuorum {
+	for i := 0; i < m.config.Manager.ReplicaCount && responseCount < m.config.Manager.ReadQuorum; i++ {
 		select {
 		case res := <-responseCh:
 			responseCount++
@@ -277,6 +281,8 @@ func (m Manager) GetRequest(key string) (string, error) {
 	}
 	if recentValue == nil {
 		return "", fmt.Errorf("value not found. responseCount = %d", responseCount)
+	} else if responseCount < m.config.Manager.ReadQuorum {
+		return "", fmt.Errorf("failed ReadQuorum. responseCount = %d", responseCount)
 	} else {
 		return recentValue.Value, nil
 	}
