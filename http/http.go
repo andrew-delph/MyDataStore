@@ -3,6 +3,7 @@ package http
 import (
 	"fmt"
 	"net/http"
+	"reflect"
 
 	"github.com/sirupsen/logrus"
 )
@@ -51,9 +52,15 @@ func (s HttpServer) getHandler(w http.ResponseWriter, r *http.Request) {
 	logrus.Debugf("http handler path = \"%s\" key = \"%s\"", r.URL.Path, key)
 	resCh := make(chan interface{})
 	s.reqCh <- GetTask{Key: key, ResCh: resCh}
-	res := <-resCh
-	logrus.Debugf("getHandler %s", res)
-	fmt.Fprintf(w, "%s", res)
+	rawRes := <-resCh
+	switch res := rawRes.(type) {
+	case string:
+		fmt.Fprintf(w, res)
+	case error:
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	default:
+		logrus.Panicf("http unkown res type: %v", reflect.TypeOf(res))
+	}
 }
 
 func (s HttpServer) StartHttp() {

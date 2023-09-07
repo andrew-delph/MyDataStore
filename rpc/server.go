@@ -2,8 +2,10 @@ package rpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
+	"reflect"
 
 	"github.com/andrew-delph/my-key-store/config"
 	datap "github.com/andrew-delph/my-key-store/datap"
@@ -68,9 +70,16 @@ func (rpcWrapper *RpcWrapper) GetRequest(ctx context.Context, req *datap.GetRequ
 	logrus.Debugf("Handling GetRequest: key=%s ", req.Key)
 	resCh := make(chan interface{})
 	rpcWrapper.reqCh <- GetValueTask{Key: req.Key, ResCh: resCh}
-	res := <-resCh
-	logrus.Debug("GetRequest res ", res)
-	return &datap.Value{Value: fmt.Sprintf("%s", res)}, nil
+	rawRes := <-resCh
+	switch res := rawRes.(type) {
+	case []byte:
+		return &datap.Value{Value: fmt.Sprintf("%s", res)}, nil
+	case error:
+		return nil, res
+	default:
+		logrus.Panicf("http unkown res type: %v", reflect.TypeOf(res))
+	}
+	return nil, errors.New("?????")
 }
 
 func (rpcWrapper *RpcWrapper) StreamBuckets(req *datap.StreamBucketsRequest, stream datap.InternalNodeService_StreamBucketsServer) error {

@@ -170,7 +170,7 @@ func (m Manager) startWorker() {
 				panic("unimplemented")
 
 			default:
-				logrus.Fatalf("worker unkown task type: %v", reflect.TypeOf(task))
+				logrus.Panicf("worker unkown task type: %v", reflect.TypeOf(task))
 			}
 		}
 	}
@@ -265,7 +265,7 @@ func (m Manager) GetRequest(key string) (string, error) {
 				recentValue = res
 			}
 		case err := <-errorCh:
-			logrus.Errorf("GET ERROR = %v", err)
+			logrus.Debugf("GET ERROR = %v", err)
 
 		case <-timeout:
 			return "", fmt.Errorf("timed out waiting for responses. responseCount = %d", responseCount)

@@ -1,5 +1,5 @@
 import http from "k6/http";
-import { check } from "k6";
+import { check, sleep } from "k6";
 import { randomString } from "https://jslib.k6.io/k6-utils/1.1.0/index.js";
 import { textSummary } from "https://jslib.k6.io/k6-summary/0.0.2/index.js";
 
@@ -13,12 +13,13 @@ export default function () {
   check(setRes, {
     "set status is 200": (r) => r.status === 200,
   });
+  // sleep(2);
 
   const getRes = http.get(`http://localhost:8080/get?key=${key}`);
 
   check(getRes, {
     "get status is 200": (r) => r.status === 200,
-    "get the correct value": (r) => r.body === value,
+    "get the correct value": (r) => r.body === value || console.error(r.body),
   });
 }
 
