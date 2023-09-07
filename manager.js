@@ -11,7 +11,8 @@ export default function () {
   );
 
   check(setRes, {
-    "set status is 200": (r) => r.status === 200,
+    "set status is 200": (r) =>
+      r.status === 200 || console.error("set:", r.body),
   });
   // sleep(2);
 
@@ -19,7 +20,8 @@ export default function () {
 
   check(getRes, {
     "get status is 200": (r) => r.status === 200,
-    "get the correct value": (r) => r.body === value || console.error(r.body),
+    "get the correct value": (r) =>
+      r.body === value || console.error("get:", r.body),
   });
 }
 
