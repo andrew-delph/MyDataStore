@@ -3,8 +3,8 @@ manager:
   read_quorum: 2
   write_quorum: 2
   default_timeout: 2
-  workers_count: 100
-  req_channel_size: 100
+  workers_count: 5
+  req_channel_size: 1
   partition_count: 100
   partition_buckets: 500
   data_path: "/store/data"
@@ -21,3 +21,5 @@ storage:
   data_path: "/store/data"
 rpc:
   port: 7070
+http:
+  default_timeout: 2

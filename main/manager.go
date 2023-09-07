@@ -42,7 +42,7 @@ func NewManager() Manager {
 	// c := config.GetConfig()
 	c := config.GetDefaultConfig()
 	reqCh := make(chan interface{}, c.Manager.ReqChannelSize)
-	httpServer := http.CreateHttpServer(reqCh)
+	httpServer := http.CreateHttpServer(c.Http, reqCh)
 	gossipCluster := gossip.CreateGossipCluster(c.Gossip, reqCh)
 	db := storage.NewBadgerStorage(c.Storage)
 	consensusCluster := consensus.CreateConsensusCluster(c.Consensus, reqCh)

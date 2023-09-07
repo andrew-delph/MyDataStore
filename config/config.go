@@ -46,6 +46,9 @@ type HashringConfig struct {
 type RpcConfig struct {
 	Port int `mapstructure:"PORT"`
 }
+type HttpConfig struct {
+	DefaultTimeout int `mapstructure:"DEFAULT_TIMEOUT"`
+}
 
 type Config struct {
 	Manager   ManagerConfig   `mapstructure:"MANAGER"`
@@ -54,6 +57,7 @@ type Config struct {
 	Storage   StorageConfig   `mapstructure:"STORAGE"`
 	Hashring  HashringConfig  `mapstructure:"HASHRING"`
 	Rpc       RpcConfig       `mapstructure:"RPC"`
+	Http      HttpConfig      `mapstructure:"HTTP"`
 }
 
 func GetConfig() Config {

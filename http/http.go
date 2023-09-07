@@ -4,8 +4,11 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"time"
 
 	"github.com/sirupsen/logrus"
+
+	"github.com/andrew-delph/my-key-store/config"
 )
 
 func testHttp() {
@@ -13,7 +16,8 @@ func testHttp() {
 }
 
 type HttpServer struct {
-	reqCh chan interface{}
+	httpConfig config.HttpConfig
+	reqCh      chan interface{}
 }
 
 type SetTask struct {
@@ -27,8 +31,8 @@ type GetTask struct {
 	ResCh chan interface{}
 }
 
-func CreateHttpServer(reqCh chan interface{}) HttpServer {
-	return HttpServer{reqCh: reqCh}
+func CreateHttpServer(httpConfig config.HttpConfig, reqCh chan interface{}) HttpServer {
+	return HttpServer{httpConfig: httpConfig, reqCh: reqCh}
 }
 
 // Define a setHandler function
@@ -37,7 +41,15 @@ func (s HttpServer) setHandler(w http.ResponseWriter, r *http.Request) {
 	value := r.URL.Query().Get("value")
 	logrus.Debugf("http handler path = \"%s\" key = \"%s\" value: \"%s\" ", r.URL.Path, key, value)
 	resCh := make(chan interface{})
-	s.reqCh <- SetTask{Key: key, Value: value, ResCh: resCh}
+	timeout := time.After(time.Second * time.Duration(s.httpConfig.DefaultTimeout))
+	select {
+	case s.reqCh <- SetTask{Key: key, Value: value, ResCh: resCh}:
+		//
+	case <-timeout:
+		http.Error(w, "server busy", http.StatusInternalServerError)
+		return
+	}
+
 	rawRes := <-resCh
 	switch res := rawRes.(type) {
 	case string:
@@ -53,7 +65,16 @@ func (s HttpServer) getHandler(w http.ResponseWriter, r *http.Request) {
 	key := r.URL.Query().Get("key")
 	logrus.Debugf("http handler path = \"%s\" key = \"%s\"", r.URL.Path, key)
 	resCh := make(chan interface{})
-	s.reqCh <- GetTask{Key: key, ResCh: resCh}
+
+	timeout := time.After(time.Second * time.Duration(s.httpConfig.DefaultTimeout))
+	select {
+	case s.reqCh <- GetTask{Key: key, ResCh: resCh}:
+		//
+	case <-timeout:
+		http.Error(w, "server busy", http.StatusInternalServerError)
+		return
+	}
+
 	rawRes := <-resCh
 	switch res := rawRes.(type) {
 	case string:

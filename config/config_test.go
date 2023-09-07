@@ -58,7 +58,11 @@ func TestConfigDefault(t *testing.T) {
 	// memberlist config
 	assert.Equal(t, []string{"store:8081"}, config.Gossip.InitMembers, "InitMembers wrong value")
 
+	// storage
 	assert.Equal(t, "/store/data", config.Storage.DataPath, "DataPath wrong value")
+
+	// http
+	assert.NotEqual(t, 0, config.Http.DefaultTimeout, "DefaultTimeout wrong value")
 }
 
 func TestConfigOverwrite(t *testing.T) {
