@@ -96,7 +96,11 @@ func (m Manager) startWorker() {
 			case http.SetTask:
 				logrus.Debugf("worker SetTask: %+v", task)
 				err := m.SetRequest(task.Key, task.Value)
-				task.ResCh <- err
+				if err != nil {
+					task.ResCh <- err
+				} else {
+					task.ResCh <- "value set"
+				}
 
 			case http.GetTask:
 				logrus.Debugf("worker GetTask: %+v", task)

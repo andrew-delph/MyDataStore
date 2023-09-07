@@ -38,12 +38,14 @@ func (s HttpServer) setHandler(w http.ResponseWriter, r *http.Request) {
 	logrus.Debugf("http handler path = \"%s\" key = \"%s\" value: \"%s\" ", r.URL.Path, key, value)
 	resCh := make(chan interface{})
 	s.reqCh <- SetTask{Key: key, Value: value, ResCh: resCh}
-	res := <-resCh
-	logrus.Debugf("setHandler %s", res)
-	if res != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-	} else {
-		fmt.Fprintf(w, "%s", res)
+	rawRes := <-resCh
+	switch res := rawRes.(type) {
+	case string:
+		fmt.Fprintf(w, res)
+	case error:
+		http.Error(w, res.Error(), http.StatusInternalServerError)
+	default:
+		logrus.Panicf("http unkown res type: %v", reflect.TypeOf(res))
 	}
 }
 
@@ -57,7 +59,7 @@ func (s HttpServer) getHandler(w http.ResponseWriter, r *http.Request) {
 	case string:
 		fmt.Fprintf(w, res)
 	case error:
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		http.Error(w, res.Error(), http.StatusInternalServerError)
 	default:
 		logrus.Panicf("http unkown res type: %v", reflect.TypeOf(res))
 	}
