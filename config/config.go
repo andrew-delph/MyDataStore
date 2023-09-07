@@ -42,12 +42,17 @@ type HashringConfig struct {
 	PartitionCount int `mapstructure:"PARTITION_COUNT"`
 }
 
+type RpcConfig struct {
+	Port int `mapstructure:"PORT"`
+}
+
 type Config struct {
 	Manager   ManagerConfig   `mapstructure:"MANAGER"`
 	Consensus ConsensusConfig `mapstructure:"CONSENSUS"`
 	Gossip    GossipConfig    `mapstructure:"GOSSIP"`
 	Storage   StorageConfig   `mapstructure:"STORAGE"`
 	Hashring  HashringConfig  `mapstructure:"HASHRING"`
+	Rpc       RpcConfig       `mapstructure:"RPC"`
 }
 
 func GetConfig() Config {

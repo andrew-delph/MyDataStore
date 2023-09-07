@@ -43,9 +43,8 @@ func (ring *Hashring) RemoveNode(name string) {
 	ring.consistent.Remove(name)
 }
 
-func (ring *Hashring) FindPartitionID(key string) int {
-	keyBytes := []byte(key)
-	return ring.consistent.FindPartitionID(keyBytes)
+func (ring *Hashring) FindPartitionID(key []byte) int {
+	return ring.consistent.FindPartitionID(key)
 }
 
 func (ring *Hashring) GetMemberPartions(member string) ([]int, error) {

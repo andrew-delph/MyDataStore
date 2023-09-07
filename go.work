@@ -9,4 +9,5 @@ use ./gossip
 use ./consensus
 use ./utils
 use ./hashring
+use ./rpc
 

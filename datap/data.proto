@@ -7,19 +7,16 @@ option go_package = "github.com/andrew-delph/my-key-store/datap";
 // The greeting service definition.
 service InternalNodeService {
 
-  rpc TestRequest (StandardResponse) returns (StandardResponse);
-
   // set a value on another node
   rpc SetRequest (Value) returns (StandardResponse);
 
   // get a value from another node
   rpc GetRequest (GetRequestMessage) returns (Value) ;
 
-
-
   // request to stream buckets from a partition back to the client
   rpc StreamBuckets(StreamBucketsRequest) returns (stream Value);
 
+  // get a PartitionEpochObject from another node
   rpc GetPartitionEpochObject(PartitionEpochObject) returns (PartitionEpochObject);
   
 }
@@ -34,15 +31,12 @@ message GetRequestMessage {
   string key = 1;
 }
 
-
-
 message Value{
   string key = 1;
   string value = 2;
   int64 unix_timestamp = 3;
   int64 epoch  =4;
 }
-
 
 message StreamBucketsRequest{
   int64 LowerEpoch = 1;

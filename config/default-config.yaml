@@ -6,7 +6,7 @@ manager:
   partition_buckets: 500
   data_path: "/store/data"
 consensus:
-  epoch_time: 5
+  epoch_time: 100
   data_path: "/store/raft"
   enable_logs: false
   auto_bootstrap: true
@@ -16,3 +16,5 @@ gossip:
     - "store:8081"
 storage:
   data_path: "/store/data"
+rpc:
+  port: 7070
