@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "badger_storage.go",
+        "index.go",
         "leveldb_storage.go",
         "storage.go",
     ],
@@ -23,7 +24,10 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["storage_test.go"],
+    srcs = [
+        "index_test.go",
+        "storage_test.go",
+    ],
     data = ["//config:rename-test-config"],
     embed = [":go_default_library"],
     env = {
