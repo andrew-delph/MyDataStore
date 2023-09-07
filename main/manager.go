@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"reflect"
@@ -27,6 +28,7 @@ func mainTest() {
 }
 
 type Manager struct {
+	config           config.Config
 	reqCh            chan interface{}
 	db               storage.Storage
 	httpServer       *http.HttpServer
@@ -48,7 +50,7 @@ func NewManager() Manager {
 
 	rpcWrapper := rpc.CreateRpcWrapper(c.Rpc, reqCh)
 
-	return Manager{reqCh: reqCh, db: db, httpServer: &httpServer, gossipCluster: &gossipCluster, consensusCluster: &consensusCluster, ring: &ring, rpcWrapper: &rpcWrapper}
+	return Manager{config: c, reqCh: reqCh, db: db, httpServer: &httpServer, gossipCluster: &gossipCluster, consensusCluster: &consensusCluster, ring: &ring, rpcWrapper: &rpcWrapper}
 }
 
 func (m Manager) StartManager() {
@@ -175,42 +177,104 @@ func (m Manager) startWorker() {
 }
 
 func (m Manager) SetRequest(key, value string) error {
-	nodes, err := m.ring.GetClosestN(key, 1)
+	nodes, err := m.ring.GetClosestN(key, m.config.Manager.ReplicaCount)
 	if err != nil {
 		return err
 	}
-	node := nodes[0]
-	member, ok := node.(Member)
-	if !ok {
-		return errors.New("failed to decode node")
-	}
+
 	unixTimestamp := time.Now().Unix()
 	setValue := &rpc.RpcValue{Key: key, Value: value, Epoch: int64(1), UnixTimestamp: unixTimestamp}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	_, err = member.rpcClient.SetRequest(ctx, setValue)
-	return err
+
+	responseCh := make(chan *rpc.RpcStandardResponse, m.config.Manager.ReplicaCount)
+	errorCh := make(chan error, m.config.Manager.ReplicaCount)
+
+	for _, node := range nodes {
+		member, ok := node.(Member)
+		if !ok {
+			return errors.New("failed to decode node")
+		}
+
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			res, err := member.rpcClient.SetRequest(ctx, setValue)
+			if err != nil {
+				errorCh <- err
+			} else {
+				responseCh <- res
+			}
+		}()
+	}
+
+	timeout := time.After(time.Second * time.Duration(m.config.Manager.DefaultTimeout))
+	responseCount := 0
+
+	for responseCount < m.config.Manager.WriteQuorum {
+		select {
+		case <-responseCh:
+			responseCount++
+		case err := <-errorCh:
+			logrus.Errorf("errorCh: %v", err)
+			_ = err // Handle error if necessary
+		case <-timeout:
+			return fmt.Errorf("timed out waiting for responses. responseCount = %d", responseCount)
+		}
+	}
+	return nil
 }
 
 func (m Manager) GetRequest(key string) (string, error) {
-	nodes, err := m.ring.GetClosestN(key, 1)
-	if err != nil {
-		return "", err
-	}
-	node := nodes[0]
-	member, ok := node.(Member)
-	if !ok {
-		return "", errors.New("failed to decode node")
-	}
-	getMessage := &rpc.RpcGetRequestMessage{Key: key}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	res, err := member.rpcClient.GetRequest(ctx, getMessage)
+	nodes, err := m.ring.GetClosestN(key, m.config.Manager.ReplicaCount)
 	if err != nil {
 		return "", err
 	}
 
-	return res.Value, nil
+	getMessage := &rpc.RpcGetRequestMessage{Key: key}
+	responseCh := make(chan *rpc.RpcValue, m.config.Manager.ReplicaCount)
+	errorCh := make(chan error, m.config.Manager.ReplicaCount)
+
+	for _, node := range nodes {
+		member, ok := node.(Member)
+		if !ok {
+			return "", errors.New("failed to decode node")
+		}
+
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			res, err := member.rpcClient.GetRequest(ctx, getMessage)
+			if err != nil {
+				errorCh <- err
+			} else {
+				responseCh <- res
+			}
+		}()
+	}
+
+	responseCount := 0
+	var recentValue *rpc.RpcValue
+	timeout := time.After(time.Second * time.Duration(m.config.Manager.DefaultTimeout))
+	for responseCount < m.config.Manager.ReadQuorum {
+		select {
+		case res := <-responseCh:
+			responseCount++
+			if recentValue == nil {
+				recentValue = res
+			} else if res != nil && recentValue.Epoch <= res.Epoch && recentValue.UnixTimestamp < res.UnixTimestamp {
+				recentValue = res
+			}
+		case err := <-errorCh:
+			logrus.Errorf("GET ERROR = %v", err)
+
+		case <-timeout:
+			return "", fmt.Errorf("timed out waiting for responses. responseCount = %d", responseCount)
+		}
+	}
+	if recentValue == nil {
+		return "", fmt.Errorf("value not found.")
+	} else {
+		return recentValue.Value, nil
+	}
 }
 
 func main() {

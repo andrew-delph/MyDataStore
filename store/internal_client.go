@@ -60,7 +60,7 @@ func (m Manager) SendSetMessage(key, value string) error {
 		go m.SendSetMessageNode(node.name, setReqMsg, responseCh, errorCh)
 	}
 
-	timeout := time.After(m.Config.Manager.DefaultTimeout)
+	timeout := time.After(time.Second * time.Duration(m.Config.Manager.DefaultTimeout))
 	responseCount := 0
 
 	for responseCount < m.Config.Manager.WriteQuorum {
@@ -114,7 +114,7 @@ func (m Manager) SendGetMessage(key string) (string, error) {
 		}(i, node)
 	}
 
-	timeout := time.After(m.Config.Manager.DefaultTimeout)
+	timeout := time.After(time.Second * time.Duration(m.Config.Manager.DefaultTimeout))
 
 	var recentValue *datap.Value
 

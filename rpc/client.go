@@ -13,6 +13,7 @@ type RpcClient = datap.InternalNodeServiceClient
 type (
 	RpcValue             = datap.Value
 	RpcGetRequestMessage = datap.GetRequestMessage
+	RpcStandardResponse  = datap.StandardResponse
 )
 
 func (rpcWrapper *RpcWrapper) CreateRpcClient(ip string) (*grpc.ClientConn, RpcClient, error) {

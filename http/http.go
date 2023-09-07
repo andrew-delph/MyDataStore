@@ -38,7 +38,11 @@ func (s HttpServer) setHandler(w http.ResponseWriter, r *http.Request) {
 	resCh := make(chan interface{})
 	s.reqCh <- SetTask{Key: key, Value: value, ResCh: resCh}
 	res := <-resCh
-	fmt.Fprintf(w, "%s", res)
+	if res != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	} else {
+		fmt.Fprintf(w, "%s", res)
+	}
 }
 
 func (s HttpServer) getHandler(w http.ResponseWriter, r *http.Request) {

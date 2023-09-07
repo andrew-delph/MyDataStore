@@ -2,7 +2,6 @@ package config
 
 import (
 	"os"
-	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -12,8 +11,8 @@ type ManagerConfig struct {
 	ReplicaCount     int `mapstructure:"REPLICA_COUNT"`
 	WriteQuorum      int `mapstructure:"WRITE_QUORUM"`
 	ReadQuorum       int `mapstructure:"READ_QUORUM"`
-	SaveInterval     time.Duration
-	DefaultTimeout   time.Duration
+	SaveInterval     int
+	DefaultTimeout   int    `mapstructure:"DEFAULT_TIMEOUT"`
 	PartitionBuckets int    `mapstructure:"PARTITION_BUCKETS"`
 	PartitionCount   int    `mapstructure:"PARTITION_COUNT"`
 	DataPath         string `mapstructure:"DATA_PATH"`

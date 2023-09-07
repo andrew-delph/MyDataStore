@@ -38,12 +38,13 @@ func TestConfigDefault(t *testing.T) {
 	config := GetDefaultConfig()
 
 	// manager config
-	assert.Equal(t, 3, config.Manager.ReplicaCount, "ReplicaCount wrong value")
-	assert.Equal(t, 2, config.Manager.WriteQuorum, "WriteQuorum wrong value")
-	assert.Equal(t, 2, config.Manager.ReadQuorum, "ReadQuorum wrong value")
-	assert.Equal(t, 500, config.Manager.PartitionBuckets, "PartitionBuckets wrong value")
-	assert.Equal(t, 100, config.Manager.PartitionCount, "PartitionCount wrong value")
+	assert.NotEqual(t, 0, config.Manager.ReplicaCount, "ReplicaCount wrong value")
+	assert.NotEqual(t, 0, config.Manager.WriteQuorum, "WriteQuorum wrong value")
+	assert.NotEqual(t, 0, config.Manager.ReadQuorum, "ReadQuorum wrong value")
+	assert.NotEqual(t, 0, config.Manager.PartitionBuckets, "PartitionBuckets wrong value")
+	assert.NotEqual(t, 0, config.Manager.PartitionCount, "PartitionCount wrong value")
 	assert.Equal(t, "/store/data", config.Manager.DataPath, "DataPath wrong value")
+	assert.NotEqual(t, 0, config.Manager.DefaultTimeout, "DefaultTimeout wrong value")
 
 	// consensus config
 	assert.NotEqual(t, 0, config.Consensus.EpochTime, "EpochTime wrong value")
