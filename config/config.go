@@ -8,6 +8,7 @@ import (
 )
 
 type ManagerConfig struct {
+	WokersCount      int `mapstructure:"WORKERS_COUNT"`
 	ReplicaCount     int `mapstructure:"REPLICA_COUNT"`
 	WriteQuorum      int `mapstructure:"WRITE_QUORUM"`
 	ReadQuorum       int `mapstructure:"READ_QUORUM"`

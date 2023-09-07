@@ -75,7 +75,7 @@ func (m Manager) StartManager() {
 }
 
 func (m Manager) startWorkers() {
-	for i := 0; i < numWorkers; i++ {
+	for i := 0; i < m.config.Manager.WokersCount; i++ {
 		go m.startWorker()
 	}
 }

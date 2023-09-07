@@ -24,8 +24,8 @@ export default function () {
 }
 
 export const options = {
-  vus: 10,
-  duration: "5s",
+  vus: 100,
+  duration: "1m",
   summaryTrendStats: ["avg", "min", "med", "max"],
   // summaryTimeUnit: "ms",
 };
