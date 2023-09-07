@@ -38,6 +38,7 @@ func (s HttpServer) setHandler(w http.ResponseWriter, r *http.Request) {
 	resCh := make(chan interface{})
 	s.reqCh <- SetTask{Key: key, Value: value, ResCh: resCh}
 	res := <-resCh
+	logrus.Debugf("setHandler %s", res)
 	if res != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	} else {
@@ -51,6 +52,7 @@ func (s HttpServer) getHandler(w http.ResponseWriter, r *http.Request) {
 	resCh := make(chan interface{})
 	s.reqCh <- GetTask{Key: key, ResCh: resCh}
 	res := <-resCh
+	logrus.Debugf("getHandler %s", res)
 	fmt.Fprintf(w, "%s", res)
 }
 

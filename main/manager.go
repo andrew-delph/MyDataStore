@@ -258,9 +258,10 @@ func (m Manager) GetRequest(key string) (string, error) {
 		select {
 		case res := <-responseCh:
 			responseCount++
+
 			if recentValue == nil {
 				recentValue = res
-			} else if res != nil && recentValue.Epoch <= res.Epoch && recentValue.UnixTimestamp < res.UnixTimestamp {
+			} else if recentValue.Epoch <= res.Epoch && recentValue.UnixTimestamp < res.UnixTimestamp {
 				recentValue = res
 			}
 		case err := <-errorCh:
@@ -271,7 +272,7 @@ func (m Manager) GetRequest(key string) (string, error) {
 		}
 	}
 	if recentValue == nil {
-		return "", fmt.Errorf("value not found.")
+		return "", fmt.Errorf("value not found. responseCount = %d", responseCount)
 	} else {
 		return recentValue.Value, nil
 	}
