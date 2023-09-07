@@ -3,7 +3,7 @@ manager:
   replica_count: 3
   read_quorum: 2
   write_quorum: 2
-  workers_count: 5
+  workers_count: 20
   partition_count: 100
   partition_buckets: 500
   data_path: "/store/data"

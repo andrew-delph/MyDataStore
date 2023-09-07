@@ -25,16 +25,14 @@ export default function () {
 
 export const options = {
   vus: 100,
-  duration: "1m",
+  duration: "20s",
   summaryTrendStats: ["avg", "min", "med", "max"],
   // summaryTimeUnit: "ms",
 };
 
 export function handleSummary(data) {
-  delete data.metrics["http_req_duration{expected_response:true}"];
-
   for (const key in data.metrics) {
-    if (key != "http_req_duration") delete data.metrics[key];
+    if (!key.includes("duration")) delete data.metrics[key];
   }
 
   return {

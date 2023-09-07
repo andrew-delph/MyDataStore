@@ -3,6 +3,6 @@ repos:
     hooks:
       - id: bazel-test
         name: Run unit tests
-        entry: bazel test  //store:go_default_test
+        entry: ./run_bazel_tests.sh
         language: system
         files: '\.go$'
