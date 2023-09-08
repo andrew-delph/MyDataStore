@@ -12,3 +12,12 @@ import "github.com/sirupsen/logrus"
 func testSync() {
 	logrus.Warn("SYNC.")
 }
+
+func HandleHashringChange() {
+}
+
+func VerifyPartition() {
+}
+
+func SyncPartition() {
+}

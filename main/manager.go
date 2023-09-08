@@ -39,7 +39,6 @@ type Manager struct {
 }
 
 func NewManager() Manager {
-	// c := config.GetConfig()
 	c := config.GetDefaultConfig()
 	reqCh := make(chan interface{}, c.Manager.ReqChannelSize)
 	httpServer := http.CreateHttpServer(c.Http, reqCh)

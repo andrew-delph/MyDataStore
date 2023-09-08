@@ -49,6 +49,9 @@ case $1 in
         go tool pprof -http=:6001 http://localhost:6060/debug/pprof/profile 
         # go tool pprof http://localhost:6060/debug/pprof/profile 
         ;;
+    events)
+        jq -r 'select(.walltime | rtrimstr("s") | tonumber > 1) |  "\(.walltime): \(.targetLabel)"' events.json
+        ;;
     *)
         echo "Invalid argument."
         exit 1
