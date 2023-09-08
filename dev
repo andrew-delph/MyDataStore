@@ -52,6 +52,17 @@ case $1 in
     events)
         jq -r 'select(.walltime | rtrimstr("s") | tonumber > 1) |  "\(.walltime): \(.targetLabel)"' events.json
         ;;
+    scale)
+        if [ "$#" -ne 2 ]; then
+            echo "Usage: $0 <number_of_replicas>"
+            exit 1
+        fi
+        if ! [[ "$2" =~ ^[0-9]+$ ]]; then
+            echo "Error: The argument must be a positive integer."
+            exit 1
+        fi
+        docker-compose up -d --scale store=$2
+        ;;
     *)
         echo "Invalid argument."
         exit 1

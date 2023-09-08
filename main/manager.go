@@ -111,6 +111,7 @@ func (m Manager) startWorker() {
 				}
 
 			case gossip.JoinTask:
+				// TODO init replication sync
 				logrus.Warnf("worker JoinTask: %+v", task)
 
 				_, rpcClient, err := m.rpcWrapper.CreateRpcClient(task.IP)
@@ -129,10 +130,12 @@ func (m Manager) startWorker() {
 					logrus.Infof("AddVoter success")
 				}
 			case gossip.LeaveTask:
+				// TODO init replication sync
 				logrus.Warnf("worker LeaveTask: %+v", task)
 				m.ring.RemoveNode(task.Name)
 				m.consensusCluster.RemoveServer(task.Name)
 			case consensus.EpochTask:
+				// TODO init replication verification
 				logrus.Infof("E = %d", task.Epoch)
 			case consensus.LeaderChangeTask:
 				if !task.IsLeader {
