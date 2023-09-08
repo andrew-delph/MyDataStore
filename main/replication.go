@@ -1,6 +1,9 @@
 package main
 
-import "github.com/sirupsen/logrus"
+import (
+	"github.com/golang-collections/collections/set"
+	"github.com/sirupsen/logrus"
+)
 
 // my partitions
 
@@ -14,6 +17,8 @@ func testSync() {
 }
 
 func HandleHashringChange() {
+	mySet := set.New()
+	logrus.Warn("mySet", mySet)
 }
 
 func VerifyPartition() {

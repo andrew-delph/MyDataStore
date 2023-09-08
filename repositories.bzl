@@ -298,6 +298,13 @@ def go_repositories():
         version = "v1.3.2",
     )
     go_repository(
+        name = "com_github_golang_collections_collections",
+        importpath = "github.com/golang-collections/collections",
+        sum = "h1:zN2lZNZRflqFyxVaTIU61KNKQ9C0055u9CAfpmqUvo4=",
+        version = "v0.0.0-20130729185459-604e922904d3",
+    )
+
+    go_repository(
         name = "com_github_golang_glog",
         importpath = "github.com/golang/glog",
         sum = "h1:/d3pCKDPWNnvIWe0vVUpNP32qc8U3PDVxySP/y360qE=",
