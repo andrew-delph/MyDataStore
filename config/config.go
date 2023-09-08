@@ -15,8 +15,8 @@ type ManagerConfig struct {
 	ReadQuorum       int `mapstructure:"READ_QUORUM"`
 	SaveInterval     int
 	DefaultTimeout   int    `mapstructure:"DEFAULT_TIMEOUT"`
-	PartitionBuckets int    `mapstructure:"PARTITION_BUCKETS"`
 	PartitionCount   int    `mapstructure:"PARTITION_COUNT"`
+	PartitionBuckets int    `mapstructure:"PARTITION_BUCKETS"`
 	DataPath         string `mapstructure:"DATA_PATH"`
 	Hostname         string
 }
@@ -39,10 +39,6 @@ type StorageConfig struct {
 	DataPath string `mapstructure:"DATA_PATH"`
 }
 
-type HashringConfig struct {
-	PartitionCount int `mapstructure:"PARTITION_COUNT"`
-}
-
 type RpcConfig struct {
 	Port int `mapstructure:"PORT"`
 }
@@ -55,7 +51,6 @@ type Config struct {
 	Consensus ConsensusConfig `mapstructure:"CONSENSUS"`
 	Gossip    GossipConfig    `mapstructure:"GOSSIP"`
 	Storage   StorageConfig   `mapstructure:"STORAGE"`
-	Hashring  HashringConfig  `mapstructure:"HASHRING"`
 	Rpc       RpcConfig       `mapstructure:"RPC"`
 	Http      HttpConfig      `mapstructure:"HTTP"`
 }

@@ -165,12 +165,6 @@ func (consensusCluster *ConsensusCluster) RaftBootstrap() error {
 }
 
 func (consensusCluster *ConsensusCluster) AddVoter(nodeName, nodeIP string) error {
-	// err := consensusCluster.raftNode.VerifyLeader().Error()
-	// if err != nil {
-	// 	logrus.Warn("ERRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR")
-	// 	return err
-	// }
-	// logrus.Warn("leader")
 	noderRaftAddr := fmt.Sprintf("%s:7000", nodeIP)
 	logrus.Debugf("AddVoter! STATE = %s nodeName = %s noderRaftAddr = %s", consensusCluster.raftNode.State(), nodeName, noderRaftAddr)
 

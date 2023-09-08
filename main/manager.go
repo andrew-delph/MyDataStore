@@ -45,7 +45,7 @@ func NewManager() Manager {
 	gossipCluster := gossip.CreateGossipCluster(c.Gossip, reqCh)
 	db := storage.NewBadgerStorage(c.Storage)
 	consensusCluster := consensus.CreateConsensusCluster(c.Consensus, reqCh)
-	ring := hashring.CreateHashring(c.Hashring)
+	ring := hashring.CreateHashring(c.Manager)
 
 	rpcWrapper := rpc.CreateRpcWrapper(c.Rpc, reqCh)
 
@@ -112,7 +112,7 @@ func (m Manager) startWorker() {
 
 			case gossip.JoinTask:
 				// TODO init replication sync
-				logrus.Warnf("worker JoinTask: %+v", task)
+				// HandleHashringChange(m.ring)
 
 				_, rpcClient, err := m.rpcWrapper.CreateRpcClient(task.IP)
 				if err != nil {
@@ -125,9 +125,9 @@ func (m Manager) startWorker() {
 				err = m.consensusCluster.AddVoter(task.Name, task.IP)
 				if err != nil {
 					err = errors.Wrap(err, "gossip.JoinTask")
-					logrus.Error(err)
+					// logrus.Error(err)
 				} else {
-					logrus.Infof("AddVoter success")
+					// logrus.Infof("AddVoter success")
 				}
 			case gossip.LeaveTask:
 				// TODO init replication sync
@@ -135,6 +135,7 @@ func (m Manager) startWorker() {
 				m.ring.RemoveNode(task.Name)
 				m.consensusCluster.RemoveServer(task.Name)
 			case consensus.EpochTask:
+				// HandleHashringChange(m.ring)
 				// TODO init replication verification
 				logrus.Infof("E = %d", task.Epoch)
 			case consensus.LeaderChangeTask:
@@ -147,9 +148,9 @@ func (m Manager) startWorker() {
 					err := m.consensusCluster.AddVoter(member.Name, member.Addr.String())
 					if err != nil {
 						err = errors.Wrap(err, "gossip.JoinTask")
-						logrus.Error(err)
+						// logrus.Error(err)
 					} else {
-						logrus.Infof("AddVoter success")
+						// logrus.Infof("AddVoter success")
 					}
 				}
 

@@ -12,28 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// func TestManagerConfig(t *testing.T) {
-// 	c := GetManagerConfig()
-
-// 	assert.Equal(t, 9, c.ReplicaCount, "ReplicaCount wrong value")
-// 	assert.Equal(t, 99, c.WriteQuorum, "WriteQuorum wrong value")
-// 	assert.Equal(t, 999, c.ReadQuorum, "ReadQuorum wrong value")
-
-// 	assert.Equal(t, 9999, c.PartitionBuckets, "ReadQuorum wrong value")
-// 	assert.Equal(t, 99999, c.PartitionCount, "ReadQuorum wrong value")
-// }
-
-// func TestRaftConfig(t *testing.T) {
-// 	c := GetManagerConfig()
-
-// 	assert.Equal(t, 9, c.ReplicaCount, "ReplicaCount wrong value")
-// 	assert.Equal(t, 99, c.WriteQuorum, "WriteQuorum wrong value")
-// 	assert.Equal(t, 999, c.ReadQuorum, "ReadQuorum wrong value")
-
-// 	assert.Equal(t, 9999, c.PartitionBuckets, "ReadQuorum wrong value")
-// 	assert.Equal(t, 99999, c.PartitionCount, "ReadQuorum wrong value")
-// }
-
 func TestConfigDefault(t *testing.T) {
 	config := GetDefaultConfig()
 
@@ -41,8 +19,8 @@ func TestConfigDefault(t *testing.T) {
 	assert.NotEqual(t, 0, config.Manager.ReplicaCount, "ReplicaCount wrong value")
 	assert.NotEqual(t, 0, config.Manager.WriteQuorum, "WriteQuorum wrong value")
 	assert.NotEqual(t, 0, config.Manager.ReadQuorum, "ReadQuorum wrong value")
-	assert.NotEqual(t, 0, config.Manager.PartitionBuckets, "PartitionBuckets wrong value")
 	assert.NotEqual(t, 0, config.Manager.PartitionCount, "PartitionCount wrong value")
+	assert.NotEqual(t, 0, config.Manager.PartitionBuckets, "PartitionBuckets wrong value")
 	assert.Equal(t, "/store/data", config.Manager.DataPath, "DataPath wrong value")
 	assert.NotEqual(t, 0, config.Manager.DefaultTimeout, "DefaultTimeout wrong value")
 	assert.NotEqual(t, 0, config.Manager.WokersCount, "WokersCount wrong value")
@@ -75,7 +53,6 @@ func TestConfigOverwrite(t *testing.T) {
 	assert.Equal(t, 9, config.Manager.ReplicaCount, "ReplicaCount wrong value")
 	assert.Equal(t, 99, config.Manager.WriteQuorum, "WriteQuorum wrong value")
 	assert.Equal(t, 999, config.Manager.ReadQuorum, "ReadQuorum wrong value")
-	assert.Equal(t, 9999, config.Manager.PartitionCount, "PartitionCount wrong value")
 	assert.Equal(t, 99999, config.Manager.PartitionBuckets, "PartitionBuckets wrong value")
 	assert.Equal(t, "/tmp/store/data", config.Manager.DataPath, "DataPath wrong value")
 

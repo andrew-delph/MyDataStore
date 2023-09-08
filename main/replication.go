@@ -3,6 +3,8 @@ package main
 import (
 	"github.com/golang-collections/collections/set"
 	"github.com/sirupsen/logrus"
+
+	"github.com/andrew-delph/my-key-store/hashring"
 )
 
 // my partitions
@@ -16,7 +18,8 @@ func testSync() {
 	logrus.Warn("SYNC.")
 }
 
-func HandleHashringChange() {
+func HandleHashringChange(ring *hashring.Hashring) {
+	logrus.Warn(ring.GetMyPartions())
 	mySet := set.New()
 	logrus.Warn("mySet", mySet)
 }

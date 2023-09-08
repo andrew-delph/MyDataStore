@@ -13,20 +13,20 @@ func testHashring() {
 }
 
 type Hashring struct {
-	hashringConfig   config.HashringConfig
+	managerConfig    config.ManagerConfig
 	consistentConfig consistent.Config
 	consistent       *consistent.Consistent
 }
 
-func CreateHashring(hashringConfig config.HashringConfig) Hashring {
+func CreateHashring(managerConfig config.ManagerConfig) Hashring {
 	consistentConfig := consistent.Config{
-		PartitionCount:    hashringConfig.PartitionCount,
+		PartitionCount:    managerConfig.PartitionCount,
 		ReplicationFactor: 13,
 		Load:              1.2,
 		Hasher:            hasher{},
 	}
 	Consistent := consistent.New(nil, consistentConfig)
-	return Hashring{hashringConfig: hashringConfig, consistent: Consistent, consistentConfig: consistentConfig}
+	return Hashring{managerConfig: managerConfig, consistent: Consistent, consistentConfig: consistentConfig}
 }
 
 type hasher struct{}
@@ -47,10 +47,14 @@ func (ring *Hashring) FindPartitionID(key []byte) int {
 	return ring.consistent.FindPartitionID(key)
 }
 
+func (ring *Hashring) GetMyPartions() ([]int, error) {
+	return ring.GetMemberPartions(ring.managerConfig.Hostname)
+}
+
 func (ring *Hashring) GetMemberPartions(member string) ([]int, error) {
 	var belongsTo []int
 	for partID := 0; partID < ring.consistentConfig.PartitionCount; partID++ {
-		members, err := ring.consistent.GetClosestNForPartition(partID, ring.consistentConfig.PartitionCount)
+		members, err := ring.consistent.GetClosestNForPartition(partID, 1)
 		if err != nil {
 			return nil, err
 		}

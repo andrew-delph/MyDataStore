@@ -1,7 +1,7 @@
 manager:
-  replica_count: 3
-  read_quorum: 2
-  write_quorum: 2
+  replica_count: 1
+  read_quorum: 1
+  write_quorum: 1
   default_timeout: 2
   workers_count: 20
   req_channel_size: 100
@@ -9,7 +9,7 @@ manager:
   partition_buckets: 500
   data_path: "/store/data"
 consensus:
-  epoch_time: 100
+  epoch_time: 5
   data_path: "/store/raft"
   enable_logs: false
   auto_bootstrap: true
