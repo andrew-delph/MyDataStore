@@ -37,7 +37,7 @@ case $1 in
         k6 run test.js
         ;;
     test)
-        bazel test $(bazel query 'kind(go_test, //... except //store:*)' --output=label) --test_arg=--test.run=$2
+        bazel test --execution_log_json_file=events.json $(bazel query 'kind(go_test, //... except //store:*)' --output=label) --test_arg=--test.run=$2
         ;;
     rtest)
         ibazel run  $(bazel query 'kind(go_test, //... except //store:*)' --output=label) --test_arg=--test.run=$2
