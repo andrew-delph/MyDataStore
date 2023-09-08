@@ -37,10 +37,10 @@ case $1 in
         k6 run test.js
         ;;
     test)
-        ibazel test --test_output=errors //store:go_default_test --test_arg=-test.run=$2
+        bazel test $(bazel query 'kind(go_test, //... except //store:*)' --output=label) --test_arg=--test.run=$2
         ;;
     rtest)
-        ibazel run --test_output=errors //store:go_default_test --test_arg=-test.run=$2
+        ibazel run  $(bazel query 'kind(go_test, //... except //store:*)' --output=label) --test_arg=--test.run=$2
         ;;
     deps)
         ./update_deps.sh

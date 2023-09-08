@@ -4,7 +4,10 @@ load("@io_bazel_rules_docker//go:image.bzl", "go_image")
 
 go_library(
     name = "go_default_library",
-    srcs = ["manager.go"],
+    srcs = [
+        "manager.go",
+        "synchronize.go",
+    ],
     importpath = "github.com/andrew-delph/my-key-store/main",
     visibility = ["//visibility:private"],
     deps = [
