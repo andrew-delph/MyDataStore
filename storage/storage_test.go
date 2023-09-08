@@ -3,7 +3,6 @@ package storage
 import (
 	"fmt"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -94,9 +93,7 @@ func TestStorageIterator(t *testing.T) {
 }
 
 func testIndex(i int) string {
-	indexStr := fmt.Sprintf("%d", i)
-	indexStr = fmt.Sprintf("testkey%s%s", strings.Repeat("0", 4-len(indexStr)), indexStr)
-	return indexStr
+	return NewIndex("test").AddColumn(CreateUnorderedColumn("c1")).AddColumn(CreateOrderedColumn(uint32(i), 4)).Build()
 }
 
 func storageIterator(t *testing.T, storage Storage) {
