@@ -141,3 +141,10 @@ func storageIterator(t *testing.T, storage Storage) {
 	it.Release()
 	assert.EqualValues(t, endRange-startRange, count, "Should have iterated the range")
 }
+
+func TestStorageBenchmark(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+	t.Error("ERROR")
+}
