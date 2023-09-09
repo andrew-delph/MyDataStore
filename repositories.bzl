@@ -808,6 +808,7 @@ def go_repositories():
         sum = "h1:h+3JX2VoWTFuyQEo87pStk/a99dzIO1mM9KxIyLPGTU=",
         version = "v0.0.0-20200727003509-22c0c7ab6b1b",
     )
+
     go_repository(
         name = "com_github_sirupsen_logrus",
         importpath = "github.com/sirupsen/logrus",

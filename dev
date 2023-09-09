@@ -37,10 +37,11 @@ case $1 in
         k6 run test.js
         ;;
     test)
-        bazel test --execution_log_json_file=events.json $(bazel query 'kind(go_test, //... except //store:*)' --output=label) --test_arg=--test.run=$2
+        bazel test --test_output=errors --execution_log_json_file=events.json $(bazel query 'kind(go_test, //... except //store:*)' --output=label) --test_arg=--test.run=$2
         ;;
     rtest)
-        ibazel run  $(bazel query 'kind(go_test, //... except //store:*)' --output=label) --test_arg=--test.run=$2
+        ## TODO implement --test_summary=none for ibazel
+        ibazel test $(bazel query 'kind(go_test, //... except //store:*)' --output=label) --test_arg=--test.run=$2 --test_output=errors  
         ;;
     deps)
         ./update_deps.sh

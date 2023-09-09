@@ -88,7 +88,7 @@ func (gossipCluster *GossipCluster) MergeRemoteState(buf []byte, join bool) {
 }
 
 func (gossipCluster *GossipCluster) NotifyJoin(node *memberlist.Node) {
-	logrus.Warnf("join %s num = %d %d", node.Name, len(gossipCluster.list.Members()), gossipCluster.list.NumMembers())
+	logrus.Debugf("join %s num = %d %d", node.Name, len(gossipCluster.list.Members()), gossipCluster.list.NumMembers())
 	gossipCluster.reqCh <- JoinTask{Name: node.Name, IP: node.Addr.String()}
 }
 

@@ -51,7 +51,8 @@ services:
 
   store-profile:
     image: busybox
-    command: ["sleep", "infinity"]
+    command: ["sleep", "1"]
+    restart: "no"
 
   # store-profile:
   #   hostname: store
