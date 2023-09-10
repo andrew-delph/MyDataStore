@@ -19,23 +19,21 @@ import (
 	"github.com/andrew-delph/my-key-store/http"
 	"github.com/andrew-delph/my-key-store/rpc"
 	"github.com/andrew-delph/my-key-store/storage"
+	"github.com/andrew-delph/my-key-store/utils"
 )
 
-var numWorkers = 1000
-
-func mainTest() {
-	logrus.Warn("hi")
-}
-
 type Manager struct {
-	config           config.Config
-	reqCh            chan interface{}
-	db               storage.Storage
-	httpServer       *http.HttpServer
-	gossipCluster    *gossip.GossipCluster
-	consensusCluster *consensus.ConsensusCluster
-	ring             *hashring.Hashring
-	rpcWrapper       *rpc.RpcWrapper
+	config                config.Config
+	reqCh                 chan interface{}
+	db                    storage.Storage
+	httpServer            *http.HttpServer
+	gossipCluster         *gossip.GossipCluster
+	consensusCluster      *consensus.ConsensusCluster
+	ring                  *hashring.Hashring
+	rpcWrapper            *rpc.RpcWrapper
+	myPartitions          *utils.IntSet
+	partitionLocker       *PartitionLocker
+	consistencyController *ConsistencyController
 }
 
 func NewManager() Manager {
@@ -48,11 +46,26 @@ func NewManager() Manager {
 	ring := hashring.CreateHashring(c.Manager)
 
 	rpcWrapper := rpc.CreateRpcWrapper(c.Rpc, reqCh)
+	parts := utils.NewIntSet()
+	partitionLocker := NewPartitionLocker(c.Manager.PartitionCount)
 
-	return Manager{config: c, reqCh: reqCh, db: db, httpServer: &httpServer, gossipCluster: &gossipCluster, consensusCluster: &consensusCluster, ring: &ring, rpcWrapper: &rpcWrapper}
+	consistencyController := NewConsistencyController(c.Manager.PartitionCount)
+	return Manager{
+		config:                c,
+		reqCh:                 reqCh,
+		db:                    db,
+		httpServer:            &httpServer,
+		gossipCluster:         gossipCluster,
+		consensusCluster:      consensusCluster,
+		ring:                  ring,
+		rpcWrapper:            rpcWrapper,
+		myPartitions:          &parts,
+		partitionLocker:       partitionLocker,
+		consistencyController: consistencyController,
+	}
 }
 
-func (m Manager) StartManager() {
+func (m *Manager) StartManager() {
 	var err error
 	go m.startWorkers()
 
@@ -64,6 +77,7 @@ func (m Manager) StartManager() {
 	if err != nil {
 		logrus.Fatal(err)
 	}
+
 	go m.rpcWrapper.StartRpcServer()
 	go m.httpServer.StartHttp()
 
@@ -73,13 +87,13 @@ func (m Manager) StartManager() {
 	logrus.Warn("Received SIGTERM signal")
 }
 
-func (m Manager) startWorkers() {
+func (m *Manager) startWorkers() {
 	for i := 0; i < m.config.Manager.WokersCount; i++ {
 		go m.startWorker()
 	}
 }
 
-func (m Manager) startWorker() {
+func (m *Manager) startWorker() {
 	logrus.Debug("starting worker")
 	defer logrus.Warn("ending worker")
 
@@ -90,7 +104,6 @@ func (m Manager) startWorker() {
 				logrus.Fatal("Channel closed!")
 				return
 			}
-
 			switch task := data.(type) {
 			case http.SetTask:
 				logrus.Debugf("worker SetTask: %+v", task)
@@ -111,17 +124,15 @@ func (m Manager) startWorker() {
 				}
 
 			case gossip.JoinTask:
-				// TODO init replication sync
-				// HandleHashringChange(m.ring)
-
 				_, rpcClient, err := m.rpcWrapper.CreateRpcClient(task.IP)
 				if err != nil {
 					err = errors.Wrap(err, "gossip.JoinTask")
-					logrus.Error(err)
+					logrus.Fatal(err)
 					continue
 				}
 
-				m.ring.AddNode(CreateMember(task.Name, rpcClient))
+				m.ring.AddNode(CreateRingMember(task.Name, rpcClient))
+				m.HandleHashringChange()
 				err = m.consensusCluster.AddVoter(task.Name, task.IP)
 				if err != nil {
 					err = errors.Wrap(err, "gossip.JoinTask")
@@ -130,27 +141,29 @@ func (m Manager) startWorker() {
 					// logrus.Infof("AddVoter success")
 				}
 			case gossip.LeaveTask:
-				// TODO init replication sync
 				logrus.Warnf("worker LeaveTask: %+v", task)
 				m.ring.RemoveNode(task.Name)
+				m.HandleHashringChange()
 				m.consensusCluster.RemoveServer(task.Name)
 			case consensus.EpochTask:
-				// HandleHashringChange(m.ring)
-				// TODO init replication verification
-				logrus.Infof("E = %d", task.Epoch)
+
+				logrus.Warnf("me = %v #members = %d memebers = %v", m.config.Gossip.Name, len(m.gossipCluster.GetMembers()), m.gossipCluster.GetMembers())
+
+				logrus.Debugf("E = %d", task.Epoch)
+				// m.VerifyEpoch(task.Epoch)
 			case consensus.LeaderChangeTask:
 				if !task.IsLeader {
 					continue
 				}
-				logrus.Infof("worker LeaderChangeTask: %+v", task)
+				logrus.Debugf("worker LeaderChangeTask: %+v", task)
 
 				for _, member := range m.gossipCluster.GetMembers() {
 					err := m.consensusCluster.AddVoter(member.Name, member.Addr.String())
 					if err != nil {
 						err = errors.Wrap(err, "gossip.JoinTask")
-						// logrus.Error(err)
+						logrus.Debug(err)
 					} else {
-						// logrus.Infof("AddVoter success")
+						logrus.Debugf("AddVoter success")
 					}
 				}
 
@@ -183,7 +196,7 @@ func (m Manager) startWorker() {
 	}
 }
 
-func (m Manager) SetRequest(key, value string) error {
+func (m *Manager) SetRequest(key, value string) error {
 	nodes, err := m.ring.GetClosestN(key, m.config.Manager.ReplicaCount)
 	if err != nil {
 		return err
@@ -196,7 +209,7 @@ func (m Manager) SetRequest(key, value string) error {
 	errorCh := make(chan error, m.config.Manager.ReplicaCount)
 
 	for _, node := range nodes {
-		member, ok := node.(Member)
+		member, ok := node.(RingMember)
 		if !ok {
 			return errors.New("failed to decode node")
 		}
@@ -234,7 +247,7 @@ func (m Manager) SetRequest(key, value string) error {
 	}
 }
 
-func (m Manager) GetRequest(key string) (string, error) {
+func (m *Manager) GetRequest(key string) (string, error) {
 	nodes, err := m.ring.GetClosestN(key, m.config.Manager.ReplicaCount)
 	if err != nil {
 		return "", err
@@ -245,7 +258,7 @@ func (m Manager) GetRequest(key string) (string, error) {
 	errorCh := make(chan error, m.config.Manager.ReplicaCount)
 
 	for _, node := range nodes {
-		member, ok := node.(Member)
+		member, ok := node.(RingMember)
 		if !ok {
 			return "", errors.New("failed to decode node")
 		}
@@ -289,28 +302,4 @@ func (m Manager) GetRequest(key string) (string, error) {
 	} else {
 		return recentValue.Value, nil
 	}
-}
-
-func main() {
-	// defer func() {
-	// 	if r := recover(); r != nil {
-	// 		logrus.Warnf("Recovered from panic: %+v", r)
-	// 	}
-	// }()
-	logrus.Info("starting")
-	manager := NewManager()
-	manager.StartManager()
-}
-
-type Member struct {
-	Name      string
-	rpcClient rpc.RpcClient
-}
-
-func CreateMember(name string, rpcClient rpc.RpcClient) Member {
-	return Member{Name: name, rpcClient: rpcClient}
-}
-
-func (m Member) String() string {
-	return string(m.Name)
 }

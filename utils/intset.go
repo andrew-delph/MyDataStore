@@ -3,7 +3,8 @@ package utils
 type IntSet map[int]struct{}
 
 func NewIntSet() IntSet {
-	return make(map[int]struct{})
+	set := make(map[int]struct{})
+	return set
 }
 
 func (s IntSet) From(values []int) IntSet {

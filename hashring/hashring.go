@@ -18,7 +18,7 @@ type Hashring struct {
 	consistent       *consistent.Consistent
 }
 
-func CreateHashring(managerConfig config.ManagerConfig) Hashring {
+func CreateHashring(managerConfig config.ManagerConfig) *Hashring {
 	consistentConfig := consistent.Config{
 		PartitionCount:    managerConfig.PartitionCount,
 		ReplicationFactor: 13,
@@ -26,7 +26,7 @@ func CreateHashring(managerConfig config.ManagerConfig) Hashring {
 		Hasher:            hasher{},
 	}
 	Consistent := consistent.New(nil, consistentConfig)
-	return Hashring{managerConfig: managerConfig, consistent: Consistent, consistentConfig: consistentConfig}
+	return &Hashring{managerConfig: managerConfig, consistent: Consistent, consistentConfig: consistentConfig}
 }
 
 type hasher struct{}

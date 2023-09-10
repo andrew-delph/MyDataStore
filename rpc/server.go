@@ -21,10 +21,10 @@ type RpcWrapper struct {
 	// datap.InternalNodeServiceServer
 }
 
-func CreateRpcWrapper(rpcConfig config.RpcConfig, reqCh chan interface{}) RpcWrapper {
+func CreateRpcWrapper(rpcConfig config.RpcConfig, reqCh chan interface{}) *RpcWrapper {
 	grpc := grpc.NewServer()
-	rpcWrapper := RpcWrapper{rpcConfig: rpcConfig, grpc: grpc, reqCh: reqCh}
-	datap.RegisterInternalNodeServiceServer(grpc, &rpcWrapper)
+	rpcWrapper := &RpcWrapper{rpcConfig: rpcConfig, grpc: grpc, reqCh: reqCh}
+	datap.RegisterInternalNodeServiceServer(grpc, rpcWrapper)
 	return rpcWrapper
 }
 

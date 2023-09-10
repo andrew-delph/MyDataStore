@@ -37,7 +37,7 @@ type EpochTask struct {
 	Epoch int64
 }
 
-func CreateConsensusCluster(consensusConfig config.ConsensusConfig, reqCh chan interface{}) ConsensusCluster {
+func CreateConsensusCluster(consensusConfig config.ConsensusConfig, reqCh chan interface{}) *ConsensusCluster {
 	raftConf := raft.DefaultConfig()
 	raftConf.LocalID = raft.ServerID(consensusConfig.Name)
 	// conf.SnapshotInterval = time.Second * 1
@@ -59,7 +59,7 @@ func CreateConsensusCluster(consensusConfig config.ConsensusConfig, reqCh chan i
 		raftConf.LogLevel = "ERROR"
 	}
 
-	return ConsensusCluster{consensusConfig: consensusConfig, reqCh: reqCh, raftConf: raftConf, raftNode: new(raft.Raft), epochTick: new(time.Ticker)}
+	return &ConsensusCluster{consensusConfig: consensusConfig, reqCh: reqCh, raftConf: raftConf, raftNode: new(raft.Raft), epochTick: new(time.Ticker)}
 }
 
 func (consensusCluster *ConsensusCluster) StartConsensusCluster() error {

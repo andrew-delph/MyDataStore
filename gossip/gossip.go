@@ -31,15 +31,15 @@ type LeaveTask struct {
 	Name string
 }
 
-func CreateGossipCluster(gossipConfig config.GossipConfig, reqCh chan interface{}) GossipCluster {
-	gossipCluster := GossipCluster{list: new(memberlist.Memberlist)}
+func CreateGossipCluster(gossipConfig config.GossipConfig, reqCh chan interface{}) *GossipCluster {
+	gossipCluster := &GossipCluster{list: new(memberlist.Memberlist)}
 
 	memberlistConfig := memberlist.DefaultLocalConfig()
 	memberlistConfig.Logger = log.New(io.Discard, "", 0)
 	memberlistConfig.BindPort = 8081
 	memberlistConfig.AdvertisePort = 8081
-	memberlistConfig.Delegate = &gossipCluster
-	memberlistConfig.Events = &gossipCluster
+	memberlistConfig.Delegate = gossipCluster
+	memberlistConfig.Events = gossipCluster
 	memberlistConfig.Name = gossipConfig.Name
 
 	gossipCluster.memberlistConfig = memberlistConfig
@@ -54,8 +54,8 @@ func (gossipCluster *GossipCluster) Join() error {
 		logrus.Fatal(err)
 	}
 
-	gossipCluster.list = clusterNodes
 	n, err := clusterNodes.Join(gossipCluster.gossipConfig.InitMembers)
+	gossipCluster.list = clusterNodes
 	logrus.Debugf("Join n = %d", n)
 	return err
 }
@@ -93,7 +93,7 @@ func (gossipCluster *GossipCluster) NotifyJoin(node *memberlist.Node) {
 }
 
 func (gossipCluster *GossipCluster) NotifyLeave(node *memberlist.Node) {
-	logrus.Debugf("leave %s", node.Name)
+	logrus.Warnf("leave %s", node.Name)
 	gossipCluster.reqCh <- LeaveTask{Name: node.Name}
 }
 

@@ -16,6 +16,7 @@ gazelle(
         "-from_file=go.work",
         "-to_macro=repositories.bzl%go_repositories",
         "-prune",
+        # "-build_file_proto_mode=disable_global",
     ],
     command = "update-repos",
 )

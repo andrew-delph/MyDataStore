@@ -27,16 +27,10 @@
     "GOPACKAGESDRIVER": "${workspaceFolder}/tools/gopackagesdriver.sh"
   },
   "go.enableCodeLens": {
+    "references": false,
     "runtest": false
   },
   "gopls": {
-    "build.directoryFilters": [
-      "-bazel-bin",
-      "-bazel-out",
-      "-bazel-testlogs",
-      "-bazel-my-key-store",
-      "-store/datap"
-    ],
     "formatting.gofumpt": true,
     "formatting.local": "github.com/andrew-delph/my-key-store",
     "ui.completion.usePlaceholders": true,
@@ -52,7 +46,9 @@
     }
   },
   "go.useLanguageServer": true,
+  "go.buildOnSave": "off",
   "go.lintOnSave": "off",
+  "go.vetOnSave": "off",
   "[go]": {
     "editor.defaultFormatter": "golang.go"
   },
