@@ -36,16 +36,18 @@ func (pl *PartitionLocker) Unlock(partition int) error {
 	return nil
 }
 
+type PartitionsUpdateEvent struct {
+	currPartitions utils.IntSet
+}
+
 func (m *Manager) HandleHashringChange() error {
-	// logrus.Warn("HandleHashringChange!!!!!!!!!!")
-	return nil
-	m.consistencyController.PublishEvent("CHANGED PARTITIONS")
 	currPartitionsList, err := m.ring.GetMyPartions()
 	if err != nil {
 		return err
 	}
-	m.consistencyController.PublishEvent("CHANGED PARTITIONS")
 	currPartitions := utils.NewIntSet().From(currPartitionsList)
+	m.consistencyController.PublishEvent(PartitionsUpdateEvent{currPartitions: currPartitions})
+	return nil
 	new := currPartitions.Difference(*m.myPartitions)
 	lost := m.myPartitions.Difference(currPartitions)
 	if len(new) > 0 || len(lost) > 0 {
@@ -113,12 +115,23 @@ func (cc *ConsistencyController) PublishEvent(event interface{}) {
 type PartitionState struct {
 	updating    bool
 	partitionId int
+	active      bool
 }
 
 func NewPartitionState(partitionId int, observable rxgo.Observable) *PartitionState {
 	ps := &PartitionState{partitionId: partitionId}
 	observable.DoOnNext(func(item interface{}) {
-		logrus.Warnf("PartitionState: pId=%d: item=%v", partitionId, item)
+		switch event := item.(type) {
+		case PartitionsUpdateEvent:
+			if !ps.active && event.currPartitions.Has(partitionId) {
+				logrus.Warnf("new partition %d", partitionId)
+			} else if ps.active && !event.currPartitions.Has(partitionId) {
+				logrus.Warnf("lost partition %d", partitionId)
+			}
+			ps.active = event.currPartitions.Has(partitionId)
+		default:
+			logrus.Warn("unknown PartitionState event")
+		}
 	})
 	return ps
 }
