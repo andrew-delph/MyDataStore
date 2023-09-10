@@ -37,7 +37,7 @@ func (pl *PartitionLocker) Unlock(partition int) error {
 }
 
 func (m *Manager) HandleHashringChange() error {
-	logrus.Warn("HandleHashringChange!!!!!!!!!!")
+	// logrus.Warn("HandleHashringChange!!!!!!!!!!")
 	return nil
 	m.consistencyController.PublishEvent("CHANGED PARTITIONS")
 	currPartitionsList, err := m.ring.GetMyPartions()

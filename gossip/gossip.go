@@ -38,8 +38,10 @@ func CreateGossipCluster(gossipConfig config.GossipConfig, reqCh chan interface{
 	memberlistConfig.Logger = log.New(io.Discard, "", 0)
 	memberlistConfig.BindPort = 8081
 	memberlistConfig.AdvertisePort = 8081
-	memberlistConfig.Delegate = gossipCluster
-	memberlistConfig.Events = gossipCluster
+	memberlistConfig.Delegate = &Delegate{}
+	memberlistConfig.Events = &EventDelegate{
+		reqCh: reqCh,
+	}
 	memberlistConfig.Name = gossipConfig.Name
 
 	gossipCluster.memberlistConfig = memberlistConfig
@@ -64,39 +66,46 @@ func (gossipCluster *GossipCluster) GetMembers() []*memberlist.Node {
 	return gossipCluster.list.Members()
 }
 
-func (gossipCluster *GossipCluster) NotifyMsg(msg []byte) {
-	gossipCluster.msgCh <- msg
+type Delegate struct{}
+
+// Msg implements memberlist.Delegate interface.
+func (d *Delegate) NodeMeta(limit int) []byte {
+	return []byte{}
 }
 
-func (gossipCluster *GossipCluster) NodeMeta(limit int) []byte {
-	logrus.Debugf("NodeMeta")
-	return nil
+// NotifyMsg implements memberlist.Delegate interface.
+func (d *Delegate) NotifyMsg(b []byte) {}
+
+// GetBroadcasts implements memberlist.Delegate interface.
+func (d *Delegate) GetBroadcasts(overhead, limit int) [][]byte {
+	return [][]byte{}
 }
 
-func (gossipCluster *GossipCluster) LocalState(join bool) []byte {
-	logrus.Debugf("LocalState")
-	return nil
+// LocalState implements memberlist.Delegate interface.
+func (d *Delegate) LocalState(join bool) []byte {
+	return []byte{}
 }
 
-func (gossipCluster *GossipCluster) GetBroadcasts(overhead, limit int) [][]byte {
-	logrus.Debugf("GetBroadcasts %d %d", overhead, limit)
-	return nil
+// MergeRemoteState implements memberlist.Delegate interface.
+func (d *Delegate) MergeRemoteState(buf []byte, join bool) {}
+
+type EventDelegate struct {
+	reqCh chan interface{}
 }
 
-func (gossipCluster *GossipCluster) MergeRemoteState(buf []byte, join bool) {
-	logrus.Warn("MergeRemoteState")
+// NotifyJoin is invoked when a node joins.
+func (e *EventDelegate) NotifyJoin(node *memberlist.Node) {
+	logrus.Debugf("leave %s", node.Name)
+	e.reqCh <- JoinTask{Name: node.Name, IP: node.Addr.String()}
 }
 
-func (gossipCluster *GossipCluster) NotifyJoin(node *memberlist.Node) {
-	logrus.Debugf("join %s num = %d %d", node.Name, len(gossipCluster.list.Members()), gossipCluster.list.NumMembers())
-	gossipCluster.reqCh <- JoinTask{Name: node.Name, IP: node.Addr.String()}
+// NotifyLeave is invoked when a node leaves.
+func (e *EventDelegate) NotifyLeave(node *memberlist.Node) {
+	logrus.Debugf("leave %s", node.Name)
+	e.reqCh <- LeaveTask{Name: node.Name}
 }
 
-func (gossipCluster *GossipCluster) NotifyLeave(node *memberlist.Node) {
-	logrus.Warnf("leave %s", node.Name)
-	gossipCluster.reqCh <- LeaveTask{Name: node.Name}
-}
-
-func (gossipCluster *GossipCluster) NotifyUpdate(node *memberlist.Node) {
-	logrus.Debugf("update %s", node.Name)
+// NotifyUpdate is invoked when a node is updated.
+func (e *EventDelegate) NotifyUpdate(n *memberlist.Node) {
+	logrus.Warnf("Node updated: %s\n", n.Name)
 }

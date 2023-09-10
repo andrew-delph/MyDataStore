@@ -46,7 +46,6 @@ func (fsm *FSM) Apply(logEntry *raft.Log) interface{} {
 func (fsm *FSM) Snapshot() (raft.FSMSnapshot, error) {
 	// logrus.Warnf("Snapshot start")
 	// defer logrus.Warnf("Snapshot done")
-
 	snapshotLock.Lock()
 	defer snapshotLock.Unlock()
 

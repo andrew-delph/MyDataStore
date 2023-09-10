@@ -49,27 +49,27 @@ services:
     # volumes:
     #   - /tmp/store_data:/store
 
-  # store-profile:
-  #   image: busybox
-  #   command: ["sleep", "1"]
-  #   restart: "no"
-
   store-profile:
-    # hostname: store
-    # scale: 1
-    image: docker.io/andrew-delph/main:store_image
-    environment:
-      - PROFILE_SERVER=true
-      - BOOTSTRAP_TIMEOUT=1
-    ports:
-      - "6060:6060"
-    depends_on:
-      - nginx
-    restart: always
-    # tmpfs:
-    #   - /store:size=300m,mode=1777
-    # volumes:
-    #   - /tmp/store_data:/store
+    image: busybox
+    command: ["sleep", "1"]
+    restart: "no"
+
+  # store-profile:
+  #   # hostname: store
+  #   # scale: 1
+  #   image: docker.io/andrew-delph/main:store_image
+  #   environment:
+  #     - PROFILE_SERVER=true
+  #     - BOOTSTRAP_TIMEOUT=1
+  #   ports:
+  #     - "6060:6060"
+  #   depends_on:
+  #     - nginx
+  #   restart: always
+  #   # tmpfs:
+  #   #   - /store:size=300m,mode=1777
+  #   # volumes:
+  #   #   - /tmp/store_data:/store
 
   prometheus:
     image: prom/prometheus

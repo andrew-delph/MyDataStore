@@ -181,6 +181,10 @@ func (consensusCluster *ConsensusCluster) RemoveServer(nodeName string) error {
 	return consensusCluster.raftNode.RemoveServer(raft.ServerID(nodeName), 0, 0).Error()
 }
 
+func (consensusCluster *ConsensusCluster) State() raft.RaftState {
+	return consensusCluster.raftNode.State()
+}
+
 var globalEpoch = int64(1)
 
 func (consensusCluster *ConsensusCluster) UpdateEpoch() error {
@@ -189,7 +193,7 @@ func (consensusCluster *ConsensusCluster) UpdateEpoch() error {
 		return nil
 	}
 	globalEpoch++
-	logrus.Warnf("Leader Update Epoch. Epoch = %d", globalEpoch)
+	logrus.Debugf("Leader Update Epoch. Epoch = %d", globalEpoch)
 
 	epochBytes, err := utils.EncodeInt64ToBytes(globalEpoch)
 	if err != nil {

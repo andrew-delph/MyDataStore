@@ -34,6 +34,7 @@ type Manager struct {
 	myPartitions          *utils.IntSet
 	partitionLocker       *PartitionLocker
 	consistencyController *ConsistencyController
+	debugTick             *time.Ticker
 }
 
 func NewManager() Manager {
@@ -62,6 +63,7 @@ func NewManager() Manager {
 		myPartitions:          &parts,
 		partitionLocker:       partitionLocker,
 		consistencyController: consistencyController,
+		debugTick:             time.NewTicker(time.Second * 100000),
 	}
 }
 
@@ -99,6 +101,8 @@ func (m *Manager) startWorker() {
 
 	for {
 		select {
+		case <-m.debugTick.C:
+			logrus.Warnf("DEBUG TICK #members = %d", len(m.gossipCluster.GetMembers()))
 		case data, ok := <-m.reqCh:
 			if !ok {
 				logrus.Fatal("Channel closed!")
@@ -124,6 +128,7 @@ func (m *Manager) startWorker() {
 				}
 
 			case gossip.JoinTask:
+				// logrus.Warnf("worker JoinTask: %+v", task)
 				_, rpcClient, err := m.rpcWrapper.CreateRpcClient(task.IP)
 				if err != nil {
 					err = errors.Wrap(err, "gossip.JoinTask")
@@ -141,15 +146,12 @@ func (m *Manager) startWorker() {
 					// logrus.Infof("AddVoter success")
 				}
 			case gossip.LeaveTask:
-				logrus.Warnf("worker LeaveTask: %+v", task)
+				// logrus.Warnf("worker LeaveTask: %+v", task)
 				m.ring.RemoveNode(task.Name)
 				m.HandleHashringChange()
 				m.consensusCluster.RemoveServer(task.Name)
 			case consensus.EpochTask:
-
-				logrus.Warnf("me = %v #members = %d memebers = %v", m.config.Gossip.Name, len(m.gossipCluster.GetMembers()), m.gossipCluster.GetMembers())
-
-				logrus.Debugf("E = %d", task.Epoch)
+				logrus.Warnf("E = %d #members = %d state = %s", task.Epoch, len(m.gossipCluster.GetMembers()), m.consensusCluster.State())
 				// m.VerifyEpoch(task.Epoch)
 			case consensus.LeaderChangeTask:
 				if !task.IsLeader {
@@ -162,6 +164,7 @@ func (m *Manager) startWorker() {
 					if err != nil {
 						err = errors.Wrap(err, "gossip.JoinTask")
 						logrus.Debug(err)
+						break
 					} else {
 						logrus.Debugf("AddVoter success")
 					}
