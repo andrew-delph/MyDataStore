@@ -54,13 +54,8 @@ func (m *Manager) HandleHashringChange() error {
 	return nil
 }
 
-func (m *Manager) HandleNewEpoch(Epoch int64) error {
-	m.consistencyController.PublishEvent(PartitionEpochVerifyEvent{Epoch: Epoch})
-	return nil
-}
-
 func (m *Manager) VerifyEpoch(Epoch int64) {
-	// logrus.Warnf("verifying epoch %d", Epoch)
+	m.consistencyController.PublishEvent(PartitionEpochVerifyEvent{Epoch: Epoch})
 }
 
 func (m *Manager) LastValidEpoch(partition int) int {

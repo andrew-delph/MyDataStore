@@ -151,9 +151,7 @@ func (m *Manager) startWorker() {
 				m.HandleHashringChange()
 				m.consensusCluster.RemoveServer(task.Name)
 			case consensus.EpochTask:
-				logrus.Warnf("E = %d #members = %d state = %s", task.Epoch, len(m.gossipCluster.GetMembers()), m.consensusCluster.State())
-				m.HandleNewEpoch(task.Epoch)
-				// m.VerifyEpoch(task.Epoch)
+				m.VerifyEpoch(task.Epoch)
 			case consensus.LeaderChangeTask:
 				if !task.IsLeader {
 					continue
