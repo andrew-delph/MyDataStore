@@ -137,7 +137,15 @@ func (m *Manager) startWorker() {
 				}
 
 				m.ring.AddNode(CreateRingMember(task.Name, rpcClient))
-				m.HandleHashringChange()
+
+				currPartitionsList, err := m.ring.GetMyPartions()
+				if err != nil {
+					logrus.Error(err)
+					continue
+				}
+				currPartitions := utils.NewIntSet().From(currPartitionsList)
+				m.consistencyController.HandleHashringChange(currPartitions)
+
 				err = m.consensusCluster.AddVoter(task.Name, task.IP)
 				if err != nil {
 					err = errors.Wrap(err, "gossip.JoinTask")
@@ -148,10 +156,18 @@ func (m *Manager) startWorker() {
 			case gossip.LeaveTask:
 				// logrus.Warnf("worker LeaveTask: %+v", task)
 				m.ring.RemoveNode(task.Name)
-				m.HandleHashringChange()
+
+				currPartitionsList, err := m.ring.GetMyPartions()
+				if err != nil {
+					logrus.Error(err)
+					continue
+				}
+				currPartitions := utils.NewIntSet().From(currPartitionsList)
+				m.consistencyController.HandleHashringChange(currPartitions)
+
 				m.consensusCluster.RemoveServer(task.Name)
 			case consensus.EpochTask:
-				m.VerifyEpoch(task.Epoch)
+				m.consistencyController.VerifyEpoch(task.Epoch)
 			case consensus.LeaderChangeTask:
 				if !task.IsLeader {
 					continue

@@ -44,42 +44,6 @@ type PartitionEpochVerifyEvent struct {
 	Epoch int64
 }
 
-func (m *Manager) HandleHashringChange() error {
-	currPartitionsList, err := m.ring.GetMyPartions()
-	if err != nil {
-		return err
-	}
-	currPartitions := utils.NewIntSet().From(currPartitionsList)
-	m.consistencyController.PublishEvent(PartitionsUpdateEvent{CurrPartitions: currPartitions})
-	return nil
-}
-
-func (m *Manager) VerifyEpoch(Epoch int64) {
-	m.consistencyController.PublishEvent(PartitionEpochVerifyEvent{Epoch: Epoch})
-}
-
-func (m *Manager) LastValidEpoch(partition int) int {
-	logrus.Debugf("LastValidEpoch for partition %d", partition)
-	return 0
-}
-
-func (m *Manager) SyncPartition(partition int) error {
-	// logrus.Warnf("SyncPartition %d", partition)
-	err := m.partitionLocker.Lock(partition)
-	if err != nil {
-		return err
-	}
-	defer m.partitionLocker.Unlock(partition)
-
-	lastValidEpoch := m.LastValidEpoch(partition)
-	logrus.Debugf("lastValidEpoch for partion %d is %d", partition, lastValidEpoch)
-
-	// should sync all values from lastValidEpoch + to including current epoch
-
-	// stream values from a node that has the highest health epoch for the partitions.
-	return nil
-}
-
 type ConsistencyController struct {
 	observationCh    chan rxgo.Item
 	partitionsStates []*PartitionState
@@ -95,6 +59,15 @@ func NewConsistencyController(partitionCount int) *ConsistencyController {
 	}
 	observable.Connect(context.Background())
 	return &ConsistencyController{observationCh: ch, partitionsStates: partitionsStates, observable: observable}
+}
+
+func (cc *ConsistencyController) HandleHashringChange(currPartitions utils.IntSet) error {
+	cc.PublishEvent(PartitionsUpdateEvent{CurrPartitions: currPartitions})
+	return nil
+}
+
+func (cc *ConsistencyController) VerifyEpoch(Epoch int64) {
+	cc.PublishEvent(PartitionEpochVerifyEvent{Epoch: Epoch})
 }
 
 func (cc *ConsistencyController) PublishEvent(event interface{}) {
