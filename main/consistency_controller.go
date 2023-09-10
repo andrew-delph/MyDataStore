@@ -37,7 +37,11 @@ func (pl *PartitionLocker) Unlock(partition int) error {
 }
 
 type PartitionsUpdateEvent struct {
-	currPartitions utils.IntSet
+	CurrPartitions utils.IntSet
+}
+
+type PartitionEpochVerifyEvent struct {
+	Epoch int64
 }
 
 func (m *Manager) HandleHashringChange() error {
@@ -46,22 +50,12 @@ func (m *Manager) HandleHashringChange() error {
 		return err
 	}
 	currPartitions := utils.NewIntSet().From(currPartitionsList)
-	m.consistencyController.PublishEvent(PartitionsUpdateEvent{currPartitions: currPartitions})
+	m.consistencyController.PublishEvent(PartitionsUpdateEvent{CurrPartitions: currPartitions})
 	return nil
-	new := currPartitions.Difference(*m.myPartitions)
-	lost := m.myPartitions.Difference(currPartitions)
-	if len(new) > 0 || len(lost) > 0 {
-		logrus.Warnf("new %d lost %d", len(new), len(lost))
-	}
-	m.myPartitions = &currPartitions
+}
 
-	for toSync := range new {
-		err := m.SyncPartition(toSync)
-		if err != nil {
-			logrus.Error(err)
-		}
-
-	}
+func (m *Manager) HandleNewEpoch(Epoch int64) error {
+	m.consistencyController.PublishEvent(PartitionEpochVerifyEvent{Epoch: Epoch})
 	return nil
 }
 
@@ -122,13 +116,16 @@ func NewPartitionState(partitionId int, observable rxgo.Observable) *PartitionSt
 	ps := &PartitionState{partitionId: partitionId}
 	observable.DoOnNext(func(item interface{}) {
 		switch event := item.(type) {
+		case PartitionEpochVerifyEvent:
+			logrus.Warnf("PartitionEpochVerifyEvent partition %d epoch %d", partitionId, event.Epoch)
+
 		case PartitionsUpdateEvent:
-			if !ps.active && event.currPartitions.Has(partitionId) {
+			if !ps.active && event.CurrPartitions.Has(partitionId) {
 				logrus.Warnf("new partition %d", partitionId)
-			} else if ps.active && !event.currPartitions.Has(partitionId) {
+			} else if ps.active && !event.CurrPartitions.Has(partitionId) {
 				logrus.Warnf("lost partition %d", partitionId)
 			}
-			ps.active = event.currPartitions.Has(partitionId)
+			ps.active = event.CurrPartitions.Has(partitionId)
 		default:
 			logrus.Warn("unknown PartitionState event")
 		}
