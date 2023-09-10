@@ -18,6 +18,11 @@ func (s IntSet) Add(value int) IntSet {
 	return s
 }
 
+func (s IntSet) Has(value int) bool {
+	_, exists := s[value]
+	return exists
+}
+
 func (s IntSet) Remove(value int) IntSet {
 	delete(s, value)
 	return s

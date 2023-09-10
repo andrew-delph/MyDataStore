@@ -21,6 +21,9 @@ func TestIntSet(t *testing.T) {
 	// t.Error("diff", setA.Difference(setB))
 	assert.EqualValues(t, []int{1}, setA.Difference(setB).List(), "Difference wrong values")
 	assert.EqualValues(t, []int{3}, setB.Difference(setA).List(), "Difference wrong values")
+
+	assert.EqualValues(t, true, setA.Has(1), "Has wrong values")
+	assert.EqualValues(t, false, setA.Has(3), "Has wrong values")
 }
 
 func TestAssert(t *testing.T) {
