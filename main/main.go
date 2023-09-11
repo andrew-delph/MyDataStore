@@ -1,6 +1,10 @@
 package main
 
-import "github.com/sirupsen/logrus"
+import (
+	"github.com/sirupsen/logrus"
+
+	"github.com/andrew-delph/my-key-store/config"
+)
 
 func main() {
 	// defer func() {
@@ -9,6 +13,7 @@ func main() {
 	// 	}
 	// }()
 	logrus.Info("starting")
-	manager := NewManager()
+	c := config.GetConfig()
+	manager := NewManager(c)
 	manager.StartManager()
 }

@@ -82,10 +82,10 @@ func (iterator BadgerIterator) First() bool {
 
 func (iterator BadgerIterator) Next() bool {
 	iterator.it.Next()
-	return !iterator.isDone()
+	return !iterator.IsDone()
 }
 
-func (iterator BadgerIterator) isDone() bool {
+func (iterator BadgerIterator) IsDone() bool {
 	return !iterator.it.Valid() || bytes.Compare(iterator.it.Item().Key(), iterator.Limit) >= 0
 }
 

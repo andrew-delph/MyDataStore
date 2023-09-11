@@ -17,7 +17,7 @@ type Storage interface {
 type Iterator interface {
 	First() bool
 	Next() bool
-	isDone() bool
+	IsDone() bool
 	Key() []byte
 	Value() []byte
 	Release()

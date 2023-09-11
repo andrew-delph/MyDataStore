@@ -40,8 +40,7 @@ type Manager struct {
 	CurrentEpoch          int64
 }
 
-func NewManager() Manager {
-	c := config.GetDefaultConfig()
+func NewManager(c config.Config) Manager {
 	reqCh := make(chan interface{}, c.Manager.ReqChannelSize)
 	httpServer := http.CreateHttpServer(c.Http, reqCh)
 	gossipCluster := gossip.CreateGossipCluster(c.Gossip, reqCh)

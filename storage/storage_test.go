@@ -123,7 +123,7 @@ func storageIterator(t *testing.T, storage Storage) {
 
 	count := 0
 
-	for !it.isDone() {
+	for !it.IsDone() {
 		it.Next()
 		count++
 	}
@@ -136,7 +136,7 @@ func storageIterator(t *testing.T, storage Storage) {
 	assert.EqualValues(t, true, it.First(), "it.First() should be true")
 
 	count = 0
-	for !it.isDone() {
+	for !it.IsDone() {
 		// logrus.Warn("key= ", string(it.Key()))
 		it.Next()
 		count++

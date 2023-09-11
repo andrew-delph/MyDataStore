@@ -65,7 +65,7 @@ func (iterator LevelDbIterator) Next() bool {
 	return iterator.it.Next()
 }
 
-func (iterator LevelDbIterator) isDone() bool {
+func (iterator LevelDbIterator) IsDone() bool {
 	return !iterator.it.Valid()
 }
 
