@@ -3,10 +3,8 @@ package main
 import (
 	"bytes"
 	"errors"
-	"time"
 
 	"github.com/cbergoon/merkletree"
-	"github.com/patrickmn/go-cache"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 
@@ -52,7 +50,6 @@ func (h *CustomHash) Hash() int64 {
 	return h.value
 }
 
-var merkletreeStore *cache.Cache = cache.New(0*time.Minute, 1*time.Minute)
 
 type BaseMerkleBucket struct {
 	bucketId int32
@@ -159,7 +156,6 @@ func RawPartitionMerkleTree(epoch int64, globalEpoch bool, partitionId int) (*me
 		logrus.Debug(err)
 		return nil, nil, err
 	}
-	// merkletreeStore.Add(fmt.Sprintf("%d-%d", partitionEpoch, epoch), tree, 0)
 
 	return tree, bucketList, nil
 }
