@@ -192,7 +192,7 @@ func (m *Manager) startWorker() {
 
 			case rpc.SetValueTask:
 				logrus.Debugf("worker SetValueTask: %+v", task)
-				err := m.db.Put([]byte(task.Key), []byte(task.Value))
+				err := m.SetValue(task.Value)
 				if err != nil {
 					task.ResCh <- err
 				} else {
@@ -201,7 +201,8 @@ func (m *Manager) startWorker() {
 
 			case rpc.GetValueTask:
 				logrus.Debugf("worker GetValueTask: %+v", task)
-				value, err := m.db.Get([]byte(task.Key))
+				// value, err := m.db.Get([]byte(task.Key))
+				value, err := m.GetValue(task.Key)
 				if err != nil {
 					task.ResCh <- err
 				} else {
@@ -337,4 +338,16 @@ func (m *Manager) GetRequest(key string) (string, error) {
 	} else {
 		return recentValue.Value, nil
 	}
+}
+
+func (m *Manager) SetValue(value *rpc.RpcValue) error {
+	return m.db.Put([]byte(value.Key), []byte(value.Value))
+}
+
+func (m *Manager) GetValue(key string) (*rpc.RpcValue, error) {
+	value, err := m.db.Get([]byte(key))
+	if err != nil {
+		return nil, err
+	}
+	return &rpc.RpcValue{Value: fmt.Sprintf("%s", value)}, nil
 }

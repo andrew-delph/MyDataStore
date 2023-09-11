@@ -29,9 +29,7 @@ func CreateRpcWrapper(rpcConfig config.RpcConfig, reqCh chan interface{}) *RpcWr
 }
 
 type SetValueTask struct {
-	Key   string
-	Value string
-	Epoch int64
+	Value *RpcValue
 	ResCh chan interface{}
 }
 
@@ -68,7 +66,7 @@ func (rpcWrapper *RpcWrapper) StartRpcServer() {
 func (rpcWrapper *RpcWrapper) SetRequest(ctx context.Context, value *datap.Value) (*datap.StandardResponse, error) {
 	logrus.Debugf("SERVER Handling SetRequest: key=%s value=%s epoch=%d", value.Key, value.Value, value.Epoch)
 	resCh := make(chan interface{})
-	rpcWrapper.reqCh <- SetValueTask{Key: value.Key, Value: value.Value, Epoch: value.Epoch, ResCh: resCh}
+	rpcWrapper.reqCh <- SetValueTask{Value: value, ResCh: resCh}
 	res := <-resCh
 	logrus.Debug("SetRequest res ", res)
 	return &datap.StandardResponse{Message: "Value set"}, nil
@@ -80,8 +78,8 @@ func (rpcWrapper *RpcWrapper) GetRequest(ctx context.Context, req *datap.GetRequ
 	rpcWrapper.reqCh <- GetValueTask{Key: req.Key, ResCh: resCh}
 	rawRes := <-resCh
 	switch res := rawRes.(type) {
-	case []byte:
-		return &datap.Value{Value: fmt.Sprintf("%s", res)}, nil
+	case *datap.Value:
+		return res, nil
 	case error:
 		return nil, res
 	default:
