@@ -52,6 +52,7 @@ func (storage LevelDbStorage) Close() error {
 }
 
 func (storage LevelDbStorage) NewTransaction(update bool) Transaction {
+	// TODO implement sync/map for transcations and test. create trx id. if another commits while touching key hash. error.
 	return LevelDbTransaction{storage: storage}
 }
 
