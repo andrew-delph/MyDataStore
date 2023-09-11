@@ -34,6 +34,8 @@ func createMockManager(t *testing.T) Manager {
 	logrus.Info("Temporary Directory:", tmpDir)
 	c := config.GetConfig()
 	c.Storage.DataPath = tmpDir
+	c.Manager.PartitionCount = 1
+	c.Manager.PartitionBuckets = 1
 
 	manager := NewManager(c)
 	return manager
@@ -41,17 +43,32 @@ func createMockManager(t *testing.T) Manager {
 
 func TestManagerStorage(t *testing.T) {
 	var err error
-	if testing.Short() {
-		t.Skip("skipping test in short mode.")
-	}
+	// if testing.Short() {
+	// 	t.Skip("skipping test in short mode.")
+	// }
 	manager := createMockManager(t)
 
 	writeValuesNum := 10
 
+	// write to epoch 1
 	for i := 0; i < writeValuesNum; i++ {
 		k := fmt.Sprintf("key%d", i)
 		v := fmt.Sprintf("val%d", i)
-		setVal := &rpc.RpcValue{Key: k, Value: v}
+		setVal := &rpc.RpcValue{Key: k, Value: v, Epoch: 1}
+		err = manager.SetValue(setVal)
+		if err != nil {
+			t.Error(err)
+		}
+		getVal, err := manager.GetValue(k)
+		if err != nil {
+			t.Error(err)
+		}
+		assert.Equal(t, v, getVal.Value, "get value is wrong")
+	}
+	for i := 0; i < writeValuesNum; i++ {
+		k := fmt.Sprintf("key%d", i)
+		v := fmt.Sprintf("val%d", i)
+		setVal := &rpc.RpcValue{Key: k, Value: v, Epoch: 2}
 		err = manager.SetValue(setVal)
 		if err != nil {
 			t.Error(err)
@@ -65,15 +82,23 @@ func TestManagerStorage(t *testing.T) {
 
 	// check iterator for both...
 
-	// it := manager.db.NewIterator([]byte(EpochIndex()), []byte(EpochIndex()))
-	// assert.EqualValues(t, true, it.First(), "it.First() should be true")
+	it := manager.db.NewIterator([]byte(EpochIndex(0, 0, 1, "")), []byte(EpochIndex(0, 0, 2, "")))
+	assert.EqualValues(t, true, it.First(), "it.First() should be true")
+	count := 0
+	for !it.IsDone() {
+		it.Next()
+		count++
+	}
+	it.Release()
+	assert.EqualValues(t, writeValuesNum, count, "Should have iterated all inserted keys")
 
-	// count := 0
-
-	// for !it.IsDone() {
-	// 	it.Next()
-	// 	count++
-	// }
-	// it.Release()
-	// assert.EqualValues(t, writeValuesNum, count, "Should have iterated all inserted keys")
+	it = manager.db.NewIterator([]byte(EpochIndex(0, 0, 1, "")), []byte(EpochIndex(0, 0, 3, "")))
+	assert.EqualValues(t, true, it.First(), "it.First() should be true")
+	count = 0
+	for !it.IsDone() {
+		it.Next()
+		count++
+	}
+	it.Release()
+	assert.EqualValues(t, writeValuesNum*2, count, "Should have iterated all inserted keys")
 }
