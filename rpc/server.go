@@ -46,6 +46,14 @@ type GetPartitionEpochObjectTask struct {
 	ResCh     chan interface{}
 }
 
+type StreamBucketsTask struct {
+	Partition  int32
+	Buckets    []int32
+	LowerEpoch int64
+	UpperEpoch int64
+	ResCh      chan interface{}
+}
+
 func (rpcWrapper *RpcWrapper) StartRpcServer() {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", rpcWrapper.rpcConfig.Port))
 	if err != nil {
@@ -84,8 +92,22 @@ func (rpcWrapper *RpcWrapper) GetRequest(ctx context.Context, req *datap.GetRequ
 
 func (rpcWrapper *RpcWrapper) StreamBuckets(req *datap.StreamBucketsRequest, stream datap.InternalNodeService_StreamBucketsServer) error {
 	logrus.Debugf("SERVER StreamBuckets Buckets %v LowerEpoch %v UpperEpoch %v Partition %v", req.Buckets, req.LowerEpoch, req.UpperEpoch, req.Partition)
-	panic("unimplemented")
-	return nil
+	resCh := make(chan interface{})
+	rpcWrapper.reqCh <- StreamBucketsTask{Partition: req.Partition, Buckets: req.Buckets, LowerEpoch: req.LowerEpoch, UpperEpoch: req.UpperEpoch, ResCh: resCh}
+	for {
+		select {
+		case item, ok := <-resCh:
+			if !ok {
+				fmt.Println("Channel is closed")
+				return nil
+			}
+			err := stream.Send(&datap.Value{Value: fmt.Sprintf("%s", item)})
+			if err != nil {
+				logrus.Errorf("SERVER StreamBuckets err = %v", err)
+				return err
+			}
+		}
+	}
 }
 
 func (rpcWrapper *RpcWrapper) GetPartitionEpochObject(ctx context.Context, req *datap.PartitionEpochObject) (*datap.PartitionEpochObject, error) {
