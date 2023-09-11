@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 
 	"github.com/pkg/errors"
 	"github.com/reactivex/rxgo/v2"
@@ -75,9 +76,9 @@ func (cc *ConsistencyController) PublishEvent(event interface{}) {
 }
 
 type PartitionState struct {
-	updating    bool
+	updating    atomic.Bool
 	partitionId int
-	active      bool
+	active      atomic.Bool
 }
 
 func NewPartitionState(partitionId int, observable rxgo.Observable) *PartitionState {
@@ -88,12 +89,11 @@ func NewPartitionState(partitionId int, observable rxgo.Observable) *PartitionSt
 			logrus.Warnf("PartitionEpochVerifyEvent partition %d epoch %d", partitionId, event.Epoch)
 
 		case PartitionsUpdateEvent:
-			if !ps.active && event.CurrPartitions.Has(partitionId) {
+			if event.CurrPartitions.Has(partitionId) && ps.active.CompareAndSwap(false, true) {
 				logrus.Warnf("new partition %d", partitionId)
-			} else if ps.active && !event.CurrPartitions.Has(partitionId) {
+			} else if !event.CurrPartitions.Has(partitionId) && ps.active.CompareAndSwap(true, false) {
 				logrus.Warnf("lost partition %d", partitionId)
 			}
-			ps.active = event.CurrPartitions.Has(partitionId)
 		default:
 			logrus.Warn("unknown PartitionState event")
 		}
