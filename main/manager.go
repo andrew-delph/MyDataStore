@@ -209,6 +209,9 @@ func (m *Manager) startWorker() {
 			case VerifyPartitionEpochRequestTask:
 				logrus.Debugf("worker VerifyPartitionEpochRequestTask: %+v", task)
 				task.ResCh <- VerifyPartitionEpochResponse{Valid: true}
+			case SyncPartitionTask:
+				logrus.Debugf("worker SyncPartitionTask: %+v", task)
+				task.ResCh <- SyncPartitionResponse{Valid: true}
 
 			default:
 				logrus.Panicf("worker unkown task type: %v", reflect.TypeOf(task))

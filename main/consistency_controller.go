@@ -48,6 +48,15 @@ type VerifyPartitionEpochResponse struct {
 	Valid bool
 }
 
+type SyncPartitionTask struct {
+	PartitionId int
+	ResCh       chan interface{}
+}
+
+type SyncPartitionResponse struct {
+	Valid bool
+}
+
 type UpdatePartitionsEvent struct {
 	CurrPartitions utils.IntSet
 }
@@ -95,7 +104,7 @@ func NewPartitionState(partitionId int, observable rxgo.Observable, reqCh chan i
 	ps := &PartitionState{partitionId: partitionId}
 	observable.DoOnNext(func(item interface{}) {
 		switch event := item.(type) {
-		case VerifyPartitionEpochEvent:
+		case VerifyPartitionEpochEvent: // TODO create test case for this
 			if ps.active.Load() {
 				resCh := make(chan interface{})
 				logrus.Debugf("trigger verify epoch event. partition %d epoch %d", partitionId, event.Epoch)
@@ -103,15 +112,24 @@ func NewPartitionState(partitionId int, observable rxgo.Observable, reqCh chan i
 				rawRes := <-resCh
 				switch res := rawRes.(type) {
 				case VerifyPartitionEpochResponse:
-					logrus.Warnf("verify epoch res = %+v", res)
+					logrus.Warnf("verify epoch=%d partitionId=%d res = %+v", event.Epoch, partitionId, res)
 				default:
-					logrus.Panicf("http unkown res type: %v", reflect.TypeOf(res))
+					logrus.Panicf("VerifyPartitionEpochEvent observer unkown res type: %v", reflect.TypeOf(res))
 				}
 			}
 
-		case UpdatePartitionsEvent:
+		case UpdatePartitionsEvent: // TODO create test case for this
 			if event.CurrPartitions.Has(partitionId) && ps.active.CompareAndSwap(false, true) { // TODO create test case for this
 				logrus.Warnf("trigger new partition sync %d", partitionId)
+				resCh := make(chan interface{})
+				reqCh <- SyncPartitionTask{PartitionId: partitionId, ResCh: resCh}
+				rawRes := <-resCh
+				switch res := rawRes.(type) {
+				case SyncPartitionResponse:
+					logrus.Warnf("sync partrition %d res = %+v", partitionId, res)
+				default:
+					logrus.Panicf("UpdatePartitionsEvent observer unkown res type: %v", reflect.TypeOf(res))
+				}
 			} else if !event.CurrPartitions.Has(partitionId) && ps.active.CompareAndSwap(true, false) {
 				logrus.Warnf("updated lost partition active %d", partitionId)
 			}
