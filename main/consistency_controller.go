@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"reflect"
 	"sync"
 	"sync/atomic"
 
@@ -37,11 +38,21 @@ func (pl *PartitionLocker) Unlock(partition int) error {
 	return nil
 }
 
-type PartitionsUpdateEvent struct {
+type VerifyPartitionEpochRequestTask struct {
+	PartitionId int
+	Epoch       int64
+	ResCh       chan interface{}
+}
+
+type VerifyPartitionEpochResponse struct {
+	Valid bool
+}
+
+type UpdatePartitionsEvent struct {
 	CurrPartitions utils.IntSet
 }
 
-type PartitionEpochVerifyEvent struct {
+type VerifyPartitionEpochEvent struct {
 	Epoch int64
 }
 
@@ -51,24 +62,24 @@ type ConsistencyController struct {
 	observable       rxgo.Observable
 }
 
-func NewConsistencyController(partitionCount int) *ConsistencyController {
+func NewConsistencyController(partitionCount int, reqCh chan interface{}) *ConsistencyController {
 	ch := make(chan rxgo.Item)
 	observable := rxgo.FromChannel(ch, rxgo.WithPublishStrategy())
 	var partitionsStates []*PartitionState
 	for i := 0; i < partitionCount; i++ {
-		partitionsStates = append(partitionsStates, NewPartitionState(i, observable))
+		partitionsStates = append(partitionsStates, NewPartitionState(i, observable, reqCh))
 	}
 	observable.Connect(context.Background())
 	return &ConsistencyController{observationCh: ch, partitionsStates: partitionsStates, observable: observable}
 }
 
 func (cc *ConsistencyController) HandleHashringChange(currPartitions utils.IntSet) error {
-	cc.PublishEvent(PartitionsUpdateEvent{CurrPartitions: currPartitions})
+	cc.PublishEvent(UpdatePartitionsEvent{CurrPartitions: currPartitions})
 	return nil
 }
 
 func (cc *ConsistencyController) VerifyEpoch(Epoch int64) {
-	cc.PublishEvent(PartitionEpochVerifyEvent{Epoch: Epoch})
+	cc.PublishEvent(VerifyPartitionEpochEvent{Epoch: Epoch})
 }
 
 func (cc *ConsistencyController) PublishEvent(event interface{}) {
@@ -76,23 +87,33 @@ func (cc *ConsistencyController) PublishEvent(event interface{}) {
 }
 
 type PartitionState struct {
-	updating    atomic.Bool
 	partitionId int
 	active      atomic.Bool
 }
 
-func NewPartitionState(partitionId int, observable rxgo.Observable) *PartitionState {
+func NewPartitionState(partitionId int, observable rxgo.Observable, reqCh chan interface{}) *PartitionState {
 	ps := &PartitionState{partitionId: partitionId}
 	observable.DoOnNext(func(item interface{}) {
 		switch event := item.(type) {
-		case PartitionEpochVerifyEvent:
-			logrus.Warnf("PartitionEpochVerifyEvent partition %d epoch %d", partitionId, event.Epoch)
+		case VerifyPartitionEpochEvent:
+			if ps.active.Load() {
+				resCh := make(chan interface{})
+				logrus.Debugf("trigger verify epoch event. partition %d epoch %d", partitionId, event.Epoch)
+				reqCh <- VerifyPartitionEpochRequestTask{PartitionId: partitionId, Epoch: event.Epoch, ResCh: resCh}
+				rawRes := <-resCh
+				switch res := rawRes.(type) {
+				case VerifyPartitionEpochResponse:
+					logrus.Warnf("verify epoch res = %+v", res)
+				default:
+					logrus.Panicf("http unkown res type: %v", reflect.TypeOf(res))
+				}
+			}
 
-		case PartitionsUpdateEvent:
-			if event.CurrPartitions.Has(partitionId) && ps.active.CompareAndSwap(false, true) {
-				logrus.Warnf("new partition %d", partitionId)
+		case UpdatePartitionsEvent:
+			if event.CurrPartitions.Has(partitionId) && ps.active.CompareAndSwap(false, true) { // TODO create test case for this
+				logrus.Warnf("trigger new partition sync %d", partitionId)
 			} else if !event.CurrPartitions.Has(partitionId) && ps.active.CompareAndSwap(true, false) {
-				logrus.Warnf("lost partition %d", partitionId)
+				logrus.Warnf("updated lost partition active %d", partitionId)
 			}
 		default:
 			logrus.Warn("unknown PartitionState event")

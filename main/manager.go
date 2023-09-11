@@ -50,7 +50,7 @@ func NewManager() Manager {
 	parts := utils.NewIntSet()
 	partitionLocker := NewPartitionLocker(c.Manager.PartitionCount)
 
-	consistencyController := NewConsistencyController(c.Manager.PartitionCount)
+	consistencyController := NewConsistencyController(c.Manager.PartitionCount, reqCh)
 	return Manager{
 		config:                c,
 		reqCh:                 reqCh,
@@ -206,6 +206,9 @@ func (m *Manager) startWorker() {
 			case rpc.GetPartitionEpochObjectTask:
 				logrus.Warnf("worker GetPartitionEpochObjectTask: %+v", task)
 				panic("unimplemented")
+			case VerifyPartitionEpochRequestTask:
+				logrus.Debugf("worker VerifyPartitionEpochRequestTask: %+v", task)
+				task.ResCh <- VerifyPartitionEpochResponse{Valid: true}
 
 			default:
 				logrus.Panicf("worker unkown task type: %v", reflect.TypeOf(task))

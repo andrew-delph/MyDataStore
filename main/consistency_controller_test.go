@@ -22,7 +22,7 @@ func TestPartitionLocker(t *testing.T) {
 }
 
 func TestRxGoObservers(t *testing.T) {
-	// TODO show this
+	// t.Error("show")
 	// use rxgo as works. use a semaphore to limit the number of active workers.
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
@@ -31,8 +31,8 @@ func TestRxGoObservers(t *testing.T) {
 	// Create a Connectable Observable
 	observable := rxgo.FromChannel(ch, rxgo.WithPublishStrategy())
 
-	workers := 10
-	items := 2
+	workers := 1
+	items := 10
 	limit := 2
 	sem := semaphore.NewWeighted(int64(limit))
 	var wg sync.WaitGroup
@@ -77,7 +77,7 @@ func TestConsistencyControllerObservers(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 	logrus.Info("HI")
-	consistencyController := NewConsistencyController(10)
+	consistencyController := NewConsistencyController(10, nil) // TODO impllement proper test
 
 	consistencyController.PublishEvent("test")
 	time.Sleep(time.Second * 5)
