@@ -72,6 +72,7 @@ type ConsistencyController struct {
 }
 
 func NewConsistencyController(partitionCount int, reqCh chan interface{}) *ConsistencyController {
+	// TODO create semaphore.NewWeighted(int64(limit)) for number of partition observer events at once
 	ch := make(chan rxgo.Item)
 	observable := rxgo.FromChannel(ch, rxgo.WithPublishStrategy())
 	var partitionsStates []*PartitionState
@@ -138,14 +139,4 @@ func NewPartitionState(partitionId int, observable rxgo.Observable, reqCh chan i
 		}
 	})
 	return ps
-}
-
-// called on new epoch or aquired new partitions
-// for now assume the partition can be partial in the past
-func (ps *PartitionState) Balance() {
-	// if lagging start sync function
-}
-
-func (ps *PartitionState) Verify() {
-	// if lagging start sync function
 }
