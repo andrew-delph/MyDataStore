@@ -103,12 +103,14 @@ func (m *Manager) startWorker() {
 		select {
 		case <-m.debugTick.C:
 			logrus.Warnf("DEBUG TICK #members = %d", len(m.gossipCluster.GetMembers()))
+
 		case data, ok := <-m.reqCh:
 			if !ok {
 				logrus.Fatal("Channel closed!")
 				return
 			}
 			switch task := data.(type) {
+
 			case http.SetTask:
 				logrus.Debugf("worker SetTask: %+v", task)
 				err := m.SetRequest(task.Key, task.Value)
@@ -153,6 +155,7 @@ func (m *Manager) startWorker() {
 				} else {
 					// logrus.Infof("AddVoter success")
 				}
+
 			case gossip.LeaveTask:
 				// logrus.Warnf("worker LeaveTask: %+v", task)
 				m.ring.RemoveNode(task.Name)
@@ -166,8 +169,10 @@ func (m *Manager) startWorker() {
 				m.consistencyController.HandleHashringChange(currPartitions)
 
 				m.consensusCluster.RemoveServer(task.Name)
+
 			case consensus.EpochTask:
 				m.consistencyController.VerifyEpoch(task.Epoch)
+
 			case consensus.LeaderChangeTask:
 				if !task.IsLeader {
 					continue
@@ -202,16 +207,19 @@ func (m *Manager) startWorker() {
 				} else {
 					task.ResCh <- value
 				}
+
 			case rpc.StreamBucketsTask:
 				logrus.Warnf("worker StreamBucketsTask: %+v", task)
 				task.ResCh <- nil
 
 			case rpc.GetPartitionEpochObjectTask:
 				logrus.Warnf("worker GetPartitionEpochObjectTask: %+v", task)
-				panic("unimplemented")
+				task.ResCh <- true // TODO create repsonse struct
+
 			case VerifyPartitionEpochRequestTask:
 				logrus.Debugf("worker VerifyPartitionEpochRequestTask: %+v", task)
 				task.ResCh <- VerifyPartitionEpochResponse{Valid: true}
+
 			case SyncPartitionTask:
 				logrus.Debugf("worker SyncPartitionTask: %+v", task)
 				task.ResCh <- SyncPartitionResponse{Valid: true}
