@@ -35,6 +35,7 @@ type Manager struct {
 	partitionLocker       *PartitionLocker
 	consistencyController *ConsistencyController
 	debugTick             *time.Ticker
+	CurrentEpoch          int64
 }
 
 func NewManager() Manager {
@@ -171,6 +172,7 @@ func (m *Manager) startWorker() {
 				m.consensusCluster.RemoveServer(task.Name)
 
 			case consensus.EpochTask:
+				m.CurrentEpoch = task.Epoch
 				m.consistencyController.VerifyEpoch(task.Epoch)
 
 			case consensus.LeaderChangeTask:
@@ -239,7 +241,7 @@ func (m *Manager) SetRequest(key, value string) error {
 	}
 
 	unixTimestamp := time.Now().Unix()
-	setValue := &rpc.RpcValue{Key: key, Value: value, Epoch: int64(1), UnixTimestamp: unixTimestamp}
+	setValue := &rpc.RpcValue{Key: key, Value: value, Epoch: m.CurrentEpoch, UnixTimestamp: unixTimestamp}
 
 	responseCh := make(chan *rpc.RpcStandardResponse, m.config.Manager.ReplicaCount)
 	errorCh := make(chan error, m.config.Manager.ReplicaCount)
