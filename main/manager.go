@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/binary"
 	"fmt"
 	"os"
 	"os/signal"
@@ -343,11 +345,21 @@ func (m *Manager) GetRequest(key string) (string, error) {
 }
 
 func (m *Manager) SetValue(value *rpc.RpcValue) error {
-	return m.db.Put([]byte(value.Key), []byte(value.Value))
+	keyBytes := []byte(value.Key)
+	partitionId := m.ring.FindPartitionID(keyBytes)
+	hash := sha256.Sum256(keyBytes)
+	bucket := binary.BigEndian.Uint64(hash[:8]) % uint64(m.config.Manager.PartitionBuckets)
+	epochIndex := EpochIndex(partitionId, int(bucket), int(value.Epoch), value.Key)
+	keyIndex := KeyIndex(value.Key)
+	trx := m.db.NewTransaction(true)
+	trx.Set([]byte(keyIndex), []byte(value.Value))
+	trx.Set([]byte(epochIndex), []byte(value.Value))
+	return trx.Commit()
 }
 
 func (m *Manager) GetValue(key string) (*rpc.RpcValue, error) {
-	value, err := m.db.Get([]byte(key))
+	keyIndex := KeyIndex(key)
+	value, err := m.db.Get([]byte(keyIndex))
 	if err != nil {
 		return nil, err
 	}

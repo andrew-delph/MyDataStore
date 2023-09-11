@@ -93,7 +93,10 @@ func TestStorageIterator(t *testing.T) {
 }
 
 func testIndex(i int) string {
-	return NewIndex("test").AddColumn(CreateUnorderedColumn("c1")).AddColumn(CreateOrderedColumn(uint32(i), 4)).Build()
+	return NewIndex("test").
+		AddColumn(CreateUnorderedColumn("c1")).
+		AddColumn(CreateOrderedColumn(i, 4)).
+		Build()
 }
 
 func storageIterator(t *testing.T, storage Storage) {

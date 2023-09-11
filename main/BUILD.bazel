@@ -6,6 +6,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "consistency_controller.go",
+        "indexs.go",
         "main.go",
         "manager.go",
         "ring_member.go",
