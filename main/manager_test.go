@@ -65,9 +65,10 @@ func TestManagerStorage(t *testing.T) {
 		}
 		assert.Equal(t, v, getVal.Value, "get value is wrong")
 	}
+	// write to epoch 1
 	for i := 0; i < writeValuesNum; i++ {
-		k := fmt.Sprintf("key%d", i)
-		v := fmt.Sprintf("val%d", i)
+		k := fmt.Sprintf("keyz%d", i)
+		v := fmt.Sprintf("valz%d", i)
 		setVal := &rpc.RpcValue{Key: k, Value: v, Epoch: 2}
 		err = manager.SetValue(setVal)
 		if err != nil {
