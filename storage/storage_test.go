@@ -2,10 +2,8 @@ package storage
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/andrew-delph/my-key-store/config"
@@ -18,12 +16,7 @@ func AllStorage(t *testing.T, storageCallback StorageCallback) {
 	var err error
 	c := config.GetConfig()
 
-	tmpDir, err := os.MkdirTemp("", "my-key-store")
-	if err != nil {
-		t.Fatal("Error creating temporary directory:", err)
-	}
-	logrus.Info("Temporary Directory:", tmpDir)
-	c.Storage.DataPath = tmpDir
+	c.Storage.DataPath = t.TempDir()
 
 	storage = NewLevelDbStorage(c.Storage)
 	storageCallback(t, storage)
@@ -32,12 +25,7 @@ func AllStorage(t *testing.T, storageCallback StorageCallback) {
 		t.Fatal(err)
 	}
 
-	tmpDir, err = os.MkdirTemp("", "my-key-store")
-	if err != nil {
-		t.Fatal("Error creating temporary directory:", err)
-	}
-	logrus.Info("Temporary Directory:", tmpDir)
-	c.Storage.DataPath = tmpDir
+	c.Storage.DataPath = t.TempDir()
 
 	storage = NewBadgerStorage(c.Storage)
 	storageCallback(t, storage)
