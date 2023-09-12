@@ -1,0 +1,13 @@
+build --incompatible_strict_action_env
+run --incompatible_strict_action_env
+test --incompatible_strict_action_env
+
+# build --remote_cache=http://localhost:9090
+# run --remote_cache=http://localhost:9090
+# test --remote_cache=http://localhost:9090
+
+test --test_output=errors 
+
+build --disk_cache=bazel-cache
+run --disk_cache=bazel-cache
+test --disk_cache=bazel-cache
