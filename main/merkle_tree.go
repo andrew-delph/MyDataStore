@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"reflect"
 
 	"github.com/cbergoon/merkletree"
@@ -128,4 +129,58 @@ func EpochTreeObjectToMerkleTree(partitionEpochObject *rpc.RpcEpochTreeObject) (
 		contentList = append(contentList, &MerkleBucket{hasher: &CustomHash{value: hashInt64}, bucketId: int32(i)})
 	}
 	return merkletree.NewTree(contentList)
+}
+
+func DifferentMerkleTreeBuckets(tree1 *merkletree.MerkleTree, tree2 *merkletree.MerkleTree) ([]int32, error) {
+	return DifferentMerkleTreeBucketsDFS(tree1.Root, tree2.Root)
+}
+
+func DifferentMerkleTreeBucketsDFS(node1 *merkletree.Node, node2 *merkletree.Node) ([]int32, error) {
+	differences := []int32{}
+
+	if node1 == nil && node2 == nil {
+		return differences, nil
+	} else if node1 == nil || node2 == nil {
+		return nil, errors.Errorf("a merkletree.Node is nil. node1=%s node2=%s", node1, node2)
+	}
+
+	if !bytes.Equal(node1.Hash, node2.Hash) {
+		if node1.Left == nil && node1.Right == nil {
+			var bucketId1 int32
+			switch bucket1 := node1.C.(type) {
+			case *MerkleBucket:
+				bucketId1 = bucket1.bucketId
+			default:
+				return nil, errors.Errorf("failed to decode MerkleBucket. type = %s", reflect.TypeOf(bucket1))
+			}
+
+			var bucketId2 int32
+			switch bucket2 := node2.C.(type) {
+			case *MerkleBucket:
+				bucketId2 = bucket2.bucketId
+			default:
+				return nil, errors.Errorf("failed to decode MerkleBucket. type = %s", reflect.TypeOf(bucket2))
+			}
+
+			if bucketId1 != bucketId2 {
+				return nil, errors.Errorf("bucketIds dont match. bucketId1 %v bucketId2%v", bucketId1, bucketId2)
+			}
+
+			differences = append(differences, bucketId1)
+		} else {
+			// Recurse into child nodes
+			diff1, err := DifferentMerkleTreeBucketsDFS(node1.Left, node2.Left)
+			if err != nil {
+				return nil, err
+			}
+			differences = append(differences, diff1...)
+			diff2, err := DifferentMerkleTreeBucketsDFS(node1.Right, node2.Right)
+			if err != nil {
+				return nil, err
+			}
+			differences = append(differences, diff2...)
+		}
+	}
+
+	return differences, nil
 }

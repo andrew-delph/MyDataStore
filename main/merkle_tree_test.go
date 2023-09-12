@@ -141,4 +141,36 @@ func TestMerkleTreeRaw(t *testing.T) {
 	assert.EqualValues(t, tree1.MerkleRoot(), stree1.MerkleRoot(), "hash should be the same")
 	assert.EqualValues(t, tree2.MerkleRoot(), stree2.MerkleRoot(), "hash should be the same")
 	assert.EqualValues(t, tree3.MerkleRoot(), stree3.MerkleRoot(), "hash should be the same")
+
+	diff1, err := DifferentMerkleTreeBuckets(tree1, tree2)
+	if err != nil {
+		t.Error(err)
+	}
+
+	diff2, err := DifferentMerkleTreeBuckets(tree2, tree1)
+	if err != nil {
+		t.Error(err)
+	}
+
+	diff3, err := DifferentMerkleTreeBuckets(tree1, tree3)
+	if err != nil {
+		t.Error(err)
+	}
+
+	diff4, err := DifferentMerkleTreeBuckets(tree1, stree1)
+	if err != nil {
+		t.Error(err)
+	}
+
+	diff5, err := DifferentMerkleTreeBuckets(tree1, stree3)
+	if err != nil {
+		t.Error(err)
+	}
+
+	assert.EqualValues(t, diff1, diff2, "diff should be the same")
+	assert.EqualValues(t, 0, len(diff1), "should be no diff")
+	assert.EqualValues(t, diff1, diff4, "diff should be the same")
+
+	assert.NotEqualValues(t, 0, len(diff3), "there should be a diff")
+	assert.NotEqualValues(t, 0, len(diff5), "there should be a diff")
 }
