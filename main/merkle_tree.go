@@ -51,16 +51,12 @@ func (h *CustomHash) Hash() int64 {
 	return h.value
 }
 
-type BaseMerkleBucket struct {
+type MerkleBucket struct {
 	bucketId int32
+	hasher   *CustomHash
 }
 
-type RealMerkleBucket struct {
-	BaseMerkleBucket
-	hasher *CustomHash
-}
-
-func (bucket RealMerkleBucket) CalculateHash() ([]byte, error) {
+func (bucket MerkleBucket) CalculateHash() ([]byte, error) {
 	hash, err := utils.EncodeInt64ToBytes(bucket.hasher.Hash())
 	if err != nil {
 		logrus.Errorf("MerkleBucket CalculateHash err = %v", err)
@@ -69,13 +65,13 @@ func (bucket RealMerkleBucket) CalculateHash() ([]byte, error) {
 	return hash, nil
 }
 
-func (bucket RealMerkleBucket) AddItem(bytes []byte) error {
+func (bucket MerkleBucket) AddItem(bytes []byte) error {
 	bucket.hasher.Add(bytes)
 	return nil
 }
 
-func (content RealMerkleBucket) Equals(other merkletree.Content) (bool, error) {
-	otherTC, ok := other.(RealMerkleBucket)
+func (content MerkleBucket) Equals(other merkletree.Content) (bool, error) {
+	otherTC, ok := other.(MerkleBucket)
 	if !ok {
 		return false, errors.New("value is not of type MerkleContent")
 	}
@@ -87,7 +83,7 @@ func (manager *Manager) RawPartitionMerkleTree(partitionId int, lowerEpoch, uppe
 	bucketList := make([]merkletree.Content, manager.config.Manager.PartitionBuckets)
 
 	for i := 0; i < manager.config.Manager.PartitionBuckets; i++ {
-		bucket := RealMerkleBucket{hasher: &CustomHash{}, BaseMerkleBucket: BaseMerkleBucket{bucketId: int32(i)}}
+		bucket := MerkleBucket{hasher: &CustomHash{}, bucketId: int32(i)}
 		it := manager.db.NewIterator([]byte(EpochIndex(partitionId, i, int(lowerEpoch), "")), []byte(EpochIndex(partitionId, i, int(upperEpoch), "")))
 		for !it.IsDone() {
 			bucket.AddItem(it.Value())

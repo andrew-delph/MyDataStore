@@ -83,7 +83,7 @@ func TestMerkleTreeRaw(t *testing.T) {
 
 	for i, leaf := range tree1.Leafs {
 		switch bucket := leaf.C.(type) {
-		case *RealMerkleBucket:
+		case *MerkleBucket:
 			assert.EqualValues(t, i, bucket.bucketId, "wrong bucket id")
 		default:
 			t.Errorf("bucket type not found. %v", reflect.TypeOf(bucket))
@@ -92,7 +92,7 @@ func TestMerkleTreeRaw(t *testing.T) {
 
 	for i, leaf := range tree2.Leafs {
 		switch bucket := leaf.C.(type) {
-		case *RealMerkleBucket:
+		case *MerkleBucket:
 			assert.EqualValues(t, i, bucket.bucketId, "wrong bucket id")
 		default:
 			t.Errorf("bucket type not found. %v", reflect.TypeOf(bucket))
@@ -101,7 +101,7 @@ func TestMerkleTreeRaw(t *testing.T) {
 
 	for i, leaf := range tree3.Leafs {
 		switch bucket := leaf.C.(type) {
-		case *RealMerkleBucket:
+		case *MerkleBucket:
 			assert.EqualValues(t, i, bucket.bucketId, "wrong bucket id")
 		default:
 			t.Errorf("bucket type not found. %v", reflect.TypeOf(bucket))
