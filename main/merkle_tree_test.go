@@ -25,7 +25,7 @@ func TestMerkleTree(t *testing.T) {
 	c := config.GetConfig()
 	c.Storage.DataPath = tmpDir
 	c.Manager.PartitionCount = 1
-	c.Manager.PartitionBuckets = 100
+	c.Manager.PartitionBuckets = 30
 
 	manager := NewManager(c)
 

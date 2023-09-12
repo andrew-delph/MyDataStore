@@ -70,6 +70,9 @@ func NewManager(c config.Config) Manager {
 }
 
 func (m *Manager) StartManager() {
+	if m.config.Manager.PartitionBuckets%2 != 0 {
+		logrus.Fatalf("PartitionBuckets must be even. PartitionBuckets = %d", m.config.Manager.PartitionBuckets)
+	}
 	var err error
 	go m.startWorkers()
 
