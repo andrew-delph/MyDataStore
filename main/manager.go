@@ -219,7 +219,15 @@ func (m *Manager) startWorker(workerId int) {
 
 			case rpc.StreamBucketsTask:
 				logrus.Warnf("worker StreamBucketsTask: %+v", task)
-				task.ResCh <- nil
+				for _, bucket := range task.Buckets {
+					it := m.db.NewIterator([]byte(EpochIndex(int(task.PartitionId), uint64(bucket), task.LowerEpoch, "")), []byte(EpochIndex(int(task.PartitionId), uint64(bucket), task.UpperEpoch, "")))
+					for !it.IsDone() {
+						task.ResCh <- nil
+						it.Next()
+					}
+					it.Release()
+				}
+				close(task.ResCh)
 
 			case VerifyPartitionEpochRequestTask:
 				logrus.Debugf("worker VerifyPartitionEpochRequestTask: %+v", task.PartitionId)
@@ -339,6 +347,7 @@ func (m *Manager) SetRequest(key, value string) error {
 				responseCh <- res
 			}
 		}()
+		// break
 	}
 
 	timeout := time.After(time.Second * time.Duration(m.config.Manager.DefaultTimeout))
@@ -461,22 +470,35 @@ func (m *Manager) EpochTreeObjectRequest(partitionId int, epoch int64, timeout t
 
 func (m *Manager) SetValue(value *rpc.RpcValue) error {
 	keyBytes := []byte(value.Key)
+	timestampBytes, err := utils.EncodeInt64ToBytes(value.UnixTimestamp)
+	if err != nil {
+		return err
+	}
+	valueData, err := proto.Marshal(value)
+	if err != nil {
+		return err
+	}
 	partitionId := m.ring.FindPartitionID(keyBytes)
 	hash := sha256.Sum256(keyBytes)
 	bucket := binary.BigEndian.Uint64(hash[:8]) % uint64(m.config.Manager.PartitionBuckets)
 	epochIndex := EpochIndex(partitionId, bucket, value.Epoch, value.Key)
 	keyIndex := KeyIndex(value.Key)
 	trx := m.db.NewTransaction(true)
-	trx.Set([]byte(keyIndex), []byte(value.Value))
-	trx.Set([]byte(epochIndex), []byte(value.Value))
+	trx.Set([]byte(keyIndex), valueData)
+	trx.Set([]byte(epochIndex), timestampBytes)
 	return trx.Commit()
 }
 
 func (m *Manager) GetValue(key string) (*rpc.RpcValue, error) {
 	keyIndex := KeyIndex(key)
-	value, err := m.db.Get([]byte(keyIndex))
+	valueBytes, err := m.db.Get([]byte(keyIndex))
 	if err != nil {
 		return nil, err
 	}
-	return &rpc.RpcValue{Value: fmt.Sprintf("%s", value)}, nil
+	value := &rpc.RpcValue{}
+	err = proto.Unmarshal(valueBytes, value)
+	if err != nil {
+		return nil, err
+	}
+	return value, nil
 }
