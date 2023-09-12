@@ -24,11 +24,11 @@ func (uc UnorderedColumn) GetValue() string {
 }
 
 type OrderedColumn struct {
-	Value  int
+	Value  string
 	Length int
 }
 
-func CreateOrderedColumn(value int, length int) Column {
+func CreateOrderedColumn(value string, length int) Column {
 	if len(string(value)) > length {
 		logrus.Fatal("Cannot create collumn: name > length")
 	}
@@ -36,7 +36,7 @@ func CreateOrderedColumn(value int, length int) Column {
 }
 
 func (oc OrderedColumn) GetValue() string {
-	valueStr := fmt.Sprintf("%d", oc.Value)
+	var valueStr string = oc.Value
 	return fmt.Sprintf("%s%s", strings.Repeat("0", oc.Length-len(valueStr)), valueStr)
 }
 

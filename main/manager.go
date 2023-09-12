@@ -351,7 +351,7 @@ func (m *Manager) SetValue(value *rpc.RpcValue) error {
 	partitionId := m.ring.FindPartitionID(keyBytes)
 	hash := sha256.Sum256(keyBytes)
 	bucket := binary.BigEndian.Uint64(hash[:8]) % uint64(m.config.Manager.PartitionBuckets)
-	epochIndex := EpochIndex(partitionId, int(bucket), int(value.Epoch), value.Key)
+	epochIndex := EpochIndex(partitionId, bucket, value.Epoch, value.Key)
 	keyIndex := KeyIndex(value.Key)
 	trx := m.db.NewTransaction(true)
 	trx.Set([]byte(keyIndex), []byte(value.Value))

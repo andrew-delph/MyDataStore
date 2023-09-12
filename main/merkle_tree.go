@@ -88,7 +88,7 @@ func (manager *Manager) RawPartitionMerkleTree(partitionId int, lowerEpoch, uppe
 
 	for i := 0; i < manager.config.Manager.PartitionBuckets; i++ {
 		bucket := MerkleBucket{hasher: &CustomHash{}, bucketId: int32(i)}
-		it := manager.db.NewIterator([]byte(EpochIndex(partitionId, i, int(lowerEpoch), "")), []byte(EpochIndex(partitionId, i, int(upperEpoch), "")))
+		it := manager.db.NewIterator([]byte(EpochIndex(partitionId, uint64(i), lowerEpoch, "")), []byte(EpochIndex(partitionId, uint64(i), upperEpoch, "")))
 		for !it.IsDone() {
 			bucket.AddItem(it.Value())
 			it.Next()
