@@ -70,17 +70,20 @@ func TestMerkleTreeRaw(t *testing.T) {
 		t.Error(err)
 	}
 
-	assert.EqualValues(t, tree1.MerkleRoot(), tree2.MerkleRoot(), "hash should be the same")
-
 	tree3, err := manager.RawPartitionMerkleTree(0, 2, 3)
 	if err != nil {
 		t.Error(err)
 	}
 
-	assert.EqualValues(t, c.Manager.PartitionBuckets, len(tree3.Leafs), "checking content size")
+	assert.EqualValues(t, c.Manager.PartitionBuckets, len(tree1.Leafs), "confirm leafs num is the same as PartitionBuckets")
+	assert.EqualValues(t, c.Manager.PartitionBuckets, len(tree2.Leafs), "confirm leafs num is the same as PartitionBuckets")
+	assert.EqualValues(t, c.Manager.PartitionBuckets, len(tree3.Leafs), "confirm leafs num is the same as PartitionBuckets")
 
+	assert.EqualValues(t, tree1.MerkleRoot(), tree2.MerkleRoot(), "hash should be the same")
 	assert.NotEqualValues(t, tree1.MerkleRoot(), tree3.MerkleRoot(), "hash should be the same")
+	assert.NotEqualValues(t, tree2.MerkleRoot(), tree3.MerkleRoot(), "hash should be the same")
 
+	// verify the leafs of each tree to have correct bucketId
 	for i, leaf := range tree1.Leafs {
 		switch bucket := leaf.C.(type) {
 		case *MerkleBucket:
@@ -89,7 +92,6 @@ func TestMerkleTreeRaw(t *testing.T) {
 			t.Errorf("bucket type not found. %v", reflect.TypeOf(bucket))
 		}
 	}
-
 	for i, leaf := range tree2.Leafs {
 		switch bucket := leaf.C.(type) {
 		case *MerkleBucket:
@@ -98,7 +100,6 @@ func TestMerkleTreeRaw(t *testing.T) {
 			t.Errorf("bucket type not found. %v", reflect.TypeOf(bucket))
 		}
 	}
-
 	for i, leaf := range tree3.Leafs {
 		switch bucket := leaf.C.(type) {
 		case *MerkleBucket:
@@ -107,4 +108,37 @@ func TestMerkleTreeRaw(t *testing.T) {
 			t.Errorf("bucket type not found. %v", reflect.TypeOf(bucket))
 		}
 	}
+
+	// create a rpc.RpcEpochTreeObject for each tree
+
+	obj1, err := MerkleTreeToPartitionEpochObject(tree1, 0, 0, 3)
+	if err != nil {
+		t.Error(err)
+	}
+	obj2, err := MerkleTreeToPartitionEpochObject(tree2, 0, 1, 3)
+	if err != nil {
+		t.Error(err)
+	}
+	obj3, err := MerkleTreeToPartitionEpochObject(tree3, 0, 2, 3)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// convert back to trees
+	stree1, err := EpochTreeObjectToMerkleTree(obj1)
+	if err != nil {
+		t.Error(err)
+	}
+	stree2, err := EpochTreeObjectToMerkleTree(obj2)
+	if err != nil {
+		t.Error(err)
+	}
+	stree3, err := EpochTreeObjectToMerkleTree(obj3)
+	if err != nil {
+		t.Error(err)
+	}
+
+	assert.EqualValues(t, tree1.MerkleRoot(), stree1.MerkleRoot(), "hash should be the same")
+	assert.EqualValues(t, tree2.MerkleRoot(), stree2.MerkleRoot(), "hash should be the same")
+	assert.EqualValues(t, tree3.MerkleRoot(), stree3.MerkleRoot(), "hash should be the same")
 }

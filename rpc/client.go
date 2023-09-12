@@ -14,6 +14,7 @@ type (
 	RpcValue             = datap.Value
 	RpcGetRequestMessage = datap.GetRequestMessage
 	RpcStandardResponse  = datap.StandardResponse
+	RpcEpochTreeObject   = datap.EpochTreeObject
 )
 
 func (rpcWrapper *RpcWrapper) CreateRpcClient(ip string) (*grpc.ClientConn, RpcClient, error) {

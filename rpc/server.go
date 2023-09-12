@@ -39,9 +39,10 @@ type GetValueTask struct {
 }
 
 type GetEpochTreeObjectTask struct {
-	Partition int32
-	Epoch     int64
-	ResCh     chan interface{}
+	Partition  int32
+	LowerEpoch int64
+	UpperEpoch int64
+	ResCh      chan interface{}
 }
 
 type StreamBucketsTask struct {
@@ -109,9 +110,9 @@ func (rpcWrapper *RpcWrapper) StreamBuckets(req *datap.StreamBucketsRequest, str
 }
 
 func (rpcWrapper *RpcWrapper) GetEpochTree(ctx context.Context, req *datap.EpochTreeObject) (*datap.EpochTreeObject, error) {
-	logrus.Debugf("Handling GetEpochTree: Partition=%d Epoch=%d", req.Partition, req.Epoch)
+	logrus.Debugf("Handling GetEpochTree: Partition=%d LowerEpoch=%d UpperEpoch=%d", req.Partition, req.LowerEpoch, req.UpperEpoch)
 	resCh := make(chan interface{})
-	rpcWrapper.reqCh <- GetEpochTreeObjectTask{Partition: req.Partition, Epoch: req.Epoch, ResCh: resCh}
+	rpcWrapper.reqCh <- GetEpochTreeObjectTask{Partition: req.Partition, LowerEpoch: req.LowerEpoch, UpperEpoch: req.UpperEpoch, ResCh: resCh}
 	res := <-resCh
 	logrus.Warn("res ", res)
 	return nil, nil

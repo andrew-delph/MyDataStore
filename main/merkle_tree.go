@@ -1,10 +1,13 @@
 package main
 
 import (
+	"reflect"
+
 	"github.com/cbergoon/merkletree"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
+	"github.com/andrew-delph/my-key-store/rpc"
 	"github.com/andrew-delph/my-key-store/utils"
 )
 
@@ -95,17 +98,34 @@ func (manager *Manager) RawPartitionMerkleTree(partitionId int, lowerEpoch, uppe
 	}
 
 	return merkletree.NewTree(bucketList)
+}
 
-	// contentList := make([]merkletree.Content, theManager.Config.Manager.PartitionBuckets)
-	// for i := range bucketList {
-	// 	contentList[i] = bucketList[i]
-	// }
+func MerkleTreeToPartitionEpochObject(tree *merkletree.MerkleTree, partitionId int, lowerEpoch, upperEpoch int64) (*rpc.RpcEpochTreeObject, error) {
+	bucketHashes := make([][]byte, 0)
+	for _, leaf := range tree.Leafs {
+		bucket, ok := leaf.C.(*MerkleBucket)
+		if !ok {
+			return nil, errors.Errorf("failed to decode MerkleBucket. type = %s", reflect.TypeOf(leaf))
+		}
+		hash, err := bucket.CalculateHash()
+		if err != nil {
+			return nil, errors.Wrap(err, "MerkleTreeToPartitionEpochObject")
+		}
+		bucketHashes = append(bucketHashes, hash)
+	}
 
-	// tree, err := merkletree.NewTree(contentList)
-	// if err != nil {
-	// 	logrus.Debug(err)
-	// 	return nil, nil, err
-	// }
+	epochTreeObject := &rpc.RpcEpochTreeObject{LowerEpoch: lowerEpoch, UpperEpoch: upperEpoch, Partition: int32(partitionId), Buckets: bucketHashes}
+	return epochTreeObject, nil
+}
 
-	// return tree, bucketList, nil
+func EpochTreeObjectToMerkleTree(partitionEpochObject *rpc.RpcEpochTreeObject) (*merkletree.MerkleTree, error) {
+	contentList := make([]merkletree.Content, 0)
+	for i, bucketHash := range partitionEpochObject.Buckets {
+		hashInt64, err := utils.DecodeBytesToInt64(bucketHash)
+		if err != nil {
+			return nil, err
+		}
+		contentList = append(contentList, &MerkleBucket{hasher: &CustomHash{value: hashInt64}, bucketId: int32(i)})
+	}
+	return merkletree.NewTree(contentList)
 }

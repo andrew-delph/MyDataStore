@@ -47,8 +47,8 @@ message StreamBucketsRequest{
 
 message EpochTreeObject{
   int32 partition = 1;
-  int64 epoch = 2;
-  bytes rootHash = 3;
+  int64 lower_epoch = 2;
+  int64 upper_epoch = 3;
   repeated bytes buckets =4;
   bool valid =5;
 }
