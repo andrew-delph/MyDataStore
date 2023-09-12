@@ -107,35 +107,45 @@ func NewPartitionState(partitionId int, observable rxgo.Observable, reqCh chan i
 		switch event := item.(type) {
 		case VerifyPartitionEpochEvent: // TODO create test case for this
 			if ps.active.Load() {
-				resCh := make(chan interface{})
-				logrus.Debugf("trigger verify epoch event. partition %d epoch %d", partitionId, event.Epoch)
-				reqCh <- VerifyPartitionEpochRequestTask{PartitionId: partitionId, Epoch: event.Epoch, ResCh: resCh}
-				rawRes := <-resCh
-				switch res := rawRes.(type) {
-				case VerifyPartitionEpochResponse:
-					logrus.Warnf("verify epoch=%d partitionId=%d res = %+v", event.Epoch, partitionId, res)
-				case error:
-					err := errors.Wrap(res, "VerifyPartitionEpochEvent response error")
-					logrus.Fatal(err)
-				default:
-					logrus.Panicf("VerifyPartitionEpochEvent observer unkown res type: %v", reflect.TypeOf(res))
+				count := 0
+				for true { // TODO better ways of handling errors
+					resCh := make(chan interface{})
+					logrus.Debugf("trigger verify epoch event. partition %d epoch %d", partitionId, event.Epoch)
+					reqCh <- VerifyPartitionEpochRequestTask{PartitionId: partitionId, Epoch: event.Epoch, ResCh: resCh}
+					rawRes := <-resCh
+					switch res := rawRes.(type) {
+					case VerifyPartitionEpochResponse:
+						logrus.Debugf("verify epoch=%d partitionId=%d res = %+v", event.Epoch, partitionId, res)
+						return
+					case error:
+						err := errors.Wrap(res, "VerifyPartitionEpochEvent response")
+						if count > 5 {
+							logrus.Error(err)
+						}
+					default:
+						logrus.Panicf("VerifyPartitionEpochEvent observer unkown res type: %v", reflect.TypeOf(res))
+					}
+					count++
 				}
 			}
 
 		case UpdatePartitionsEvent: // TODO create test case for this
 			if event.CurrPartitions.Has(partitionId) && ps.active.CompareAndSwap(false, true) { // TODO create test case for this
-				logrus.Warnf("trigger new partition sync %d", partitionId)
+				logrus.Warnf("new partition sync %d", partitionId)
 				resCh := make(chan interface{})
 				reqCh <- SyncPartitionTask{PartitionId: partitionId, ResCh: resCh}
 				rawRes := <-resCh
 				switch res := rawRes.(type) {
 				case SyncPartitionResponse:
-					logrus.Warnf("sync partrition %d res = %+v", partitionId, res)
+					logrus.Debugf("sync partrition %d res = %+v", partitionId, res)
 				default:
 					logrus.Panicf("UpdatePartitionsEvent observer unkown res type: %v", reflect.TypeOf(res))
 				}
 			} else if !event.CurrPartitions.Has(partitionId) && ps.active.CompareAndSwap(true, false) {
 				logrus.Warnf("updated lost partition active %d", partitionId)
+			}
+			if event.CurrPartitions.Has(partitionId) != ps.active.Load() {
+				logrus.Fatal("active partition did not switch") // remove this once unit tested
 			}
 		default:
 			logrus.Warn("unknown PartitionState event")

@@ -21,7 +21,7 @@ type Hashring struct {
 func CreateHashring(managerConfig config.ManagerConfig) *Hashring {
 	consistentConfig := consistent.Config{
 		PartitionCount:    managerConfig.PartitionCount,
-		ReplicationFactor: 13,
+		ReplicationFactor: managerConfig.ReplicaCount,
 		Load:              1.2,
 		Hasher:            hasher{},
 	}
@@ -54,7 +54,7 @@ func (ring *Hashring) GetMyPartions() ([]int, error) {
 func (ring *Hashring) GetMemberPartions(member string) ([]int, error) {
 	var belongsTo []int
 	for partID := 0; partID < ring.consistentConfig.PartitionCount; partID++ {
-		members, err := ring.consistent.GetClosestNForPartition(partID, 1)
+		members, err := ring.consistent.GetClosestNForPartition(partID, ring.consistentConfig.ReplicationFactor)
 		if err != nil {
 			return nil, err
 		}
@@ -71,12 +71,40 @@ func (ring Hashring) GetMembers() []consistent.Member {
 	return ring.consistent.GetMembers()
 }
 
-func (ring Hashring) GetClosestN(key string, count int) ([]consistent.Member, error) {
+func (ring Hashring) GetClosestN(key string, count int, includeSelf bool) ([]consistent.Member, error) {
 	keyBytes := []byte(key)
 
-	return ring.consistent.GetClosestN(keyBytes, count)
+	members, err := ring.consistent.GetClosestN(keyBytes, count)
+	if includeSelf || err != nil {
+		return members, err
+	}
+
+	logrus.Fatal("GetClosestN includeSelf") // error since no reason for now
+
+	var membersFilter []consistent.Member
+	for _, member := range members {
+		// add everyone but self
+		if ring.managerConfig.Hostname != member.String() {
+			membersFilter = append(membersFilter, member)
+		}
+	}
+	return membersFilter, nil
 }
 
-func (ring Hashring) GetClosestNForPartition(partitionId, count int) ([]consistent.Member, error) {
+func (ring Hashring) GetClosestNForPartition(partitionId, count int, includeSelf bool) ([]consistent.Member, error) {
+	members, err := ring.consistent.GetClosestNForPartition(partitionId, count)
+	if includeSelf || err != nil {
+		return members, err
+	}
+
+	logrus.Fatal("GetClosestNForPartition includeSelf") // error since no reason for now
+
+	var membersFilter []consistent.Member
+	for _, member := range members {
+		// add everyone but self
+		if ring.managerConfig.Hostname != member.String() {
+			membersFilter = append(membersFilter, member)
+		}
+	}
 	return ring.consistent.GetClosestNForPartition(partitionId, count)
 }

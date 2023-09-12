@@ -39,18 +39,18 @@ type GetValueTask struct {
 }
 
 type GetEpochTreeObjectTask struct {
-	Partition  int32
-	LowerEpoch int64
-	UpperEpoch int64
-	ResCh      chan interface{}
+	PartitionId int32
+	LowerEpoch  int64
+	UpperEpoch  int64
+	ResCh       chan interface{}
 }
 
 type StreamBucketsTask struct {
-	Partition  int32
-	Buckets    []int32
-	LowerEpoch int64
-	UpperEpoch int64
-	ResCh      chan interface{}
+	PartitionId int32
+	Buckets     []int32
+	LowerEpoch  int64
+	UpperEpoch  int64
+	ResCh       chan interface{}
 }
 
 func (rpcWrapper *RpcWrapper) StartRpcServer() {
@@ -92,7 +92,7 @@ func (rpcWrapper *RpcWrapper) GetRequest(ctx context.Context, req *datap.GetRequ
 func (rpcWrapper *RpcWrapper) StreamBuckets(req *datap.StreamBucketsRequest, stream datap.InternalNodeService_StreamBucketsServer) error {
 	logrus.Debugf("SERVER StreamBuckets Buckets %v LowerEpoch %v UpperEpoch %v Partition %v", req.Buckets, req.LowerEpoch, req.UpperEpoch, req.Partition)
 	resCh := make(chan interface{})
-	rpcWrapper.reqCh <- StreamBucketsTask{Partition: req.Partition, Buckets: req.Buckets, LowerEpoch: req.LowerEpoch, UpperEpoch: req.UpperEpoch, ResCh: resCh}
+	rpcWrapper.reqCh <- StreamBucketsTask{PartitionId: req.Partition, Buckets: req.Buckets, LowerEpoch: req.LowerEpoch, UpperEpoch: req.UpperEpoch, ResCh: resCh}
 	for {
 		select {
 		case item, ok := <-resCh:
@@ -112,8 +112,15 @@ func (rpcWrapper *RpcWrapper) StreamBuckets(req *datap.StreamBucketsRequest, str
 func (rpcWrapper *RpcWrapper) GetEpochTree(ctx context.Context, req *datap.EpochTreeObject) (*datap.EpochTreeObject, error) {
 	logrus.Debugf("Handling GetEpochTree: Partition=%d LowerEpoch=%d UpperEpoch=%d", req.Partition, req.LowerEpoch, req.UpperEpoch)
 	resCh := make(chan interface{})
-	rpcWrapper.reqCh <- GetEpochTreeObjectTask{Partition: req.Partition, LowerEpoch: req.LowerEpoch, UpperEpoch: req.UpperEpoch, ResCh: resCh}
-	res := <-resCh
-	logrus.Warn("res ", res)
+	rpcWrapper.reqCh <- GetEpochTreeObjectTask{PartitionId: req.Partition, LowerEpoch: req.LowerEpoch, UpperEpoch: req.UpperEpoch, ResCh: resCh}
+	rawRes := <-resCh
+	switch res := rawRes.(type) {
+	case *datap.EpochTreeObject:
+		return res, nil
+	case error:
+		return nil, res
+	default:
+		logrus.Panicf("http unkown res type: %v", reflect.TypeOf(res))
+	}
 	return nil, nil
 }

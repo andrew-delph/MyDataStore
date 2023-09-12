@@ -97,15 +97,16 @@ func (m *Manager) StartManager() {
 
 func (m *Manager) startWorkers() {
 	for i := 0; i < m.config.Manager.WokersCount; i++ {
-		go m.startWorker()
+		go m.startWorker(i)
 	}
 }
 
-func (m *Manager) startWorker() {
-	logrus.Debug("starting worker")
-	defer logrus.Panic("ending worker")
+func (m *Manager) startWorker(workerId int) {
+	logrus.Debugf("starting worker %d", workerId)
+	defer logrus.Panicf("ending worker %d", workerId)
 
 	for {
+	workerLoop:
 		select {
 		case <-m.debugTick.C:
 			logrus.Warnf("DEBUG TICK #members = %d", len(m.gossipCluster.GetMembers()))
@@ -221,15 +222,15 @@ func (m *Manager) startWorker() {
 				task.ResCh <- nil
 
 			case VerifyPartitionEpochRequestTask:
-				logrus.Debugf("worker VerifyPartitionEpochRequestTask: %+v", task)
-				// create tree
-				tree, err := m.RawPartitionMerkleTree(task.PartitionId, task.Epoch, task.Epoch+1)
+				logrus.Debugf("worker VerifyPartitionEpochRequestTask: %+v", task.PartitionId)
+				// create myTree
+				myTree, err := m.RawPartitionMerkleTree(task.PartitionId, task.Epoch, task.Epoch+1)
 				if err != nil {
 					task.ResCh <- err
 					continue
 				}
 				// serialize
-				partitionEpochObject, err := MerkleTreeToPartitionEpochObject(tree, task.PartitionId, task.Epoch, task.Epoch+1)
+				partitionEpochObject, err := MerkleTreeToPartitionEpochObject(myTree, task.PartitionId, task.Epoch, task.Epoch+1)
 				data, err := proto.Marshal(partitionEpochObject)
 				if err != nil {
 					task.ResCh <- err
@@ -243,11 +244,60 @@ func (m *Manager) startWorker() {
 					continue
 				}
 
-				task.ResCh <- VerifyPartitionEpochResponse{Valid: true}
+				var epochTreeObjects []*rpc.RpcEpochTreeObject
+
+				epochTreeObjects, err = m.EpochTreeObjectRequest(task.PartitionId, task.Epoch, time.Second*20)
+				if err != nil {
+					task.ResCh <- err
+					continue
+				}
+
+				if len(epochTreeObjects) < m.config.Manager.ReadQuorum {
+					task.ResCh <- errors.New("did not recieve enough trees")
+					continue
+				}
+
+				// compare the difference to the otherTree
+				validCount := 0
+				for _, epochTreeObject := range epochTreeObjects {
+					otherTree, err := EpochTreeObjectToMerkleTree(epochTreeObject)
+					if err != nil {
+						task.ResCh <- err
+						break workerLoop
+					}
+					diff, err := DifferentMerkleTreeBuckets(myTree, otherTree)
+					if err != nil {
+						task.ResCh <- err
+						break workerLoop
+					}
+
+					if len(diff) == 0 {
+						validCount++
+					}
+				}
+
+				if validCount >= m.config.Manager.ReadQuorum {
+					task.ResCh <- VerifyPartitionEpochResponse{Valid: true}
+				} else {
+					task.ResCh <- errors.Errorf("did not get enough valid trees. validCount = %d partitionId = %d epoch = %d", validCount, task.PartitionId, task.Epoch)
+				}
 
 			case rpc.GetEpochTreeObjectTask:
-				logrus.Warnf("worker GetPartitionEpochObjectTask: %+v", task)
-				task.ResCh <- true // TODO create repsonse struct
+				logrus.Debugf("worker GetPartitionEpochObjectTask: %+v", task)
+
+				epochTreeObjectBytes, err := m.db.Get([]byte(EpochTreeObjectIndex(int(task.PartitionId), task.LowerEpoch)))
+				if err != nil {
+					task.ResCh <- err
+					continue
+				}
+
+				epochTreeObject := &rpc.RpcEpochTreeObject{}
+				err = proto.Unmarshal(epochTreeObjectBytes, epochTreeObject)
+				if err != nil {
+					task.ResCh <- err
+					continue
+				}
+				task.ResCh <- epochTreeObject
 
 			case SyncPartitionTask:
 				logrus.Debugf("worker SyncPartitionTask: %+v", task)
@@ -255,19 +305,20 @@ func (m *Manager) startWorker() {
 
 			default:
 				logrus.Panicf("worker unkown task type: %v", reflect.TypeOf(task))
+				break workerLoop
 			}
 		}
 	}
 }
 
 func (m *Manager) SetRequest(key, value string) error {
-	nodes, err := m.ring.GetClosestN(key, m.config.Manager.ReplicaCount)
+	nodes, err := m.ring.GetClosestN(key, m.config.Manager.ReplicaCount, true)
 	if err != nil {
 		return err
 	}
 
 	unixTimestamp := time.Now().Unix()
-	setValue := &rpc.RpcValue{Key: key, Value: value, Epoch: m.CurrentEpoch, UnixTimestamp: unixTimestamp}
+	setReq := &rpc.RpcValue{Key: key, Value: value, Epoch: m.CurrentEpoch, UnixTimestamp: unixTimestamp}
 
 	responseCh := make(chan *rpc.RpcStandardResponse, m.config.Manager.ReplicaCount)
 	errorCh := make(chan error, m.config.Manager.ReplicaCount)
@@ -281,7 +332,7 @@ func (m *Manager) SetRequest(key, value string) error {
 		go func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
-			res, err := member.rpcClient.SetRequest(ctx, setValue)
+			res, err := member.rpcClient.SetRequest(ctx, setReq)
 			if err != nil {
 				errorCh <- err
 			} else {
@@ -312,12 +363,12 @@ func (m *Manager) SetRequest(key, value string) error {
 }
 
 func (m *Manager) GetRequest(key string) (string, error) {
-	nodes, err := m.ring.GetClosestN(key, m.config.Manager.ReplicaCount)
+	nodes, err := m.ring.GetClosestN(key, m.config.Manager.ReplicaCount, true)
 	if err != nil {
 		return "", err
 	}
 
-	getMessage := &rpc.RpcGetRequestMessage{Key: key}
+	getReq := &rpc.RpcGetRequestMessage{Key: key}
 	responseCh := make(chan *rpc.RpcValue, m.config.Manager.ReplicaCount)
 	errorCh := make(chan error, m.config.Manager.ReplicaCount)
 
@@ -330,7 +381,7 @@ func (m *Manager) GetRequest(key string) (string, error) {
 		go func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
-			res, err := member.rpcClient.GetRequest(ctx, getMessage)
+			res, err := member.rpcClient.GetRequest(ctx, getReq)
 			if err != nil {
 				errorCh <- err
 			} else {
@@ -366,6 +417,46 @@ func (m *Manager) GetRequest(key string) (string, error) {
 	} else {
 		return recentValue.Value, nil
 	}
+}
+
+func (m *Manager) EpochTreeObjectRequest(partitionId int, epoch int64, timeout time.Duration) ([]*rpc.RpcEpochTreeObject, error) {
+	nodes, err := m.ring.GetClosestNForPartition(partitionId, m.config.Manager.ReplicaCount, true)
+	if err != nil {
+		return nil, err
+	}
+
+	treeReq := &rpc.RpcEpochTreeObject{Partition: int32(partitionId), LowerEpoch: epoch, UpperEpoch: epoch + 1}
+	responseCh := make(chan *rpc.RpcEpochTreeObject, m.config.Manager.ReplicaCount)
+	errorCh := make(chan error, m.config.Manager.ReplicaCount)
+
+	for _, node := range nodes {
+		member, ok := node.(RingMember)
+		if !ok {
+			return nil, errors.New("failed to decode node")
+		}
+
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), timeout)
+			defer cancel()
+			res, err := member.rpcClient.GetEpochTree(ctx, treeReq)
+			if err != nil {
+				errorCh <- err
+			} else {
+				responseCh <- res
+			}
+		}()
+	}
+
+	var otherTrees []*rpc.RpcEpochTreeObject
+	for i := 0; i < len(nodes); i++ {
+		select {
+		case res := <-responseCh:
+			otherTrees = append(otherTrees, res)
+		case err := <-errorCh:
+			logrus.Debugf("GetEpochTree err = %v", err)
+		}
+	}
+	return otherTrees, nil
 }
 
 func (m *Manager) SetValue(value *rpc.RpcValue) error {
