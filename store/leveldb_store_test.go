@@ -266,7 +266,7 @@ func TestLevelDbPartitionEpochObject(t *testing.T) {
 	}
 
 	// input new object not valid ahead
-	partitionEpochObject = &datap.PartitionEpochObject{
+	partitionEpochObject = &datap.EpochTreeObject{
 		Epoch:     5,
 		Partition: int32(partitionId),
 	}
@@ -276,7 +276,7 @@ func TestLevelDbPartitionEpochObject(t *testing.T) {
 	}
 
 	// input new object valid
-	partitionEpochObject = &datap.PartitionEpochObject{
+	partitionEpochObject = &datap.EpochTreeObject{
 		Epoch:     2,
 		Partition: int32(partitionId),
 		Valid:     true,
@@ -287,7 +287,7 @@ func TestLevelDbPartitionEpochObject(t *testing.T) {
 	}
 
 	// input new object not valid ahead
-	partitionEpochObject = &datap.PartitionEpochObject{
+	partitionEpochObject = &datap.EpochTreeObject{
 		Epoch:     6,
 		Partition: int32(partitionId),
 	}
@@ -309,7 +309,7 @@ func TestLevelDbPartitionEpochObject(t *testing.T) {
 
 	// input new higher object
 
-	partitionEpochObject = &datap.PartitionEpochObject{
+	partitionEpochObject = &datap.EpochTreeObject{
 		Epoch:     4,
 		Partition: int32(partitionId),
 		Valid:     true,

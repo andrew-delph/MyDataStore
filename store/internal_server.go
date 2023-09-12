@@ -97,7 +97,7 @@ func (s *internalServer) StreamBuckets(req *datap.StreamBucketsRequest, stream d
 	return nil
 }
 
-func (s *internalServer) GetPartitionEpochObject(ctx context.Context, req *datap.PartitionEpochObject) (*datap.PartitionEpochObject, error) {
+func (s *internalServer) GetPartitionEpochObject(ctx context.Context, req *datap.EpochTreeObject) (*datap.EpochTreeObject, error) {
 	logrus.Debugf("Handling GetPartitionEpochObject: Partition=%d Epoch=%d", req.Partition, req.Epoch)
 
 	partition, err := store.getPartition(int(req.Partition))

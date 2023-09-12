@@ -229,7 +229,7 @@ func (m Manager) StreamBuckets(nodeName string, buckets *[]int32, lowerEpoch, up
 	}
 }
 
-func (m Manager) GetPartitionEpochObject(nodeName string, epoch int64, partitionId int) (*datap.PartitionEpochObject, error) {
+func (m Manager) GetPartitionEpochObject(nodeName string, epoch int64, partitionId int) (*datap.EpochTreeObject, error) {
 	client, err := m.gossipCluster.GetNodeClient(nodeName)
 	if err != nil {
 		return nil, err
@@ -239,7 +239,7 @@ func (m Manager) GetPartitionEpochObject(nodeName string, epoch int64, partition
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	req := &datap.PartitionEpochObject{Epoch: epoch, Partition: int32(partitionId)}
+	req := &datap.EpochTreeObject{Epoch: epoch, Partition: int32(partitionId)}
 
 	res, err := client.GetPartitionEpochObject(ctx, req)
 	if err != nil {

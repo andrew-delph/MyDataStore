@@ -301,7 +301,7 @@ type UnsyncedBuckets struct {
 	Buckets  *[][]byte
 }
 
-func (m Manager) verifyPartitionEpochTree(partitionEpochObject *datap.PartitionEpochObject) ([]*UnsyncedBuckets, error) {
+func (m Manager) verifyPartitionEpochTree(partitionEpochObject *datap.EpochTreeObject) ([]*UnsyncedBuckets, error) {
 	tree, err := PartitionEpochObjectToMerkleTree(partitionEpochObject)
 	if err != nil {
 		logrus.Error(err)

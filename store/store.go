@@ -26,9 +26,9 @@ type Partition interface {
 	SetPartitionValue(value *datap.Value) error
 	Items(bucket, lowerEpoch, upperEpoch int) map[string]*datap.Value
 	GetPartitionId() int
-	GetPartitionEpochObject(epoch int) (*datap.PartitionEpochObject, error)
-	PutPartitionEpochObject(partitionEpochObject *datap.PartitionEpochObject) error
-	LastPartitionEpochObject() (*datap.PartitionEpochObject, error)
+	GetPartitionEpochObject(epoch int) (*datap.EpochTreeObject, error)
+	PutPartitionEpochObject(partitionEpochObject *datap.EpochTreeObject) error
+	LastPartitionEpochObject() (*datap.EpochTreeObject, error)
 }
 
 var STORE_NOT_FOUND error = fmt.Errorf("Store not found.")
@@ -227,14 +227,14 @@ func (store GoCacheStore) saveStore() {
 	}
 }
 
-func (partition GoCachePartition) GetPartitionEpochObject(epoch int) (*datap.PartitionEpochObject, error) {
+func (partition GoCachePartition) GetPartitionEpochObject(epoch int) (*datap.EpochTreeObject, error) {
 	return nil, nil
 }
 
-func (partition GoCachePartition) PutPartitionEpochObject(partitionEpochObject *datap.PartitionEpochObject) error {
+func (partition GoCachePartition) PutPartitionEpochObject(partitionEpochObject *datap.EpochTreeObject) error {
 	return nil
 }
 
-func (partition GoCachePartition) LastPartitionEpochObject() (*datap.PartitionEpochObject, error) {
+func (partition GoCachePartition) LastPartitionEpochObject() (*datap.EpochTreeObject, error) {
 	return nil, nil
 }

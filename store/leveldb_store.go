@@ -254,7 +254,7 @@ func (store LevelDbStore) Clear() {
 	// }
 }
 
-func (partition LevelDbPartition) GetPartitionEpochObject(epoch int) (*datap.PartitionEpochObject, error) {
+func (partition LevelDbPartition) GetPartitionEpochObject(epoch int) (*datap.EpochTreeObject, error) {
 	keyBytes := IndexPartitionEpochObject(partition.GetPartitionId(), epoch)
 	valueBytes, err := partition.store.db.Get(keyBytes, nil)
 	if err == leveldb.ErrNotFound {
@@ -264,7 +264,7 @@ func (partition LevelDbPartition) GetPartitionEpochObject(epoch int) (*datap.Par
 		return nil, err
 	}
 
-	partitionEpochObject := &datap.PartitionEpochObject{}
+	partitionEpochObject := &datap.EpochTreeObject{}
 	err = proto.Unmarshal(valueBytes, partitionEpochObject)
 	if err != nil {
 		logrus.Error("Error: ", err)
@@ -274,7 +274,7 @@ func (partition LevelDbPartition) GetPartitionEpochObject(epoch int) (*datap.Par
 	return partitionEpochObject, nil
 }
 
-func (partition LevelDbPartition) PutPartitionEpochObject(partitionEpochObject *datap.PartitionEpochObject) error {
+func (partition LevelDbPartition) PutPartitionEpochObject(partitionEpochObject *datap.EpochTreeObject) error {
 	writeOpts := &opt.WriteOptions{}
 	writeOpts.Sync = true
 
@@ -292,7 +292,7 @@ func (partition LevelDbPartition) PutPartitionEpochObject(partitionEpochObject *
 	return nil
 }
 
-func (partition LevelDbPartition) LastPartitionEpochObject() (*datap.PartitionEpochObject, error) {
+func (partition LevelDbPartition) LastPartitionEpochObject() (*datap.EpochTreeObject, error) {
 	keyBytes := IndexPartitionEpochObject_Partition_Only(partition.GetPartitionId())
 
 	rng := util.BytesPrefix(keyBytes)
@@ -304,7 +304,7 @@ func (partition LevelDbPartition) LastPartitionEpochObject() (*datap.PartitionEp
 
 	for ok := iter.Last(); ok; ok = iter.Prev() {
 		valueBytes := iter.Value()
-		partitionEpochObject := &datap.PartitionEpochObject{}
+		partitionEpochObject := &datap.EpochTreeObject{}
 		err := proto.Unmarshal(valueBytes, partitionEpochObject)
 		if err != nil {
 			return nil, err

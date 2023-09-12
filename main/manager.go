@@ -219,7 +219,7 @@ func (m *Manager) startWorker() {
 				logrus.Warnf("worker StreamBucketsTask: %+v", task)
 				task.ResCh <- nil
 
-			case rpc.GetPartitionEpochObjectTask:
+			case rpc.GetEpochTreeObjectTask:
 				logrus.Warnf("worker GetPartitionEpochObjectTask: %+v", task)
 				task.ResCh <- true // TODO create repsonse struct
 
