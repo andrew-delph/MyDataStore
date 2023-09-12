@@ -107,11 +107,11 @@ func NewPartitionState(partitionId int, observable rxgo.Observable, reqCh chan i
 		switch event := item.(type) {
 		case VerifyPartitionEpochEvent: // TODO create test case for this
 			if ps.active.Load() {
-				count := 0
+				attempts := 0
 				for true { // TODO better ways of handling errors
 					resCh := make(chan interface{})
 					logrus.Debugf("trigger verify epoch event. partition %d epoch %d", partitionId, event.Epoch)
-					reqCh <- VerifyPartitionEpochRequestTask{PartitionId: partitionId, Epoch: event.Epoch, ResCh: resCh}
+					reqCh <- VerifyPartitionEpochRequestTask{PartitionId: partitionId, Epoch: event.Epoch - 2, ResCh: resCh}
 					rawRes := <-resCh
 					switch res := rawRes.(type) {
 					case VerifyPartitionEpochResponse:
@@ -119,13 +119,13 @@ func NewPartitionState(partitionId int, observable rxgo.Observable, reqCh chan i
 						return
 					case error:
 						err := errors.Wrap(res, "VerifyPartitionEpochEvent response")
-						if count > 5 {
-							logrus.Error(err)
+						if attempts > 5 {
+							logrus.Errorf("%s attempts = %d", err, attempts)
 						}
 					default:
 						logrus.Panicf("VerifyPartitionEpochEvent observer unkown res type: %v", reflect.TypeOf(res))
 					}
-					count++
+					attempts++
 				}
 			}
 

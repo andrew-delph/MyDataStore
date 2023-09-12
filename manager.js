@@ -15,6 +15,7 @@ export default function () {
       r.status === 200 || console.error("set:", r.body),
   });
   // sleep(2);
+  return;
 
   const getRes = http.get(`http://localhost:8080/get?key=${key}`);
 
