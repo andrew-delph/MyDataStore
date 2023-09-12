@@ -13,9 +13,12 @@ import (
 
 func TestMerkleTreeRaw(t *testing.T) {
 	var err error
-	// if testing.Short() {
-	// 	t.Skip("skipping test in short mode.")
-	// }
+
+	writeValuesNum := 100
+	if testing.Short() {
+		writeValuesNum = 10
+		// t.Skip("skipping test in short mode.")
+	}
 
 	c := config.GetConfig()
 	c.Storage.DataPath = t.TempDir()
@@ -23,8 +26,6 @@ func TestMerkleTreeRaw(t *testing.T) {
 	c.Manager.PartitionBuckets = 30
 
 	manager := NewManager(c)
-
-	writeValuesNum := 10
 
 	// write to epoch 1
 	for i := 0; i < writeValuesNum; i++ {
