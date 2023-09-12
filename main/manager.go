@@ -13,6 +13,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/andrew-delph/my-key-store/config"
 	"github.com/andrew-delph/my-key-store/consensus"
@@ -102,7 +103,7 @@ func (m *Manager) startWorkers() {
 
 func (m *Manager) startWorker() {
 	logrus.Debug("starting worker")
-	defer logrus.Warn("ending worker")
+	defer logrus.Panic("ending worker")
 
 	for {
 		select {
@@ -219,13 +220,34 @@ func (m *Manager) startWorker() {
 				logrus.Warnf("worker StreamBucketsTask: %+v", task)
 				task.ResCh <- nil
 
+			case VerifyPartitionEpochRequestTask:
+				logrus.Debugf("worker VerifyPartitionEpochRequestTask: %+v", task)
+				// create tree
+				tree, err := m.RawPartitionMerkleTree(task.PartitionId, task.Epoch, task.Epoch+1)
+				if err != nil {
+					task.ResCh <- err
+					continue
+				}
+				// serialize
+				partitionEpochObject, err := MerkleTreeToPartitionEpochObject(tree, task.PartitionId, task.Epoch, task.Epoch+1)
+				data, err := proto.Marshal(partitionEpochObject)
+				if err != nil {
+					task.ResCh <- err
+					continue
+				}
+
+				// save to db
+				err = m.db.Put([]byte(EpochTreeObjectIndex(task.PartitionId, task.Epoch)), data)
+				if err != nil {
+					task.ResCh <- err
+					continue
+				}
+
+				task.ResCh <- VerifyPartitionEpochResponse{Valid: true}
+
 			case rpc.GetEpochTreeObjectTask:
 				logrus.Warnf("worker GetPartitionEpochObjectTask: %+v", task)
 				task.ResCh <- true // TODO create repsonse struct
-
-			case VerifyPartitionEpochRequestTask:
-				logrus.Debugf("worker VerifyPartitionEpochRequestTask: %+v", task)
-				task.ResCh <- VerifyPartitionEpochResponse{Valid: true}
 
 			case SyncPartitionTask:
 				logrus.Debugf("worker SyncPartitionTask: %+v", task)

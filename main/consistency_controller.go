@@ -113,7 +113,10 @@ func NewPartitionState(partitionId int, observable rxgo.Observable, reqCh chan i
 				rawRes := <-resCh
 				switch res := rawRes.(type) {
 				case VerifyPartitionEpochResponse:
-					logrus.Debugf("verify epoch=%d partitionId=%d res = %+v", event.Epoch, partitionId, res)
+					logrus.Warnf("verify epoch=%d partitionId=%d res = %+v", event.Epoch, partitionId, res)
+				case error:
+					err := errors.Wrap(res, "VerifyPartitionEpochEvent response error")
+					logrus.Fatal(err)
 				default:
 					logrus.Panicf("VerifyPartitionEpochEvent observer unkown res type: %v", reflect.TypeOf(res))
 				}

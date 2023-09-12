@@ -18,3 +18,10 @@ func KeyIndex(key string) string {
 		AddColumn(storage.CreateUnorderedColumn(key)).
 		Build()
 }
+
+func EpochTreeObjectIndex(partitionId int, epoch int64) string {
+	return storage.NewIndex("epochtree").
+		AddColumn(storage.CreateUnorderedColumn(string(partitionId))).
+		AddColumn(storage.CreateUnorderedColumn(string(epoch))).
+		Build()
+}
