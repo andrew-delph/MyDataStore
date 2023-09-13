@@ -8,8 +8,6 @@ import (
 	"os"
 	"os/signal"
 	"reflect"
-	"strconv"
-	"strings"
 	"syscall"
 	"time"
 
@@ -243,30 +241,23 @@ func (m *Manager) startWorker(workerId int) {
 						[]byte(index2),
 					)
 					for !it.IsDone() {
-						indexBytes := it.Key()
+						_, _, epoch, key, err := ParseEpochIndex(string(it.Key()))
+						if err != nil {
+							logrus.Fatal(err)
+							continue
+						}
 						timestamp, err := utils.DecodeBytesToInt64(it.Value())
 						if err != nil {
 							logrus.Fatal(err)
 							continue
 						}
-						// get the key and epoch
-						// TODO make func and test to decode index
-						parts := strings.Split(string(indexBytes), "_")
-						key := parts[len(parts)-1]
-						epochStr := strings.TrimLeft(parts[len(parts)-2], "0")
-						if epochStr == "" { // if it is 0
-							epochStr = "0"
-						}
-						epoch, err := strconv.ParseInt(epochStr, 10, 64)
-						if err != nil {
-							logrus.Fatal(err)
-							continue
-						}
+
 						task.ResCh <- &rpc.RpcValue{Key: key, Epoch: epoch, UnixTimestamp: timestamp}
 						it.Next()
 					}
 					it.Release()
 				}
+
 				close(task.ResCh)
 
 			case VerifyPartitionEpochRequestTask:

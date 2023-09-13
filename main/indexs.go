@@ -3,6 +3,8 @@ package main
 import (
 	"strconv"
 
+	"github.com/pkg/errors"
+
 	"github.com/andrew-delph/my-key-store/storage"
 )
 
@@ -15,13 +17,32 @@ func BuildEpochIndex(parition int, bucket uint64, epoch int64, key string) (stri
 		Build()
 }
 
-func ParseEpochIndex(indexStr string) (map[string]string, error) {
-	index := storage.NewIndex("epoch").
+func ParseEpochIndex(indexStr string) (int, uint64, int64, string, error) {
+	indexMap, err := storage.NewIndex("epoch").
 		AddColumn(storage.CreateUnorderedColumn("parition", "1")).
 		AddColumn(storage.CreateUnorderedColumn("bucket", "1")).
 		AddColumn(storage.CreateOrderedColumn("epoch", "1", 4)).
-		AddColumn(storage.CreateUnorderedColumn("key", "1"))
-	return index.Parse(indexStr)
+		AddColumn(storage.CreateUnorderedColumn("key", "1")).Parse(indexStr)
+	if err != nil {
+		return 0, 0, 0, "", err
+	}
+	if indexMap["name"] != "epoch" {
+		return 0, 0, 0, "", errors.New("index name is wrong")
+	}
+	parition, err := strconv.ParseInt(indexMap["parition"], 10, 64)
+	if err != nil {
+		return 0, 0, 0, "", err
+	}
+	bucket, err := strconv.ParseInt(indexMap["bucket"], 10, 64)
+	if err != nil {
+		return 0, 0, 0, "", err
+	}
+	epoch, err := strconv.ParseInt(indexMap["epoch"], 10, 64)
+	if err != nil {
+		return 0, 0, 0, "", err
+	}
+	key := indexMap["key"]
+	return int(parition), uint64(bucket), epoch, key, nil
 }
 
 func BuildKeyIndex(key string) string {
