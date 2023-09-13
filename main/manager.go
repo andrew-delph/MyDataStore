@@ -352,38 +352,12 @@ func (m *Manager) startWorker(workerId int) {
 
 			case rpc.GetEpochTreeLastValidObjectTask:
 				logrus.Warnf("worker GetEpochTreeLastValidObjectTask: %+v", task)
-				index1, err := BuildEpochTreeObjectIndex(int(task.PartitionId), 0)
+				epochTreeObject, err := m.GetEpochTreeLastValid(task.PartitionId)
 				if err != nil {
-					logrus.Fatal(err)
-					continue
+					task.ResCh <- err
+				} else {
+					task.ResCh <- epochTreeObject
 				}
-				index2, err := BuildEpochTreeObjectIndex(int(task.PartitionId), m.CurrentEpoch)
-				if err != nil {
-					logrus.Fatal(err)
-					continue
-				}
-				it := m.db.NewIterator(
-					[]byte(index1),
-					[]byte(index2),
-					true,
-				)
-				for !it.IsDone() {
-					epochTreeObjectBytes := it.Value()
-					epochTreeObject := &rpc.RpcEpochTreeObject{}
-					err = proto.Unmarshal(epochTreeObjectBytes, epochTreeObject)
-					if err != nil {
-						task.ResCh <- err
-						continue
-					}
-
-					if epochTreeObject.Valid {
-						task.ResCh <- epochTreeObject
-						break
-					}
-					it.Next()
-				}
-				it.Release()
-				close(task.ResCh)
 
 			case SyncPartitionTask:
 				logrus.Debugf("worker SyncPartitionTask: %+v", task)
@@ -589,4 +563,35 @@ func (m *Manager) GetValue(key string) (*rpc.RpcValue, error) {
 		return nil, err
 	}
 	return value, nil
+}
+
+func (m *Manager) GetEpochTreeLastValid(partitionId int32) (*rpc.RpcEpochTreeObject, error) {
+	index1, err := BuildEpochTreeObjectIndex(int(partitionId), 0)
+	if err != nil {
+		return nil, err
+	}
+	index2, err := BuildEpochTreeObjectIndex(int(partitionId), m.CurrentEpoch)
+	if err != nil {
+		return nil, err
+	}
+	it := m.db.NewIterator(
+		[]byte(index1),
+		[]byte(index2),
+		true,
+	)
+	defer it.Release()
+	for !it.IsDone() {
+		epochTreeObjectBytes := it.Value()
+		epochTreeObject := &rpc.RpcEpochTreeObject{}
+		err = proto.Unmarshal(epochTreeObjectBytes, epochTreeObject)
+		if err != nil {
+			return nil, err
+		}
+
+		if epochTreeObject.Valid {
+			return epochTreeObject, nil
+		}
+		it.Next()
+	}
+	return nil, errors.Errorf("no valid EpochTreeObject found")
 }
