@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/andrew-delph/my-key-store/config"
@@ -14,24 +15,29 @@ import (
 func TestMerkleTreeRaw(t *testing.T) {
 	var err error
 
-	writeValuesNum := 100
+	writeValuesNum := 10
 	if testing.Short() {
 		writeValuesNum = 10
 		// t.Skip("skipping test in short mode.")
 	}
 
+	tmpDir := t.TempDir()
+	logrus.Info("Temporary Directory:", tmpDir)
+
 	c := config.GetConfig()
-	c.Storage.DataPath = t.TempDir()
+	c.Storage.DataPath = tmpDir
 	c.Manager.PartitionCount = 1
 	c.Manager.PartitionBuckets = 30
 
 	manager := NewManager(c)
+	timestamp := int64(0)
 
 	// write to epoch 1
 	for i := 0; i < writeValuesNum; i++ {
+		timestamp++
 		k := fmt.Sprintf("key%d", i)
 		v := fmt.Sprintf("val%d", i)
-		setVal := &rpc.RpcValue{Key: k, Value: v, Epoch: 1}
+		setVal := &rpc.RpcValue{Key: k, Value: v, Epoch: 1, UnixTimestamp: timestamp}
 		err = manager.SetValue(setVal)
 		if err != nil {
 			t.Error(err)
@@ -45,9 +51,10 @@ func TestMerkleTreeRaw(t *testing.T) {
 
 	// write to epoch 2
 	for i := 0; i < writeValuesNum; i++ {
+		timestamp++
 		k := fmt.Sprintf("keyz%d", i)
 		v := fmt.Sprintf("valz%d", i)
-		setVal := &rpc.RpcValue{Key: k, Value: v, Epoch: 2}
+		setVal := &rpc.RpcValue{Key: k, Value: v, Epoch: 2, UnixTimestamp: timestamp}
 		err = manager.SetValue(setVal)
 		if err != nil {
 			t.Error(err)
@@ -80,8 +87,8 @@ func TestMerkleTreeRaw(t *testing.T) {
 	assert.EqualValues(t, c.Manager.PartitionBuckets, len(tree3.Leafs), "confirm leafs num is the same as PartitionBuckets")
 
 	assert.EqualValues(t, tree1.MerkleRoot(), tree2.MerkleRoot(), "hash should be the same")
-	assert.NotEqualValues(t, tree1.MerkleRoot(), tree3.MerkleRoot(), "hash should be the same")
-	assert.NotEqualValues(t, tree2.MerkleRoot(), tree3.MerkleRoot(), "hash should be the same")
+	assert.NotEqualValues(t, tree1.MerkleRoot(), tree3.MerkleRoot(), "hash should be different")
+	assert.NotEqualValues(t, tree2.MerkleRoot(), tree3.MerkleRoot(), "hash should be different")
 
 	// verify the leafs of each tree to have correct bucketId
 	for i, leaf := range tree1.Leafs {

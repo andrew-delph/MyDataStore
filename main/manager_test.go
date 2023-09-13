@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"sync/atomic"
 	"testing"
 
@@ -27,10 +26,7 @@ func TestManagerDepsHolder(t *testing.T) {
 }
 
 func createMockManager(t *testing.T) Manager {
-	tmpDir, err := os.MkdirTemp("", "my-key-store")
-	if err != nil {
-		t.Fatal("Error creating temporary directory:", err)
-	}
+	tmpDir := t.TempDir()
 	logrus.Info("Temporary Directory:", tmpDir)
 	c := config.GetConfig()
 	c.Storage.DataPath = tmpDir

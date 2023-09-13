@@ -220,8 +220,14 @@ func (m *Manager) startWorker(workerId int) {
 			case rpc.StreamBucketsTask:
 				logrus.Warnf("worker StreamBucketsTask: %+v", task)
 				for _, bucket := range task.Buckets {
-					it := m.db.NewIterator([]byte(EpochIndex(int(task.PartitionId), uint64(bucket), task.LowerEpoch, "")), []byte(EpochIndex(int(task.PartitionId), uint64(bucket), task.UpperEpoch, "")))
+					it := m.db.NewIterator(
+						[]byte(EpochIndex(int(task.PartitionId), uint64(bucket), task.LowerEpoch, "")),
+						[]byte(EpochIndex(int(task.PartitionId), uint64(bucket), task.UpperEpoch, "")),
+					)
 					for !it.IsDone() {
+						keyBytes := it.Key()
+						valueBytes := it.Value()
+						println(keyBytes, valueBytes)
 						task.ResCh <- nil
 						it.Next()
 					}

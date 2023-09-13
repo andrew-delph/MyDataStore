@@ -86,17 +86,20 @@ func (manager *Manager) RawPartitionMerkleTree(partitionId int, lowerEpoch, uppe
 	// Build content list in sorted order of keys
 	bucketList := make([]merkletree.Content, manager.config.Manager.PartitionBuckets)
 
+	count := 0
 	for i := 0; i < manager.config.Manager.PartitionBuckets; i++ {
 		bucket := MerkleBucket{hasher: &CustomHash{}, bucketId: int32(i)}
 		it := manager.db.NewIterator([]byte(EpochIndex(partitionId, uint64(i), lowerEpoch, "")), []byte(EpochIndex(partitionId, uint64(i), upperEpoch, "")))
 		for !it.IsDone() {
 			bucket.AddItem(it.Value())
+			count++
 			it.Next()
 		}
 		it.Release()
 
 		bucketList[i] = &bucket
 	}
+	logrus.Warn("ITEM COUNT: ", count)
 
 	return merkletree.NewTree(bucketList)
 }
