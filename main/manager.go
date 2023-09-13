@@ -8,6 +8,8 @@ import (
 	"os"
 	"os/signal"
 	"reflect"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -217,18 +219,50 @@ func (m *Manager) startWorker(workerId int) {
 					task.ResCh <- value
 				}
 
-			case rpc.StreamBucketsTask:
+			case rpc.StreamBucketsTask: // TODO test this is returning right values
 				logrus.Warnf("worker StreamBucketsTask: %+v", task)
-				for _, bucket := range task.Buckets {
+				var buckets []int32 = task.Buckets
+				if len(buckets) == 0 {
+					for i := 0; i < m.config.Manager.PartitionBuckets; i++ {
+						buckets = append(buckets, int32(i))
+					}
+				}
+				for _, bucket := range buckets {
+					index1, err := BuildEpochIndex(int(task.PartitionId), uint64(bucket), task.LowerEpoch, "")
+					if err != nil {
+						logrus.Fatal(err)
+						continue
+					}
+					index2, err := BuildEpochIndex(int(task.PartitionId), uint64(bucket), task.UpperEpoch, "")
+					if err != nil {
+						logrus.Fatal(err)
+						continue
+					}
 					it := m.db.NewIterator(
-						[]byte(EpochIndex(int(task.PartitionId), uint64(bucket), task.LowerEpoch, "")),
-						[]byte(EpochIndex(int(task.PartitionId), uint64(bucket), task.UpperEpoch, "")),
+						[]byte(index1),
+						[]byte(index2),
 					)
 					for !it.IsDone() {
-						keyBytes := it.Key()
-						valueBytes := it.Value()
-						println(keyBytes, valueBytes)
-						task.ResCh <- nil
+						indexBytes := it.Key()
+						timestamp, err := utils.DecodeBytesToInt64(it.Value())
+						if err != nil {
+							logrus.Fatal(err)
+							continue
+						}
+						// get the key and epoch
+						// TODO make func and test to decode index
+						parts := strings.Split(string(indexBytes), "_")
+						key := parts[len(parts)-1]
+						epochStr := strings.TrimLeft(parts[len(parts)-2], "0")
+						if epochStr == "" { // if it is 0
+							epochStr = "0"
+						}
+						epoch, err := strconv.ParseInt(epochStr, 10, 64)
+						if err != nil {
+							logrus.Fatal(err)
+							continue
+						}
+						task.ResCh <- &rpc.RpcValue{Key: key, Epoch: epoch, UnixTimestamp: timestamp}
 						it.Next()
 					}
 					it.Release()
@@ -252,7 +286,7 @@ func (m *Manager) startWorker(workerId int) {
 				}
 
 				// save to db
-				err = m.db.Put([]byte(EpochTreeObjectIndex(task.PartitionId, task.Epoch)), data)
+				err = m.db.Put([]byte(BuildEpochTreeObjectIndex(task.PartitionId, task.Epoch)), data)
 				if err != nil {
 					task.ResCh <- err
 					continue
@@ -299,7 +333,7 @@ func (m *Manager) startWorker(workerId int) {
 			case rpc.GetEpochTreeObjectTask:
 				logrus.Debugf("worker GetPartitionEpochObjectTask: %+v", task)
 
-				epochTreeObjectBytes, err := m.db.Get([]byte(EpochTreeObjectIndex(int(task.PartitionId), task.LowerEpoch)))
+				epochTreeObjectBytes, err := m.db.Get([]byte(BuildEpochTreeObjectIndex(int(task.PartitionId), task.LowerEpoch)))
 				if err != nil {
 					task.ResCh <- err
 					continue
@@ -487,8 +521,11 @@ func (m *Manager) SetValue(value *rpc.RpcValue) error {
 	partitionId := m.ring.FindPartitionID(keyBytes)
 	hash := sha256.Sum256(keyBytes)
 	bucket := binary.BigEndian.Uint64(hash[:8]) % uint64(m.config.Manager.PartitionBuckets)
-	epochIndex := EpochIndex(partitionId, bucket, value.Epoch, value.Key)
-	keyIndex := KeyIndex(value.Key)
+	epochIndex, err := BuildEpochIndex(partitionId, bucket, value.Epoch, value.Key)
+	if err != nil {
+		return err
+	}
+	keyIndex := BuildKeyIndex(value.Key)
 	trx := m.db.NewTransaction(true)
 	trx.Set([]byte(keyIndex), valueData)
 	trx.Set([]byte(epochIndex), timestampBytes)
@@ -496,7 +533,7 @@ func (m *Manager) SetValue(value *rpc.RpcValue) error {
 }
 
 func (m *Manager) GetValue(key string) (*rpc.RpcValue, error) {
-	keyIndex := KeyIndex(key)
+	keyIndex := BuildKeyIndex(key)
 	valueBytes, err := m.db.Get([]byte(keyIndex))
 	if err != nil {
 		return nil, err

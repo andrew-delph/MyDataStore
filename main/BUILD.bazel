@@ -45,6 +45,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "consistency_controller_test.go",
+        "indexs_test.go",
         "manager_test.go",
         "merkle_tree_test.go",
     ],

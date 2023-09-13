@@ -15,7 +15,7 @@ import (
 func TestMerkleTreeRaw(t *testing.T) {
 	var err error
 
-	writeValuesNum := 10
+	writeValuesNum := 100
 	if testing.Short() {
 		writeValuesNum = 10
 		// t.Skip("skipping test in short mode.")

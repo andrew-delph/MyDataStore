@@ -87,10 +87,11 @@ func TestStorageIterator(t *testing.T) {
 }
 
 func testIndex(i int) string {
-	return NewIndex("test").
-		AddColumn(CreateUnorderedColumn("c1")).
-		AddColumn(CreateOrderedColumn(fmt.Sprint(i), 4)).
+	index, _ := NewIndex("test").
+		AddColumn(CreateUnorderedColumn("partition", "1")).
+		AddColumn(CreateOrderedColumn("key", fmt.Sprint(i), 4)).
 		Build()
+	return index
 }
 
 func storageIterator(t *testing.T, storage Storage) {

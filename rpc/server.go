@@ -95,15 +95,22 @@ func (rpcWrapper *RpcWrapper) StreamBuckets(req *datap.StreamBucketsRequest, str
 	rpcWrapper.reqCh <- StreamBucketsTask{PartitionId: req.Partition, Buckets: req.Buckets, LowerEpoch: req.LowerEpoch, UpperEpoch: req.UpperEpoch, ResCh: resCh}
 	for {
 		select {
-		case item, ok := <-resCh:
+		case itemObj, ok := <-resCh:
 			if !ok {
 				fmt.Println("Channel is closed")
 				return nil
 			}
-			err := stream.Send(&datap.Value{Value: fmt.Sprintf("%s", item)})
-			if err != nil {
-				logrus.Errorf("SERVER StreamBuckets err = %v", err)
-				return err
+			switch item := itemObj.(type) {
+			case *datap.Value:
+				err := stream.Send(item)
+				if err != nil {
+					logrus.Errorf("SERVER StreamBuckets err = %v", err)
+					return err
+				}
+			case error:
+				return item
+			default:
+				logrus.Panicf("http unkown res type: %v", reflect.TypeOf(item))
 			}
 		}
 	}
