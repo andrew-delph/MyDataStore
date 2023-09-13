@@ -98,41 +98,58 @@ func storageIterator(t *testing.T, storage Storage) {
 	trx := storage.NewTransaction(true)
 	defer trx.Discard()
 
-	insertNum := 99
-	for i := 0; i < insertNum; i++ {
+	writeValuesNum := 100
+	if testing.Short() {
+		writeValuesNum = 10
+	}
+	for i := 0; i < writeValuesNum; i++ {
 		key := []byte(testIndex(i))
-		value := []byte(fmt.Sprintf("testvalue%d", i))
+		value := []byte(fmt.Sprintf("%d", i))
 		err := trx.Set(key, value)
 		if err != nil {
 			t.Error(err)
 		}
 	}
-
 	err := trx.Commit()
 	if err != nil {
 		t.Error(err)
 	}
 
-	it := storage.NewIterator([]byte(testIndex(0)), []byte(testIndex(insertNum)))
+	it := storage.NewIterator([]byte(testIndex(0)), []byte(testIndex(writeValuesNum)), false)
 	assert.EqualValues(t, true, it.First(), "it.First() should be true")
-
 	count := 0
-
 	for !it.IsDone() {
+		// logrus.Infof("count= %s value= %s", fmt.Sprintf("%d", count), string(it.Value()))
+		assert.EqualValues(t, fmt.Sprintf("%d", count), string(it.Value()), "value should be ith")
 		it.Next()
 		count++
 	}
 	it.Release()
-	assert.EqualValues(t, insertNum, count, "Should have iterated all inserted keys")
+	assert.EqualValues(t, writeValuesNum, count, "Should have iterated all inserted keys")
+
+	it = storage.NewIterator([]byte(testIndex(0)), []byte(testIndex(writeValuesNum)), true) // test in reverse
+	assert.EqualValues(t, true, it.First(), "it.First() should be true")
+	count = 0
+	for !it.IsDone() {
+		// logrus.Infof("count= %s value= %s", fmt.Sprintf("%d", count), string(it.Value()))
+		assert.EqualValues(t, fmt.Sprintf("%d", writeValuesNum-count-1), string(it.Value()), "value should be ith")
+		it.Next()
+		count++
+	}
+	it.Release()
+	assert.EqualValues(t, writeValuesNum, count, "Should have iterated all inserted keys")
 
 	startRange := 11
 	endRange := 25
-	it = storage.NewIterator([]byte(testIndex(startRange)), []byte(testIndex(endRange)))
+	if writeValuesNum < endRange {
+		t.Skip("skipping: writeValuesNum < endRange")
+	}
+	it = storage.NewIterator([]byte(testIndex(startRange)), []byte(testIndex(endRange)), false)
 	assert.EqualValues(t, true, it.First(), "it.First() should be true")
-
 	count = 0
 	for !it.IsDone() {
-		// logrus.Warn("key= ", string(it.Key()))
+		// logrus.Infof("count= %s value= %s", fmt.Sprintf("%d", startRange+count), string(it.Value()))
+		assert.EqualValues(t, fmt.Sprintf("%d", startRange+count), string(it.Value()), "value should be ith")
 		it.Next()
 		count++
 	}

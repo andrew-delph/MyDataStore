@@ -9,7 +9,7 @@ import (
 type Storage interface {
 	Put(key []byte, value []byte) error
 	Get(key []byte) ([]byte, error)
-	NewIterator(Start []byte, Limit []byte) Iterator
+	NewIterator(Start []byte, Limit []byte, reverse bool) Iterator
 	NewTransaction(update bool) Transaction
 	Close() error
 }

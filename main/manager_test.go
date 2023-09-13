@@ -83,7 +83,7 @@ func TestManagerStorage(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	it := manager.db.NewIterator([]byte(index1), []byte(index2))
+	it := manager.db.NewIterator([]byte(index1), []byte(index2), false)
 	assert.EqualValues(t, true, it.First(), "it.First() should be true")
 	count := 0
 	for !it.IsDone() {
@@ -102,7 +102,7 @@ func TestManagerStorage(t *testing.T) {
 		t.Error(err)
 	}
 
-	it = manager.db.NewIterator([]byte(index3), []byte(index4))
+	it = manager.db.NewIterator([]byte(index3), []byte(index4), false)
 	assert.EqualValues(t, true, it.First(), "it.First() should be true")
 	count = 0
 	for !it.IsDone() {

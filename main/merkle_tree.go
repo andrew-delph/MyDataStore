@@ -97,7 +97,7 @@ func (manager *Manager) RawPartitionMerkleTree(partitionId int, lowerEpoch, uppe
 		if err != nil {
 			logrus.Fatal(err)
 		}
-		it := manager.db.NewIterator([]byte(index1), []byte(index2))
+		it := manager.db.NewIterator([]byte(index1), []byte(index2), false)
 		for !it.IsDone() {
 			bucket.AddItem(it.Value())
 			count++

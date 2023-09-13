@@ -239,6 +239,7 @@ func (m *Manager) startWorker(workerId int) {
 					it := m.db.NewIterator(
 						[]byte(index1),
 						[]byte(index2),
+						false,
 					)
 					for !it.IsDone() {
 						_, _, epoch, key, err := ParseEpochIndex(string(it.Key()))

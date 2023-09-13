@@ -52,13 +52,6 @@ func (storage BadgerStorage) Get(key []byte) ([]byte, error) {
 	return value, nil
 }
 
-func (storage BadgerStorage) NewIterator(Start []byte, Limit []byte) Iterator {
-	trx := storage.db.NewTransaction(false)
-	it := trx.NewIterator(badger.DefaultIteratorOptions)
-	it.Seek(Start)
-	return BadgerIterator{it: it, trx: trx, Start: Start, Limit: Limit}
-}
-
 func (storage BadgerStorage) NewTransaction(update bool) Transaction {
 	trx := storage.db.NewTransaction(update)
 	return BadgerTransaction{trx: trx}
@@ -69,19 +62,40 @@ func (storage BadgerStorage) Close() error {
 }
 
 type BadgerIterator struct {
-	it    *badger.Iterator
-	trx   *badger.Txn
-	Start []byte
-	Limit []byte
+	it      *badger.Iterator
+	trx     *badger.Txn
+	Start   []byte
+	Limit   []byte
+	reverse bool
+}
+
+func (storage BadgerStorage) NewIterator(Start []byte, Limit []byte, reverse bool) Iterator {
+	trx := storage.db.NewTransaction(false)
+	op := badger.DefaultIteratorOptions
+	op.Reverse = reverse
+	it := trx.NewIterator(op)
+
+	if reverse {
+		it.Seek(Limit)
+	} else {
+		it.Seek(Start)
+	}
+
+	return BadgerIterator{it: it, trx: trx, Start: Start, Limit: Limit, reverse: reverse}
 }
 
 func (iterator BadgerIterator) First() bool {
-	iterator.it.Seek(iterator.Start)
+	if iterator.reverse {
+		iterator.it.Seek(iterator.Limit)
+	} else {
+		iterator.it.Seek(iterator.Start)
+	}
 	return iterator.it.Valid()
 }
 
 func (iterator BadgerIterator) Next() bool {
 	iterator.it.Next()
+
 	return !iterator.IsDone()
 }
 

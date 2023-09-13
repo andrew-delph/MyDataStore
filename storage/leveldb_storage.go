@@ -37,14 +37,13 @@ func (storage LevelDbStorage) Get(key []byte) ([]byte, error) {
 	return value, nil
 }
 
-func (storage LevelDbStorage) NewIterator(Start []byte, Limit []byte) Iterator {
+func (storage LevelDbStorage) NewIterator(Start []byte, Limit []byte, reverse bool) Iterator {
 	rng := &util.Range{Start: Start, Limit: Limit}
-
 	// Create an Iterator to iterate through the keys within the range
 	readOpts := &opt.ReadOptions{}
 	iter := storage.db.NewIterator(rng, readOpts)
 
-	return LevelDbIterator{it: iter}
+	return LevelDbIterator{it: iter, reverse: reverse}
 }
 
 func (storage LevelDbStorage) Close() error {
@@ -56,14 +55,25 @@ func (storage LevelDbStorage) NewTransaction(update bool) Transaction {
 	return LevelDbTransaction{storage: storage}
 }
 
-type LevelDbIterator struct{ it iterator.Iterator }
+type LevelDbIterator struct {
+	it      iterator.Iterator
+	reverse bool
+}
 
 func (iterator LevelDbIterator) First() bool {
-	return iterator.it.First()
+	if iterator.reverse {
+		return iterator.it.Last()
+	} else {
+		return iterator.it.First()
+	}
 }
 
 func (iterator LevelDbIterator) Next() bool {
-	return iterator.it.Next()
+	if iterator.reverse {
+		return iterator.it.Prev()
+	} else {
+		return iterator.it.Next()
+	}
 }
 
 func (iterator LevelDbIterator) IsDone() bool {
