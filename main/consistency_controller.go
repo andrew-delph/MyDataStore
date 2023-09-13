@@ -108,7 +108,7 @@ func NewPartitionState(partitionId int, observable rxgo.Observable, reqCh chan i
 		case VerifyPartitionEpochEvent: // TODO create test case for this
 			if ps.active.Load() {
 				attempts := 0
-				for true { // TODO better ways of handling errors
+				for true { // TODO better ways of handling errors. regarding loops
 					resCh := make(chan interface{})
 					logrus.Debugf("trigger verify epoch event. partition %d epoch %d", partitionId, event.Epoch)
 					reqCh <- VerifyPartitionEpochRequestTask{PartitionId: partitionId, Epoch: event.Epoch - 2, ResCh: resCh}

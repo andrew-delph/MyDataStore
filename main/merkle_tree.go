@@ -107,7 +107,6 @@ func (manager *Manager) RawPartitionMerkleTree(partitionId int, lowerEpoch, uppe
 
 		bucketList[i] = &bucket
 	}
-	logrus.Warn("ITEM COUNT: ", count)
 
 	return merkletree.NewTree(bucketList)
 }

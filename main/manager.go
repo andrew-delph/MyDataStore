@@ -316,6 +316,7 @@ func (m *Manager) startWorker(workerId int) {
 				}
 
 				if validCount >= m.config.Manager.ReadQuorum {
+					// TODO update Valid to true
 					task.ResCh <- VerifyPartitionEpochResponse{Valid: true}
 				} else {
 					task.ResCh <- errors.Errorf("did not get enough valid trees. validCount = %d partitionId = %d epoch = %d", validCount, task.PartitionId, task.Epoch)
