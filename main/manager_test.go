@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"reflect"
 	"sync/atomic"
 	"testing"
 
@@ -118,7 +119,6 @@ func TestStreamBucketsTask(t *testing.T) {
 
 	if testing.Short() {
 		writeValuesNum = 10
-		t.Skip("skipping test in short mode.") // TODO dont skip
 	}
 	tmpDir := t.TempDir()
 	logrus.Info("Temporary Directory:", tmpDir)
@@ -159,28 +159,53 @@ func TestStreamBucketsTask(t *testing.T) {
 		}
 		assert.Equal(t, v, getVal.Value, "get value is wrong")
 	}
-
-	go manager.startWorker(0)
+	go manager.startWorker(1)
 	// , Buckets: req.Buckets
 	resCh := make(chan interface{})
+	manager.reqCh <- rpc.StreamBucketsTask{PartitionId: int32(0), LowerEpoch: int64(0), UpperEpoch: int64(2), ResCh: resCh}
+	itemCount := 0
+outerLoop:
+	for {
+		select {
+		case itemObj, ok := <-resCh:
+			if !ok {
+				logrus.Info("Channel is closed")
+				break outerLoop
+			}
+			switch item := itemObj.(type) {
+			case *rpc.RpcValue:
+				logrus.Info("item ", item)
+				itemCount++
+			case error:
+				t.Fatal(err)
+			default:
+				t.Fatalf("http unkown res type: %v", reflect.TypeOf(item))
+			}
+		}
+	}
+	assert.Equal(t, writeValuesNum, itemCount, "itemCount is wrong")
+
+	resCh = make(chan interface{})
 	manager.reqCh <- rpc.StreamBucketsTask{PartitionId: int32(0), LowerEpoch: int64(0), UpperEpoch: int64(3), ResCh: resCh}
-	itemObj, ok := <-resCh
-	t.Errorf("resCh itemObj=%+v ok=%v", itemObj, ok)
-	// for {
-	// 	select {
-	// 	case itemObj, ok := <-resCh:
-	// 		if !ok {
-	// 			logrus.Info("Channel is closed")
-	// 			break
-	// 		}
-	// 		switch item := itemObj.(type) {
-	// 		case *rpc.RpcValue:
-	// 			logrus.Info("item ", item)
-	// 		case error:
-	// 			t.Fatal(err)
-	// 		default:
-	// 			t.Fatalf("http unkown res type: %v", reflect.TypeOf(item))
-	// 		}
-	// 	}
-	// }
+	itemCount = 0
+outerLoop2:
+	for {
+		select {
+		case itemObj, ok := <-resCh:
+			if !ok {
+				logrus.Info("Channel is closed")
+				break outerLoop2
+			}
+			switch item := itemObj.(type) {
+			case *rpc.RpcValue:
+				logrus.Info("item ", item)
+				itemCount++
+			case error:
+				t.Fatal(err)
+			default:
+				t.Fatalf("http unkown res type: %v", reflect.TypeOf(item))
+			}
+		}
+	}
+	assert.Equal(t, writeValuesNum*2, itemCount, "itemCount is wrong")
 }

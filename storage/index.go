@@ -3,8 +3,6 @@ package storage
 import (
 	"fmt"
 	"strings"
-
-	"github.com/sirupsen/logrus"
 )
 
 type Column interface {
@@ -106,7 +104,6 @@ func (idx *Index) Parse(index string) (map[string]string, error) {
 	m := map[string]string{}
 	for i := len(idx.Columns) - 1; i >= 0; i-- {
 		column := idx.Columns[i]
-		logrus.Warnf("i %d parts[i] %s", i, parts[i])
 		m[column.GetName()] = column.Parse(parts[i])
 	}
 	return m, nil
