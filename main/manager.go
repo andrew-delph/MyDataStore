@@ -352,16 +352,36 @@ func (m *Manager) startWorker(workerId int) {
 
 			case rpc.GetEpochTreeLastValidObjectTask:
 				logrus.Warnf("worker GetEpochTreeLastValidObjectTask: %+v", task)
-				epochTreeObject, err := m.GetEpochTreeLastValid(task.PartitionId)
+				epochTreeObjectLastValid, err := m.GetEpochTreeLastValid(task.PartitionId)
 				if err != nil {
 					task.ResCh <- err
+				} else if epochTreeObjectLastValid == nil {
+					task.ResCh <- errors.New("no valid EpochTreeObject for partition")
 				} else {
-					task.ResCh <- epochTreeObject
+					task.ResCh <- epochTreeObjectLastValid
 				}
 
 			case SyncPartitionTask:
-				logrus.Debugf("worker SyncPartitionTask: %+v", task)
-				task.ResCh <- SyncPartitionResponse{Valid: true}
+				logrus.Debugf("worker SyncPartitionTask: %+v", task.PartitionId)
+				epochTreeObjectLastValid, err := m.GetEpochTreeLastValid(int32(task.PartitionId))
+				if err != nil {
+					task.ResCh <- err
+				}
+
+				if epochTreeObjectLastValid.LowerEpoch >= m.CurrentEpoch-1 { // TODO validate this is the correct compare
+					task.ResCh <- SyncPartitionResponse{Valid: true}
+					continue
+				}
+
+				lastValidEpoch := int64(0)
+				if epochTreeObjectLastValid != nil {
+					lastValidEpoch = epochTreeObjectLastValid.LowerEpoch
+				}
+
+				logrus.Warn("sync lastValidEpoch %d", lastValidEpoch)
+
+				// find most healthy node
+				// stream from healthest node...
 
 			default:
 				logrus.Panicf("worker unkown task type: %v", reflect.TypeOf(task))
@@ -593,5 +613,5 @@ func (m *Manager) GetEpochTreeLastValid(partitionId int32) (*rpc.RpcEpochTreeObj
 		}
 		it.Next()
 	}
-	return nil, errors.Errorf("no valid EpochTreeObject found")
+	return nil, nil
 }
