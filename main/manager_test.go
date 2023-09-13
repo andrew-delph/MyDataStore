@@ -8,6 +8,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/andrew-delph/my-key-store/config"
 	"github.com/andrew-delph/my-key-store/rpc"
@@ -160,7 +161,6 @@ func TestStreamBucketsTask(t *testing.T) {
 		assert.Equal(t, v, getVal.Value, "get value is wrong")
 	}
 	go manager.startWorker(1)
-	// , Buckets: req.Buckets
 	resCh := make(chan interface{})
 	manager.reqCh <- rpc.StreamBucketsTask{PartitionId: int32(0), LowerEpoch: int64(0), UpperEpoch: int64(2), ResCh: resCh}
 	itemCount := 0
@@ -208,4 +208,79 @@ outerLoop2:
 		}
 	}
 	assert.Equal(t, writeValuesNum*2, itemCount, "itemCount is wrong")
+}
+
+func TestGetEpochTreeLastValidObjectTask(t *testing.T) {
+	var err error
+
+	tmpDir := t.TempDir()
+	logrus.Info("Temporary Directory:", tmpDir)
+	c := config.GetConfig()
+	c.Storage.DataPath = tmpDir
+	c.Manager.PartitionCount = 200
+	c.Manager.PartitionBuckets = 100
+	writePartition := 1
+	manager := NewManager(c)
+	manager.CurrentEpoch = 100
+
+	var obj *rpc.RpcEpochTreeObject
+	var data []byte
+	var index string
+
+	// epoch 1 false
+	obj = &rpc.RpcEpochTreeObject{Partition: int32(writePartition), LowerEpoch: 1, Valid: false}
+	data, err = proto.Marshal(obj)
+	if err != nil {
+		t.Error(err)
+	}
+	index, err = BuildEpochTreeObjectIndex(writePartition, obj.LowerEpoch)
+	if err != nil {
+		t.Error(err)
+	}
+	err = manager.db.Put([]byte(index), data)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// epoch 2 true
+	obj = &rpc.RpcEpochTreeObject{Partition: int32(writePartition), LowerEpoch: 2, Valid: true}
+	data, err = proto.Marshal(obj)
+	if err != nil {
+		t.Error(err)
+	}
+	index, err = BuildEpochTreeObjectIndex(writePartition, obj.LowerEpoch)
+	if err != nil {
+		t.Error(err)
+	}
+	err = manager.db.Put([]byte(index), data)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// epoch 3 false
+	obj = &rpc.RpcEpochTreeObject{Partition: int32(writePartition), LowerEpoch: 3, Valid: false}
+	data, err = proto.Marshal(obj)
+	if err != nil {
+		t.Error(err)
+	}
+	index, err = BuildEpochTreeObjectIndex(writePartition, obj.LowerEpoch)
+	if err != nil {
+		t.Error(err)
+	}
+	err = manager.db.Put([]byte(index), data)
+	if err != nil {
+		t.Error(err)
+	}
+
+	go manager.startWorker(1)
+	resCh := make(chan interface{})
+	manager.reqCh <- rpc.GetEpochTreeLastValidObjectTask{PartitionId: int32(writePartition), ResCh: resCh}
+	res := <-resCh
+
+	switch item := res.(type) {
+	case *rpc.RpcEpochTreeObject:
+		assert.Equal(t, int64(2), item.LowerEpoch, "the correct object was returned")
+	default:
+		t.Errorf("unknown type: %v", reflect.TypeOf(item))
+	}
 }

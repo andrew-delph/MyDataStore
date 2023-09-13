@@ -278,7 +278,12 @@ func (m *Manager) startWorker(workerId int) {
 				}
 
 				// save to db
-				err = m.db.Put([]byte(BuildEpochTreeObjectIndex(task.PartitionId, task.Epoch)), data)
+				index, err := BuildEpochTreeObjectIndex(task.PartitionId, task.Epoch)
+				if err != nil {
+					task.ResCh <- err
+					continue
+				}
+				err = m.db.Put([]byte(index), data)
 				if err != nil {
 					task.ResCh <- err
 					continue
@@ -325,8 +330,13 @@ func (m *Manager) startWorker(workerId int) {
 
 			case rpc.GetEpochTreeObjectTask:
 				logrus.Debugf("worker GetPartitionEpochObjectTask: %+v", task)
+				index, err := BuildEpochTreeObjectIndex(int(task.PartitionId), task.LowerEpoch)
+				if err != nil {
+					task.ResCh <- err
+					continue
+				}
 
-				epochTreeObjectBytes, err := m.db.Get([]byte(BuildEpochTreeObjectIndex(int(task.PartitionId), task.LowerEpoch)))
+				epochTreeObjectBytes, err := m.db.Get([]byte(index))
 				if err != nil {
 					task.ResCh <- err
 					continue
@@ -341,9 +351,39 @@ func (m *Manager) startWorker(workerId int) {
 				task.ResCh <- epochTreeObject
 
 			case rpc.GetEpochTreeLastValidObjectTask:
-				logrus.Debugf("worker GetEpochTreeLastValidObjectTask: %+v", task)
-				// TODO impl
-				task.ResCh <- nil
+				logrus.Warnf("worker GetEpochTreeLastValidObjectTask: %+v", task)
+				index1, err := BuildEpochTreeObjectIndex(int(task.PartitionId), 0)
+				if err != nil {
+					logrus.Fatal(err)
+					continue
+				}
+				index2, err := BuildEpochTreeObjectIndex(int(task.PartitionId), m.CurrentEpoch)
+				if err != nil {
+					logrus.Fatal(err)
+					continue
+				}
+				it := m.db.NewIterator(
+					[]byte(index1),
+					[]byte(index2),
+					true,
+				)
+				for !it.IsDone() {
+					epochTreeObjectBytes := it.Value()
+					epochTreeObject := &rpc.RpcEpochTreeObject{}
+					err = proto.Unmarshal(epochTreeObjectBytes, epochTreeObject)
+					if err != nil {
+						task.ResCh <- err
+						continue
+					}
+
+					if epochTreeObject.Valid {
+						task.ResCh <- epochTreeObject
+						break
+					}
+					it.Next()
+				}
+				it.Release()
+				close(task.ResCh)
 
 			case SyncPartitionTask:
 				logrus.Debugf("worker SyncPartitionTask: %+v", task)
@@ -523,7 +563,10 @@ func (m *Manager) SetValue(value *rpc.RpcValue) error {
 	if err != nil {
 		return err
 	}
-	keyIndex := BuildKeyIndex(value.Key)
+	keyIndex, err := BuildKeyIndex(value.Key)
+	if err != nil {
+		return err
+	}
 	trx := m.db.NewTransaction(true)
 	trx.Set([]byte(keyIndex), valueData)
 	trx.Set([]byte(epochIndex), timestampBytes)
@@ -531,7 +574,11 @@ func (m *Manager) SetValue(value *rpc.RpcValue) error {
 }
 
 func (m *Manager) GetValue(key string) (*rpc.RpcValue, error) {
-	keyIndex := BuildKeyIndex(key)
+	keyIndex, err := BuildKeyIndex(key)
+	if err != nil {
+		return nil, err
+	}
+
 	valueBytes, err := m.db.Get([]byte(keyIndex))
 	if err != nil {
 		return nil, err

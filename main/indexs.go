@@ -45,17 +45,15 @@ func ParseEpochIndex(indexStr string) (int, uint64, int64, string, error) {
 	return int(parition), uint64(bucket), epoch, key, nil
 }
 
-func BuildKeyIndex(key string) string {
-	index, _ := storage.NewIndex("item").
+func BuildKeyIndex(key string) (string, error) {
+	return storage.NewIndex("item").
 		AddColumn(storage.CreateUnorderedColumn("key", key)).
 		Build()
-	return index
 }
 
-func BuildEpochTreeObjectIndex(partitionId int, epoch int64) string {
-	index, _ := storage.NewIndex("epochtree").
+func BuildEpochTreeObjectIndex(partitionId int, epoch int64) (string, error) {
+	return storage.NewIndex("epochtree").
 		AddColumn(storage.CreateUnorderedColumn("partition", string(partitionId))).
 		AddColumn(storage.CreateUnorderedColumn("epoch", string(epoch))).
 		Build()
-	return index
 }
