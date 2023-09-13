@@ -339,6 +339,11 @@ func (m *Manager) startWorker(workerId int) {
 				}
 				task.ResCh <- epochTreeObject
 
+			case rpc.GetEpochTreeLastValidObjectTask:
+				logrus.Debugf("worker GetEpochTreeLastValidObjectTask: %+v", task)
+				// TODO impl
+				task.ResCh <- nil
+
 			case SyncPartitionTask:
 				logrus.Debugf("worker SyncPartitionTask: %+v", task)
 				task.ResCh <- SyncPartitionResponse{Valid: true}

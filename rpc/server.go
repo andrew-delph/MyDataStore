@@ -45,6 +45,11 @@ type GetEpochTreeObjectTask struct {
 	ResCh       chan interface{}
 }
 
+type GetEpochTreeLastValidObjectTask struct {
+	PartitionId int32
+	ResCh       chan interface{}
+}
+
 type StreamBucketsTask struct {
 	PartitionId int32
 	Buckets     []int32
@@ -120,6 +125,22 @@ func (rpcWrapper *RpcWrapper) GetEpochTree(ctx context.Context, req *datap.Epoch
 	logrus.Debugf("Handling GetEpochTree: Partition=%d LowerEpoch=%d UpperEpoch=%d", req.Partition, req.LowerEpoch, req.UpperEpoch)
 	resCh := make(chan interface{})
 	rpcWrapper.reqCh <- GetEpochTreeObjectTask{PartitionId: req.Partition, LowerEpoch: req.LowerEpoch, UpperEpoch: req.UpperEpoch, ResCh: resCh}
+	rawRes := <-resCh
+	switch res := rawRes.(type) {
+	case *datap.EpochTreeObject:
+		return res, nil
+	case error:
+		return nil, res
+	default:
+		logrus.Panicf("http unkown res type: %v", reflect.TypeOf(res))
+	}
+	return nil, nil
+}
+
+func (rpcWrapper *RpcWrapper) GetEpochTreeLastValid(ctx context.Context, req *datap.EpochTreeObject) (*datap.EpochTreeObject, error) {
+	logrus.Debugf("Handling GetEpochTree: Partition=%d LowerEpoch=%d UpperEpoch=%d", req.Partition, req.LowerEpoch, req.UpperEpoch)
+	resCh := make(chan interface{})
+	rpcWrapper.reqCh <- GetEpochTreeLastValidObjectTask{PartitionId: req.Partition, ResCh: resCh}
 	rawRes := <-resCh
 	switch res := rawRes.(type) {
 	case *datap.EpochTreeObject:

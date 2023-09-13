@@ -18,6 +18,8 @@ service InternalNodeService {
 
   // get a EpochTree from another node
   rpc GetEpochTree(EpochTreeObject) returns (EpochTreeObject);
+
+  rpc GetEpochTreeLastValid(EpochTreeObject) returns (EpochTreeObject);
   
 }
 
