@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/reactivex/rxgo/v2"
@@ -49,7 +50,7 @@ type VerifyPartitionEpochResponse struct {
 }
 
 type SyncPartitionTask struct {
-	PartitionId int
+	PartitionId int32
 	ResCh       chan interface{}
 }
 
@@ -120,7 +121,8 @@ func NewPartitionState(partitionId int, observable rxgo.Observable, reqCh chan i
 					case error:
 						err := errors.Wrap(res, "VerifyPartitionEpochEvent response")
 						if attempts > 5 {
-							logrus.Errorf("%s attempts = %d", err, attempts)
+							logrus.Errorf("%s attempts = %d partitionId = %d", err, attempts, partitionId)
+							time.Sleep(time.Second * 2) // TODO find a better backoff
 						}
 					default:
 						logrus.Panicf("VerifyPartitionEpochEvent observer unkown res type: %v", reflect.TypeOf(res))
@@ -133,7 +135,7 @@ func NewPartitionState(partitionId int, observable rxgo.Observable, reqCh chan i
 			if event.CurrPartitions.Has(partitionId) && ps.active.CompareAndSwap(false, true) { // TODO create test case for this
 				logrus.Warnf("new partition sync %d", partitionId)
 				resCh := make(chan interface{})
-				reqCh <- SyncPartitionTask{PartitionId: partitionId, ResCh: resCh}
+				reqCh <- SyncPartitionTask{PartitionId: int32(partitionId), ResCh: resCh}
 				rawRes := <-resCh
 				switch res := rawRes.(type) {
 				case SyncPartitionResponse:

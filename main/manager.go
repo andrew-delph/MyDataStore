@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"reflect"
+	"sort"
 	"syscall"
 	"time"
 
@@ -322,7 +323,18 @@ func (m *Manager) startWorker(workerId int) {
 				}
 
 				if validCount >= m.config.Manager.ReadQuorum {
-					// TODO update Valid to true
+					partitionEpochObject.Valid = true
+					data, err = proto.Marshal(partitionEpochObject)
+					if err != nil {
+						task.ResCh <- err
+						continue
+					}
+					err = m.db.Put([]byte(index), data)
+					if err != nil {
+						task.ResCh <- err
+						continue
+					}
+					// logrus.Warnf("write partitionEpochObject lowerEpoch %d", partitionEpochObject.LowerEpoch)
 					task.ResCh <- VerifyPartitionEpochResponse{Valid: true}
 				} else {
 					task.ResCh <- errors.Errorf("did not get enough valid trees. validCount = %d partitionId = %d epoch = %d", validCount, task.PartitionId, task.Epoch)
@@ -351,7 +363,7 @@ func (m *Manager) startWorker(workerId int) {
 				task.ResCh <- epochTreeObject
 
 			case rpc.GetEpochTreeLastValidObjectTask:
-				logrus.Warnf("worker GetEpochTreeLastValidObjectTask: %+v", task)
+				logrus.Debugf("worker GetEpochTreeLastValidObjectTask: %+v", task)
 				epochTreeObjectLastValid, err := m.GetEpochTreeLastValid(task.PartitionId)
 				if err != nil {
 					task.ResCh <- err
@@ -363,12 +375,11 @@ func (m *Manager) startWorker(workerId int) {
 
 			case SyncPartitionTask:
 				logrus.Debugf("worker SyncPartitionTask: %+v", task.PartitionId)
-				epochTreeObjectLastValid, err := m.GetEpochTreeLastValid(int32(task.PartitionId))
+				epochTreeObjectLastValid, err := m.GetEpochTreeLastValid(task.PartitionId)
 				if err != nil {
 					task.ResCh <- err
-				}
-
-				if epochTreeObjectLastValid.LowerEpoch >= m.CurrentEpoch-1 { // TODO validate this is the correct compare
+					continue
+				} else if epochTreeObjectLastValid != nil && epochTreeObjectLastValid.LowerEpoch >= m.CurrentEpoch-1 { // TODO validate this is the correct compare
 					task.ResCh <- SyncPartitionResponse{Valid: true}
 					continue
 				}
@@ -378,9 +389,24 @@ func (m *Manager) startWorker(workerId int) {
 					lastValidEpoch = epochTreeObjectLastValid.LowerEpoch
 				}
 
-				logrus.Warn("sync lastValidEpoch %d", lastValidEpoch)
-
 				// find most healthy node
+				membersLastValid, err := m.EpochTreeLastValidRequest(task.PartitionId, time.Second*10)
+				if err != nil {
+					logrus.Errorf("EpochTreeLastValidRequest %v", err)
+				}
+
+				sort.Slice(membersLastValid, func(i, j int) bool { // sort most healthy first
+					return membersLastValid[i].epochTreeLastValid.LowerEpoch > membersLastValid[j].epochTreeLastValid.LowerEpoch
+				})
+
+				logrus.Warnf("sync lastValidEpoch %d", lastValidEpoch)
+
+				for _, lastValid := range membersLastValid {
+					logrus.Warnf("sync name %s lastValid %d", lastValid.member.Name, lastValid.epochTreeLastValid.LowerEpoch)
+				}
+
+				task.ResCh <- SyncPartitionResponse{Valid: false}
+
 				// stream from healthest node...
 
 			default:
@@ -614,4 +640,49 @@ func (m *Manager) GetEpochTreeLastValid(partitionId int32) (*rpc.RpcEpochTreeObj
 		it.Next()
 	}
 	return nil, nil
+}
+
+type MemberEpochTreeLastValid struct {
+	member             *RingMember
+	epochTreeLastValid *rpc.RpcEpochTreeObject
+}
+
+func (m *Manager) EpochTreeLastValidRequest(partitionId int32, timeout time.Duration) ([]MemberEpochTreeLastValid, error) {
+	nodes, err := m.ring.GetClosestNForPartition(int(partitionId), m.config.Manager.ReplicaCount, true)
+	if err != nil {
+		return nil, err
+	}
+
+	treeReq := &rpc.RpcEpochTreeObject{Partition: int32(partitionId)}
+	responseCh := make(chan MemberEpochTreeLastValid, m.config.Manager.ReplicaCount)
+	errorCh := make(chan error, m.config.Manager.ReplicaCount)
+
+	for _, node := range nodes {
+		member, ok := node.(RingMember)
+		if !ok {
+			return nil, errors.New("failed to decode node")
+		}
+
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), timeout)
+			defer cancel()
+			res, err := member.rpcClient.GetEpochTreeLastValid(ctx, treeReq)
+			if err != nil {
+				errorCh <- err
+			} else {
+				responseCh <- MemberEpochTreeLastValid{member: &member, epochTreeLastValid: res}
+			}
+		}()
+	}
+
+	var membersLastValid []MemberEpochTreeLastValid
+	for i := 0; i < len(nodes); i++ {
+		select {
+		case res := <-responseCh:
+			membersLastValid = append(membersLastValid, res)
+		case err := <-errorCh:
+			logrus.Debugf("GetEpochTree err = %v", err)
+		}
+	}
+	return membersLastValid, nil
 }
