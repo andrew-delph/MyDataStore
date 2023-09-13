@@ -150,7 +150,7 @@ func NewPartitionState(partitionId int, observable rxgo.Observable, reqCh chan i
 				logrus.Fatal("active partition did not switch") // remove this once unit tested
 			}
 		default:
-			logrus.Warn("unknown PartitionState event")
+			logrus.Warn("unknown PartitionState event : %v", reflect.TypeOf(event))
 		}
 	})
 	return ps
