@@ -224,7 +224,7 @@ func (m *Manager) startWorker(workerId int) {
 				}
 
 			case rpc.StreamBucketsTask: // TODO test this is returning right values
-				logrus.Warnf("worker StreamBucketsTask: %+v", task)
+				logrus.Debugf("worker StreamBucketsTask: %+v", task)
 				var buckets []int32 = task.Buckets
 				if len(buckets) == 0 {
 					for i := 0; i < m.config.Manager.PartitionBuckets; i++ {
@@ -414,7 +414,7 @@ func (m *Manager) startWorker(workerId int) {
 				logrus.Warnf("sync lastValidEpoch %d", lastValidEpoch)
 
 				if len(membersLastValid) == 0 {
-					task.ResCh <- errors.New("membersLastValid is 0")
+					task.ResCh <- errors.New("no valid members")
 					continue
 				}
 
