@@ -121,7 +121,7 @@ func NewPartitionState(partitionId int, observable rxgo.Observable, reqCh chan i
 					case error:
 						err := errors.Wrap(res, "VerifyPartitionEpochEvent response")
 						if attempts > 5 {
-							logrus.Errorf("%s attempts = %d partitionId = %d", err, attempts, partitionId)
+							logrus.Errorf("%s attempts = %d partitionId = %d epoch = %d", err, attempts, partitionId, event.Epoch-2)
 							time.Sleep(time.Second * 2) // TODO find a better backoff
 						}
 					default:

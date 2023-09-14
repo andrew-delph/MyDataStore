@@ -13,6 +13,11 @@ func main() {
 	// 	}
 	// }()
 	logrus.Info("starting")
+
+	logrus.SetFormatter(&logrus.TextFormatter{
+		DisableTimestamp: true,
+	})
+
 	c := config.GetConfig()
 	manager := NewManager(c)
 	manager.StartManager()
