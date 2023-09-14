@@ -215,7 +215,7 @@ func (m *Manager) startWorker(workerId int) {
 				logrus.Debugf("worker GetValueTask: %+v", task)
 				// value, err := m.db.Get([]byte(task.Key))
 				value, err := m.GetValue(task.Key)
-				if err == storage.KEY_NOT_FOUND {
+				if err == storage.KEY_NOT_FOUND { // TODO if the nodes partition is not up to date it should not count as response
 					task.ResCh <- nil
 				} else if err != nil {
 					task.ResCh <- err
@@ -734,9 +734,29 @@ func (m *Manager) SyncPartitionRequest(member *RingMember, partitionId int32, lo
 			return errors.Wrap(err, "StreamBuckets Recv")
 		}
 
+		// TODO change to get from epoch index.
+		// if index value is less. write it.
+		// then check the value. if the current value timestamp is greater then request from nodes
+		keyBytes := []byte(value.Key)
+		hash := sha256.Sum256(keyBytes)
+		bucket := binary.BigEndian.Uint64(hash[:8]) % uint64(m.config.Manager.PartitionBuckets)
+		epochIndex, err := BuildEpochIndex(int(partitionId), bucket, value.Epoch, value.Key)
+		if err != nil {
+			return err
+		}
+
+		epochBytes, err := m.db.Get([]byte(epochIndex))
+		if epochBytes != nil {
+			timestamp, err := utils.DecodeBytesToInt64(epochBytes)
+			if err == nil && timestamp >= value.UnixTimestamp {
+				logrus.Debugf("epochIndex ALREADY SYNCED~~~~~~~~~~~~~~~ KEY = %s", value.Key)
+				continue
+			}
+		}
+
 		myValue, err := m.GetValue(value.Key)
-		if myValue != nil && myValue.UnixTimestamp > value.UnixTimestamp {
-			logrus.Warnf("ALREADY SYNCED!!!!!!!!!!!!!!!! KEY = %s", value.Key)
+		if myValue != nil && myValue.UnixTimestamp >= value.UnixTimestamp {
+			logrus.Debugf("GetValue ALREADY SYNCED!!!!!!!!!!!!!!!! KEY = %s", value.Key)
 			continue
 		} else {
 			syncedValue, err := m.GetRequest(value.Key)
@@ -749,9 +769,11 @@ func (m *Manager) SyncPartitionRequest(member *RingMember, partitionId int32, lo
 				logrus.Errorf("FAILED WRITE SYNC KEY = %s err = %v", syncedValue.Key, err)
 				continue
 			} else {
-				logrus.Warnf("SYNC SUCCESS KEY = %s", syncedValue.Key)
+				logrus.Debugf("SYNC SUCCESS KEY = %s", syncedValue.Key)
 			}
 		}
+
+		// verify each epoch from bottom up
 
 		// If I have key and greater timestamp. ignore.
 		// else request the key and write to my db.
