@@ -11,10 +11,11 @@ import (
 type RpcClient = datap.InternalNodeServiceClient
 
 type (
-	RpcValue             = datap.Value
-	RpcGetRequestMessage = datap.GetRequestMessage
-	RpcStandardResponse  = datap.StandardResponse
-	RpcEpochTreeObject   = datap.EpochTreeObject
+	RpcValue                = datap.Value
+	RpcGetRequestMessage    = datap.GetRequestMessage
+	RpcStandardResponse     = datap.StandardResponse
+	RpcEpochTreeObject      = datap.EpochTreeObject
+	RpcStreamBucketsRequest = datap.StreamBucketsRequest
 )
 
 func (rpcWrapper *RpcWrapper) CreateRpcClient(ip string) (*grpc.ClientConn, RpcClient, error) {

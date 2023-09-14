@@ -120,7 +120,7 @@ func NewPartitionState(partitionId int, observable rxgo.Observable, reqCh chan i
 						return
 					case error:
 						err := errors.Wrap(res, "VerifyPartitionEpochEvent response")
-						if attempts > 5 {
+						if attempts > 10000 {
 							logrus.Errorf("%s attempts = %d partitionId = %d epoch = %d", err, attempts, partitionId, event.Epoch-2)
 							time.Sleep(time.Second * 2) // TODO find a better backoff
 						}
@@ -140,6 +140,8 @@ func NewPartitionState(partitionId int, observable rxgo.Observable, reqCh chan i
 				switch res := rawRes.(type) {
 				case SyncPartitionResponse:
 					logrus.Debugf("sync partrition %d res = %+v", partitionId, res)
+				case error:
+					logrus.Error(errors.Wrap(res, "UpdatePartitionsEvent res"))
 				default:
 					logrus.Panicf("UpdatePartitionsEvent observer unkown res type: %v", reflect.TypeOf(res))
 				}

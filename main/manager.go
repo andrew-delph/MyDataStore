@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"reflect"
@@ -12,8 +13,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gogo/status"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/andrew-delph/my-key-store/config"
@@ -134,7 +137,7 @@ func (m *Manager) startWorker(workerId int) {
 				if err != nil {
 					task.ResCh <- err
 				} else {
-					task.ResCh <- value
+					task.ResCh <- value.Value
 				}
 
 			case gossip.JoinTask:
@@ -212,7 +215,9 @@ func (m *Manager) startWorker(workerId int) {
 				logrus.Debugf("worker GetValueTask: %+v", task)
 				// value, err := m.db.Get([]byte(task.Key))
 				value, err := m.GetValue(task.Key)
-				if err != nil {
+				if err == storage.KEY_NOT_FOUND {
+					task.ResCh <- nil
+				} else if err != nil {
 					task.ResCh <- err
 				} else {
 					task.ResCh <- value
@@ -272,6 +277,10 @@ func (m *Manager) startWorker(workerId int) {
 				}
 				// serialize
 				partitionEpochObject, err := MerkleTreeToPartitionEpochObject(myTree, task.PartitionId, task.Epoch, task.Epoch+1)
+				if err != nil {
+					task.ResCh <- err
+					continue
+				}
 				data, err := proto.Marshal(partitionEpochObject)
 				if err != nil {
 					task.ResCh <- err
@@ -377,9 +386,10 @@ func (m *Manager) startWorker(workerId int) {
 				logrus.Debugf("worker SyncPartitionTask: %+v", task.PartitionId)
 				epochTreeObjectLastValid, err := m.GetEpochTreeLastValid(task.PartitionId)
 				if err != nil {
-					task.ResCh <- err
+					task.ResCh <- errors.Wrap(err, "GetEpochTreeLastValid")
 					continue
 				} else if epochTreeObjectLastValid != nil && epochTreeObjectLastValid.LowerEpoch >= m.CurrentEpoch-1 { // TODO validate this is the correct compare
+					logrus.Warn("DOESNT NEED TO SYNC")
 					task.ResCh <- SyncPartitionResponse{Valid: true}
 					continue
 				}
@@ -393,6 +403,8 @@ func (m *Manager) startWorker(workerId int) {
 				membersLastValid, err := m.EpochTreeLastValidRequest(task.PartitionId, time.Second*10)
 				if err != nil {
 					logrus.Errorf("EpochTreeLastValidRequest %v", err)
+					task.ResCh <- errors.Wrap(err, "EpochTreeLastValidRequest")
+					continue
 				}
 
 				sort.Slice(membersLastValid, func(i, j int) bool { // sort most healthy first
@@ -401,11 +413,20 @@ func (m *Manager) startWorker(workerId int) {
 
 				logrus.Warnf("sync lastValidEpoch %d", lastValidEpoch)
 
-				for _, lastValid := range membersLastValid {
-					logrus.Warnf("sync name %s lastValid %d", lastValid.member.Name, lastValid.epochTreeLastValid.LowerEpoch)
+				if len(membersLastValid) == 0 {
+					task.ResCh <- errors.New("membersLastValid is 0")
+					continue
 				}
 
-				task.ResCh <- SyncPartitionResponse{Valid: false}
+				for _, lastValid := range membersLastValid {
+					logrus.Warnf("sync name %s lastValid %d", lastValid.member.Name, lastValid.epochTreeLastValid.LowerEpoch)
+					err := m.SyncPartitionRequest(lastValid.member, task.PartitionId, lastValidEpoch, m.CurrentEpoch, time.Second*20)
+					if err != nil {
+						logrus.Errorf("SyncPartitionRequest err = %v", err)
+					}
+				}
+
+				task.ResCh <- SyncPartitionResponse{Valid: true}
 
 				// stream from healthest node...
 
@@ -469,10 +490,10 @@ func (m *Manager) SetRequest(key, value string) error {
 	}
 }
 
-func (m *Manager) GetRequest(key string) (string, error) {
+func (m *Manager) GetRequest(key string) (*rpc.RpcValue, error) {
 	nodes, err := m.ring.GetClosestN(key, m.config.Manager.ReplicaCount, true)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	getReq := &rpc.RpcGetRequestMessage{Key: key}
@@ -482,14 +503,17 @@ func (m *Manager) GetRequest(key string) (string, error) {
 	for _, node := range nodes {
 		member, ok := node.(RingMember)
 		if !ok {
-			return "", errors.New("failed to decode node")
+			return nil, errors.New("failed to decode node")
 		}
 
 		go func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			res, err := member.rpcClient.GetRequest(ctx, getReq)
-			if err != nil {
+			st, ok := status.FromError(err)
+			if ok && st.Code() == codes.NotFound {
+				responseCh <- nil
+			} else if err != nil {
 				errorCh <- err
 			} else {
 				responseCh <- res
@@ -505,6 +529,11 @@ func (m *Manager) GetRequest(key string) (string, error) {
 		case res := <-responseCh:
 			responseCount++
 
+			if res == nil {
+				// not found
+				continue
+			}
+
 			if recentValue == nil {
 				recentValue = res
 			} else if recentValue.Epoch <= res.Epoch && recentValue.UnixTimestamp < res.UnixTimestamp {
@@ -514,15 +543,15 @@ func (m *Manager) GetRequest(key string) (string, error) {
 			logrus.Debugf("GET ERROR = %v", err)
 
 		case <-timeout:
-			return "", fmt.Errorf("timed out waiting for responses. responseCount = %d", responseCount)
+			return nil, fmt.Errorf("timed out waiting for responses. responseCount = %d", responseCount)
 		}
 	}
 	if recentValue == nil {
-		return "", fmt.Errorf("value not found. responseCount = %d", responseCount)
+		return nil, fmt.Errorf("value not found. responseCount = %d", responseCount)
 	} else if responseCount < m.config.Manager.ReadQuorum {
-		return "", fmt.Errorf("failed ReadQuorum. responseCount = %d", responseCount)
+		return nil, fmt.Errorf("failed ReadQuorum. responseCount = %d", responseCount)
 	} else {
-		return recentValue.Value, nil
+		return recentValue, nil
 	}
 }
 
@@ -614,11 +643,11 @@ func (m *Manager) GetValue(key string) (*rpc.RpcValue, error) {
 func (m *Manager) GetEpochTreeLastValid(partitionId int32) (*rpc.RpcEpochTreeObject, error) {
 	index1, err := BuildEpochTreeObjectIndex(int(partitionId), 0)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "BuildEpochTreeObjectIndex")
 	}
 	index2, err := BuildEpochTreeObjectIndex(int(partitionId), m.CurrentEpoch)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "BuildEpochTreeObjectIndex")
 	}
 	it := m.db.NewIterator(
 		[]byte(index1),
@@ -631,7 +660,7 @@ func (m *Manager) GetEpochTreeLastValid(partitionId int32) (*rpc.RpcEpochTreeObj
 		epochTreeObject := &rpc.RpcEpochTreeObject{}
 		err = proto.Unmarshal(epochTreeObjectBytes, epochTreeObject)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithMessagef(err, "RpcEpochTreeObject Unmarshal. epochTreeObjectBytes = %v", epochTreeObjectBytes)
 		}
 
 		if epochTreeObject.Valid {
@@ -685,4 +714,46 @@ func (m *Manager) EpochTreeLastValidRequest(partitionId int32, timeout time.Dura
 		}
 	}
 	return membersLastValid, nil
+}
+
+func (m *Manager) SyncPartitionRequest(member *RingMember, partitionId int32, lowerEpoch int64, upperEpoch int64, timeout time.Duration) error {
+	logrus.Debugf("CLIENT SyncPartitionRequest")
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	req := &rpc.RpcStreamBucketsRequest{Partition: partitionId, LowerEpoch: lowerEpoch, UpperEpoch: upperEpoch}
+	streamClient, err := member.rpcClient.StreamBuckets(ctx, req)
+	if err != nil {
+		return errors.Wrap(err, "StreamBuckets request")
+	}
+	for {
+		value, err := streamClient.Recv()
+		if err == io.EOF {
+			logrus.Debugf("CLIENT SyncPartitionRequest completed.")
+			return nil
+		} else if err != nil {
+			return errors.Wrap(err, "StreamBuckets Recv")
+		}
+
+		myValue, err := m.GetValue(value.Key)
+		if myValue != nil && myValue.UnixTimestamp > value.UnixTimestamp {
+			logrus.Warnf("ALREADY SYNCED!!!!!!!!!!!!!!!! KEY = %s", value.Key)
+			continue
+		} else {
+			syncedValue, err := m.GetRequest(value.Key)
+			if err != nil {
+				logrus.Errorf("FAILED TO SYNC KEY = %s err = %v", value.Key, err)
+				continue
+			}
+			err = m.SetValue(syncedValue)
+			if err != nil {
+				logrus.Errorf("FAILED WRITE SYNC KEY = %s err = %v", syncedValue.Key, err)
+				continue
+			} else {
+				logrus.Warnf("SYNC SUCCESS KEY = %s", syncedValue.Key)
+			}
+		}
+
+		// If I have key and greater timestamp. ignore.
+		// else request the key and write to my db.
+	}
 }

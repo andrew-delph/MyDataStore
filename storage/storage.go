@@ -1,10 +1,13 @@
 package storage
 
 import (
+	"errors"
 	"time"
 
 	"github.com/patrickmn/go-cache"
 )
+
+var KEY_NOT_FOUND = errors.New("KEY_NOT_FOUND")
 
 type Storage interface {
 	Put(key []byte, value []byte) error

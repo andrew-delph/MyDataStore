@@ -40,7 +40,9 @@ func (storage BadgerStorage) Get(key []byte) ([]byte, error) {
 	defer txn.Discard()
 
 	item, err := txn.Get(key)
-	if err != nil {
+	if err == badger.ErrKeyNotFound {
+		return nil, KEY_NOT_FOUND
+	} else if err != nil {
 		return nil, err
 	}
 

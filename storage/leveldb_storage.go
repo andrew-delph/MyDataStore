@@ -31,7 +31,9 @@ func (storage LevelDbStorage) Put(key []byte, value []byte) error {
 func (storage LevelDbStorage) Get(key []byte) ([]byte, error) {
 	readOpts := &opt.ReadOptions{}
 	value, err := storage.db.Get(key, readOpts)
-	if err != nil {
+	if err == leveldb.ErrNotFound {
+		return nil, KEY_NOT_FOUND
+	} else if err != nil {
 		return nil, err
 	}
 	return value, nil

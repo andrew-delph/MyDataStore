@@ -7,11 +7,14 @@ import (
 	"net"
 	"reflect"
 
+	"github.com/gogo/status"
+
 	"github.com/andrew-delph/my-key-store/config"
 	datap "github.com/andrew-delph/my-key-store/datap"
 
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 )
 
 type RpcWrapper struct {
@@ -86,7 +89,10 @@ func (rpcWrapper *RpcWrapper) GetRequest(ctx context.Context, req *datap.GetRequ
 	switch res := rawRes.(type) {
 	case *datap.Value:
 		return res, nil
+	case nil:
+		return nil, status.Errorf(codes.NotFound, "Resource not found")
 	case error:
+		logrus.Errorf("GetRequest err = %v", res)
 		return nil, res
 	default:
 		logrus.Panicf("http unkown res type: %v", reflect.TypeOf(res))
@@ -95,14 +101,14 @@ func (rpcWrapper *RpcWrapper) GetRequest(ctx context.Context, req *datap.GetRequ
 }
 
 func (rpcWrapper *RpcWrapper) StreamBuckets(req *datap.StreamBucketsRequest, stream datap.InternalNodeService_StreamBucketsServer) error {
-	logrus.Debugf("SERVER StreamBuckets Buckets %v LowerEpoch %v UpperEpoch %v Partition %v", req.Buckets, req.LowerEpoch, req.UpperEpoch, req.Partition)
+	logrus.Warnf("SERVER StreamBuckets Buckets %v LowerEpoch %v UpperEpoch %v Partition %v", req.Buckets, req.LowerEpoch, req.UpperEpoch, req.Partition)
 	resCh := make(chan interface{})
 	rpcWrapper.reqCh <- StreamBucketsTask{PartitionId: req.Partition, Buckets: req.Buckets, LowerEpoch: req.LowerEpoch, UpperEpoch: req.UpperEpoch, ResCh: resCh}
 	for {
 		select {
 		case itemObj, ok := <-resCh:
 			if !ok {
-				fmt.Println("Channel is closed")
+				logrus.Debug("SERVER StreamBuckets channel closed")
 				return nil
 			}
 			switch item := itemObj.(type) {
@@ -113,6 +119,7 @@ func (rpcWrapper *RpcWrapper) StreamBuckets(req *datap.StreamBucketsRequest, str
 					return err
 				}
 			case error:
+				logrus.Errorf("StreamBuckets err = %v", item)
 				return item
 			default:
 				logrus.Panicf("http unkown res type: %v", reflect.TypeOf(item))

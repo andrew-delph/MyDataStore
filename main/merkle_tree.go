@@ -91,15 +91,18 @@ func (manager *Manager) RawPartitionMerkleTree(partitionId int, lowerEpoch, uppe
 		bucket := MerkleBucket{hasher: &CustomHash{}, bucketId: int32(i)}
 		index1, err := BuildEpochIndex(partitionId, uint64(i), lowerEpoch, "")
 		if err != nil {
-			logrus.Fatal(err)
+			return nil, err
 		}
 		index2, err := BuildEpochIndex(partitionId, uint64(i), upperEpoch, "")
 		if err != nil {
-			logrus.Fatal(err)
+			return nil, err
 		}
 		it := manager.db.NewIterator([]byte(index1), []byte(index2), false)
 		for !it.IsDone() {
-			bucket.AddItem(it.Value())
+			err := bucket.AddItem(it.Value())
+			if err != nil {
+				return nil, err
+			}
 			count++
 			it.Next()
 		}
