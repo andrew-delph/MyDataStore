@@ -6,6 +6,7 @@ import { randomString } from "https://jslib.k6.io/k6-utils/1.2.0/index.js";
 import { textSummary } from "https://jslib.k6.io/k6-summary/0.0.2/index.js";
 
 export let options = {
+  summaryTrendStats: ["avg", "min", "med", "max"],
   // iterations: 20,
   // vus: 5,
   scenarios: {
@@ -58,13 +59,15 @@ export let options = {
 
 let address = __ENV.ADDRESS || "localhost:8080";
 
-// export function handleSummary(data) {
-//   let output = data;
-//   delete output.metrics;
-//   return {
-//     stdout: textSummary(output, { indent: " ", enableColors: true }),
-//   };
-// }
+export function handleSummary(data) {
+  for (const key in data.metrics) {
+    if (!key.includes("duration")) delete data.metrics[key];
+  }
+
+  return {
+    stdout: textSummary(data, { indent: "→", enableColors: true }),
+  };
+}
 
 export function basic() {
   let addr = `http://${address}`;
@@ -146,7 +149,7 @@ export function remove() {
   return;
 }
 
-options = { duration: "2h", vus: 1 };
+// options = { duration: "2h", vus: 1 };
 // options = { iterations: 1, vus: 1 };
 export default function () {
   // leader();
@@ -160,29 +163,18 @@ export default function () {
   let setRes = http.get(`http://${address}/set?key=${key}&value=${value}`);
 
   check(setRes, {
-    "Set: status was 200": (r) => r.status === 200,
+    "set status is 200": (r) =>
+      r.status === 200 || console.error("set:", r.body),
   });
-  if (setRes.status != 200) {
-    console.error(`Set Error: status= ${setRes.status} body= ${setRes.body}`);
-  }
 
-  return;
   sleep(10);
 
   // Get a value from the map
   let getRes = http.get(`http://${address}/get?key=${key}`);
 
   check(getRes, {
-    "Get: status was 200": (r) => r.status === 200,
-    "Get: body contains testValue": (r) =>
-      r.body && r.body.indexOf(value) !== -1,
+    "get status is 200": (r) => r.status === 200,
+    "get the correct value": (r) =>
+      r.body === value || console.error("get:", r.body),
   });
-
-  if ((getRes.body || "").indexOf(value) == -1 || getRes.status != 200) {
-    console.error(
-      `Get Error: status= ${getRes.status} missing= ${
-        (getRes.body || "").indexOf(value) == -1
-      } body= ${getRes.body}`
-    );
-  }
 }
