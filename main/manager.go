@@ -342,7 +342,7 @@ func (m *Manager) startWorker(workerId int) {
 				for i := lastValidEpoch + 1; i <= task.UpperEpoch; i++ {
 					err := m.VerifyEpoch(int(task.PartitionId), i)
 					if err != nil {
-						logrus.Errorf("SyncPartitionTask VerifyEpoch PartitionId %d Epoch %d err = %v", task.PartitionId, i, err)
+						logrus.Fatalf("SyncPartitionTask VerifyEpoch PartitionId %d Epoch %d err = %v", task.PartitionId, i, err)
 					} else {
 						logrus.Warnf("[SYNC] VerifyEpoch PartitionId %d Epoch %d", task.PartitionId, i)
 					}

@@ -121,7 +121,7 @@ func NewPartitionState(partitionId int, observable rxgo.Observable, reqCh chan i
 					return
 				case error:
 					err := errors.Wrap(res, "VerifyPartitionEpochEvent response")
-					logrus.Error(err)
+					logrus.Fatal(err)
 				default:
 					logrus.Panicf("VerifyPartitionEpochEvent observer unkown res type: %v", reflect.TypeOf(res))
 				}
