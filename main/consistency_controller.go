@@ -51,6 +51,7 @@ type VerifyPartitionEpochResponse struct {
 
 type SyncPartitionTask struct {
 	PartitionId int32
+	UpperEpoch  int64
 	ResCh       chan interface{}
 }
 
@@ -90,6 +91,7 @@ func (cc *ConsistencyController) HandleHashringChange(currPartitions utils.IntSe
 }
 
 func (cc *ConsistencyController) VerifyEpoch(Epoch int64) {
+	logrus.Warnf("new Epoch %d", Epoch)
 	cc.PublishEvent(VerifyPartitionEpochEvent{Epoch: Epoch})
 }
 
@@ -100,6 +102,7 @@ func (cc *ConsistencyController) PublishEvent(event interface{}) {
 type PartitionState struct {
 	partitionId int
 	active      atomic.Bool
+	lastEpoch   int64
 }
 
 func NewPartitionState(partitionId int, observable rxgo.Observable, reqCh chan interface{}) *PartitionState {
@@ -107,20 +110,21 @@ func NewPartitionState(partitionId int, observable rxgo.Observable, reqCh chan i
 	observable.DoOnNext(func(item interface{}) {
 		switch event := item.(type) {
 		case VerifyPartitionEpochEvent: // TODO create test case for this
+			ps.lastEpoch = event.Epoch
 			if ps.active.Load() {
 				attempts := 0
 				for true { // TODO better ways of handling errors. regarding loops
 					resCh := make(chan interface{})
-					logrus.Debugf("trigger verify epoch event. partition %d epoch %d", partitionId, event.Epoch)
+					logrus.Debugf("Verify partition %d epoch %d", partitionId, event.Epoch)
 					reqCh <- VerifyPartitionEpochRequestTask{PartitionId: partitionId, Epoch: event.Epoch - 2, ResCh: resCh}
 					rawRes := <-resCh
 					switch res := rawRes.(type) {
 					case VerifyPartitionEpochResponse:
-						logrus.Debugf("verify epoch=%d partitionId=%d res = %+v", event.Epoch, partitionId, res)
+						logrus.Debugf("VerifyPartitionEpochResponse E= %d res = %+v", event.Epoch, res)
 						return
 					case error:
 						err := errors.Wrap(res, "VerifyPartitionEpochEvent response")
-						if attempts > 10000 {
+						if attempts > 3 {
 							logrus.Errorf("%s attempts = %d partitionId = %d epoch = %d", err, attempts, partitionId, event.Epoch-2)
 							time.Sleep(time.Second * 2) // TODO find a better backoff
 						}
@@ -133,9 +137,10 @@ func NewPartitionState(partitionId int, observable rxgo.Observable, reqCh chan i
 
 		case UpdatePartitionsEvent: // TODO create test case for this
 			if event.CurrPartitions.Has(partitionId) && ps.active.CompareAndSwap(false, true) { // TODO create test case for this
+
 				logrus.Warnf("new partition sync %d", partitionId)
 				resCh := make(chan interface{})
-				reqCh <- SyncPartitionTask{PartitionId: int32(partitionId), ResCh: resCh}
+				reqCh <- SyncPartitionTask{PartitionId: int32(partitionId), ResCh: resCh, UpperEpoch: ps.lastEpoch}
 				rawRes := <-resCh
 				switch res := rawRes.(type) {
 				case SyncPartitionResponse:
