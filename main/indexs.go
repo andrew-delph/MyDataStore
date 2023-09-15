@@ -54,6 +54,6 @@ func BuildKeyIndex(key string) (string, error) {
 func BuildEpochTreeObjectIndex(partitionId int, epoch int64) (string, error) {
 	return storage.NewIndex("epochtree").
 		AddColumn(storage.CreateUnorderedColumn("partition", strconv.FormatInt(int64(partitionId), 10))).
-		AddColumn(storage.CreateUnorderedColumn("epoch", strconv.FormatInt(epoch, 10))).
+		AddColumn(storage.CreateOrderedColumn("epoch", strconv.FormatInt(epoch, 10), 4)).
 		Build()
 }

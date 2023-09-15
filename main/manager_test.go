@@ -228,7 +228,7 @@ func TestGetEpochTreeLastValidObjectTask(t *testing.T) {
 	var index string
 
 	// epoch 1 false
-	obj = &rpc.RpcEpochTreeObject{Partition: int32(writePartition), LowerEpoch: 1, Valid: false}
+	obj = &rpc.RpcEpochTreeObject{Partition: int32(writePartition), LowerEpoch: 1, Valid: true}
 	data, err = proto.Marshal(obj)
 	if err != nil {
 		t.Error(err)
@@ -280,7 +280,47 @@ func TestGetEpochTreeLastValidObjectTask(t *testing.T) {
 	switch item := res.(type) {
 	case *rpc.RpcEpochTreeObject:
 		assert.Equal(t, int64(2), item.LowerEpoch, "the correct object was returned")
+	case error:
+		t.Error(item)
 	default:
 		t.Errorf("unknown type: %v", reflect.TypeOf(item))
+	}
+}
+
+func TestGetEpochTreeObjectWriteRead(t *testing.T) {
+	var err error
+
+	tmpDir := t.TempDir()
+	logrus.Info("Temporary Directory:", tmpDir)
+	c := config.GetConfig()
+	c.Storage.DataPath = tmpDir
+	c.Manager.PartitionCount = 200
+	c.Manager.PartitionBuckets = 100
+	writePartition := 1
+	manager := NewManager(c)
+	manager.CurrentEpoch = 100
+
+	var obj *rpc.RpcEpochTreeObject
+	var data []byte
+	var index string
+
+	// epoch 1 false
+	obj = &rpc.RpcEpochTreeObject{Partition: int32(writePartition), LowerEpoch: 1, Valid: false}
+	data, err = proto.Marshal(obj)
+	if err != nil {
+		t.Error(err)
+	}
+	index, err = BuildEpochTreeObjectIndex(writePartition, obj.LowerEpoch)
+	if err != nil {
+		t.Error(err)
+	}
+	err = manager.db.Put([]byte(index), data)
+	if err != nil {
+		t.Error(err)
+	}
+
+	_, err = manager.db.Get([]byte(index))
+	if err != nil {
+		t.Error(err)
 	}
 }
