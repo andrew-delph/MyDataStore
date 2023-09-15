@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/reactivex/rxgo/v2"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/semaphore"
 
 	"github.com/andrew-delph/my-key-store/utils"
 )
@@ -72,13 +73,14 @@ type ConsistencyController struct {
 	observable       rxgo.Observable
 }
 
-func NewConsistencyController(partitionCount int, reqCh chan interface{}) *ConsistencyController {
+func NewConsistencyController(concurrencyLevel int64, partitionCount int, reqCh chan interface{}) *ConsistencyController {
+	sema := semaphore.NewWeighted(concurrencyLevel)
 	// TODO create semaphore.NewWeighted(int64(limit)) for number of partition observer events at once
 	ch := make(chan rxgo.Item)
 	observable := rxgo.FromChannel(ch, rxgo.WithPublishStrategy())
 	var partitionsStates []*PartitionState
 	for i := 0; i < partitionCount; i++ {
-		partitionsStates = append(partitionsStates, NewPartitionState(i, observable, reqCh))
+		partitionsStates = append(partitionsStates, NewPartitionState(sema, i, observable, reqCh))
 	}
 	observable.Connect(context.Background())
 	return &ConsistencyController{observationCh: ch, partitionsStates: partitionsStates, observable: observable}
@@ -104,9 +106,15 @@ type PartitionState struct {
 	lastEpoch   int64
 }
 
-func NewPartitionState(partitionId int, observable rxgo.Observable, reqCh chan interface{}) *PartitionState {
+func NewPartitionState(sema *semaphore.Weighted, partitionId int, observable rxgo.Observable, reqCh chan interface{}) *PartitionState {
 	ps := &PartitionState{partitionId: partitionId}
 	observable.DoOnNext(func(item interface{}) {
+		err := sema.Acquire(context.Background(), 1)
+		if err != nil {
+			logrus.Error(err)
+		} else {
+			defer sema.Release(1)
+		}
 		switch event := item.(type) {
 		case VerifyPartitionEpochEvent: // TODO create test case for this
 			ps.lastEpoch = event.Epoch - 2

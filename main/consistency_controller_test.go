@@ -77,7 +77,7 @@ func TestConsistencyControllerObservers(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 	logrus.Info("HI")
-	consistencyController := NewConsistencyController(10, nil) // TODO impllement proper test
+	consistencyController := NewConsistencyController(2, 10, nil) // TODO impllement proper test
 
 	consistencyController.PublishEvent("test")
 	time.Sleep(time.Second * 5)
