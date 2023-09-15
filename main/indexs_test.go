@@ -24,4 +24,10 @@ func TestIndexManager(t *testing.T) {
 	assert.Equal(t, bucket, bucketParsed, "parsed bucket")
 	assert.Equal(t, epoch, epochParsed, "parsed epoch")
 	assert.Equal(t, key, keyParsed, "parsed key")
+
+	index2, err := BuildEpochTreeObjectIndex(1, 2)
+	if err != nil {
+		t.Error(err)
+	}
+	assert.Equal(t, "epochtree_1_2", index2, "equal index")
 }
