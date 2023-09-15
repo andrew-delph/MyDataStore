@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/reactivex/rxgo/v2"
@@ -112,26 +111,19 @@ func NewPartitionState(partitionId int, observable rxgo.Observable, reqCh chan i
 		case VerifyPartitionEpochEvent: // TODO create test case for this
 			ps.lastEpoch = event.Epoch
 			if ps.active.Load() {
-				attempts := 0
-				for true { // TODO better ways of handling errors. regarding loops
-					resCh := make(chan interface{})
-					logrus.Debugf("Verify partition %d epoch %d", partitionId, event.Epoch)
-					reqCh <- VerifyPartitionEpochRequestTask{PartitionId: partitionId, Epoch: event.Epoch - 2, ResCh: resCh}
-					rawRes := <-resCh
-					switch res := rawRes.(type) {
-					case VerifyPartitionEpochResponse:
-						logrus.Debugf("VerifyPartitionEpochResponse E= %d res = %+v", event.Epoch, res)
-						return
-					case error:
-						err := errors.Wrap(res, "VerifyPartitionEpochEvent response")
-						if attempts > 3 {
-							logrus.Errorf("%s attempts = %d partitionId = %d epoch = %d", err, attempts, partitionId, event.Epoch-2)
-							time.Sleep(time.Second * 2) // TODO find a better backoff
-						}
-					default:
-						logrus.Panicf("VerifyPartitionEpochEvent observer unkown res type: %v", reflect.TypeOf(res))
-					}
-					attempts++
+				resCh := make(chan interface{})
+				logrus.Debugf("Verify partition %d epoch %d", partitionId, event.Epoch)
+				reqCh <- VerifyPartitionEpochRequestTask{PartitionId: partitionId, Epoch: event.Epoch - 2, ResCh: resCh}
+				rawRes := <-resCh
+				switch res := rawRes.(type) {
+				case VerifyPartitionEpochResponse:
+					logrus.Debugf("VerifyPartitionEpochResponse E= %d res = %+v", event.Epoch, res)
+					return
+				case error:
+					err := errors.Wrap(res, "VerifyPartitionEpochEvent response")
+					logrus.Error(err)
+				default:
+					logrus.Panicf("VerifyPartitionEpochEvent observer unkown res type: %v", reflect.TypeOf(res))
 				}
 			}
 
