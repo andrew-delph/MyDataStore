@@ -786,7 +786,7 @@ func (m *Manager) VerifyEpoch(PartitionId int, Epoch int64) error {
 			if err != nil {
 				continue
 			}
-			if attempts > 3 {
+			if attempts > 2 {
 				logrus.Warnf("write partitionEpochObject Partition %v LowerEpoch %v index %s attempts %d", partitionEpochObject.Partition, partitionEpochObject.LowerEpoch, index, attempts)
 			}
 			return nil
