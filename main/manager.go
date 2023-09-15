@@ -795,7 +795,7 @@ func (m *Manager) VerifyEpoch(PartitionId int, Epoch int64) error {
 			return nil
 		} else {
 			err = m.PoliteStreamRequest(int(partitionEpochObject.Partition), partitionEpochObject.LowerEpoch, partitionEpochObject.LowerEpoch+1, diffSet.List())
-			err = errors.Errorf("no validate against ReadQuorum. validCount= %d", validCount)
+			err = errors.Errorf("validCount= %d against ReadQuorum %d", validCount, m.config.Manager.ReadQuorum)
 		}
 	}
 	return nil
