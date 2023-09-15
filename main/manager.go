@@ -714,7 +714,7 @@ func (m *Manager) VerifyEpoch(PartitionId int, Epoch int64) error {
 	attempts := 0
 	for true {
 		if attempts > 2 {
-			logrus.Errorf("attempts = %d partitionId = %d epoch = %d err = %v", attempts, PartitionId, Epoch, err)
+			logrus.Errorf("VerifyEpoch: %v attempts= %d P= %d E= %d", err, attempts, PartitionId, Epoch)
 		}
 		if err != nil {
 			time.Sleep(time.Second * 4)
@@ -752,10 +752,11 @@ func (m *Manager) VerifyEpoch(PartitionId int, Epoch int64) error {
 			continue
 		}
 
-		if len(epochTreeObjects) < m.config.Manager.ReadQuorum {
-			err = errors.Errorf("need more trees #%d", len(epochTreeObjects))
-			continue
-		}
+		// if len(epochTreeObjects) < m.config.Manager.ReadQuorum {
+		// 	err = errors.Errorf("need more trees #%d", len(epochTreeObjects))
+		// 	continue
+		// }
+		// TODO do we need this?
 
 		// compare the difference to the otherTree
 		validCount := 0
@@ -791,7 +792,8 @@ func (m *Manager) VerifyEpoch(PartitionId int, Epoch int64) error {
 			}
 			return nil
 		} else {
-			err = errors.Errorf("need more trees valid trees. validCount = %d", validCount)
+			err = m.PoliteStreamRequest(int(partitionEpochObject.Partition), partitionEpochObject.LowerEpoch, partitionEpochObject.LowerEpoch+1)
+			err = errors.Errorf("no validate against ReadQuorum. validCount= %d", validCount)
 		}
 	}
 	return nil
@@ -814,7 +816,7 @@ func (m *Manager) PoliteStreamRequest(PartitionId int, LowerEpoch, UpperEpoch in
 	}
 
 	for _, lastValid := range membersLastValid {
-		logrus.Warnf("sync name %s lastValid %d", lastValid.member.Name, lastValid.epochTreeLastValid.LowerEpoch)
+		// logrus.Warnf("sync name %s lastValid %d", lastValid.member.Name, lastValid.epochTreeLastValid.LowerEpoch)
 		err := m.SyncPartitionRequest(lastValid.member, int32(PartitionId), LowerEpoch, UpperEpoch, time.Second*20)
 		if err != nil {
 			logrus.Errorf("SyncPartitionRequest err = %v", err)
