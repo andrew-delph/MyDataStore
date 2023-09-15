@@ -109,15 +109,15 @@ func NewPartitionState(partitionId int, observable rxgo.Observable, reqCh chan i
 	observable.DoOnNext(func(item interface{}) {
 		switch event := item.(type) {
 		case VerifyPartitionEpochEvent: // TODO create test case for this
-			ps.lastEpoch = event.Epoch
+			ps.lastEpoch = event.Epoch - 2
 			if ps.active.Load() {
 				resCh := make(chan interface{})
-				logrus.Debugf("Verify partition %d epoch %d", partitionId, event.Epoch)
-				reqCh <- VerifyPartitionEpochRequestTask{PartitionId: partitionId, Epoch: event.Epoch - 2, ResCh: resCh}
+				logrus.Debugf("Verify partition %d epoch %d", partitionId, ps.lastEpoch)
+				reqCh <- VerifyPartitionEpochRequestTask{PartitionId: partitionId, Epoch: ps.lastEpoch, ResCh: resCh}
 				rawRes := <-resCh
 				switch res := rawRes.(type) {
 				case VerifyPartitionEpochResponse:
-					logrus.Debugf("VerifyPartitionEpochResponse E= %d res = %+v", event.Epoch, res)
+					logrus.Debugf("VerifyPartitionEpochResponse E= %d res = %+v", ps.lastEpoch, res)
 					return
 				case error:
 					err := errors.Wrap(res, "VerifyPartitionEpochEvent response")
