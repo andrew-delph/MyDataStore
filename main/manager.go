@@ -822,8 +822,10 @@ func (m *Manager) PoliteStreamRequest(PartitionId int, LowerEpoch, UpperEpoch in
 		err := m.SyncPartitionRequest(lastValid.member, int32(PartitionId), LowerEpoch, UpperEpoch, buckets, time.Second*20)
 		if err != nil {
 			logrus.Errorf("SyncPartitionRequest err = %v", err)
+		} else {
+			return nil
 		}
 	}
 
-	return nil
+	return errors.New("PoliteStreamRequest errored on every member.")
 }
