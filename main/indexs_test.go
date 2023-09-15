@@ -15,7 +15,7 @@ func TestIndexManager(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	assert.Equal(t, "epoch_1_2_0003_zz", index1, "equal index")
+	assert.Equal(t, "epoch_1_2_0000000003_zz", index1, "equal index")
 	paritionParsed, bucketParsed, epochParsed, keyParsed, err := ParseEpochIndex(index1)
 	if err != nil {
 		t.Error(err)
@@ -29,5 +29,5 @@ func TestIndexManager(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	assert.Equal(t, "epochtree_1_2", index2, "equal index")
+	assert.Equal(t, "epochtree_1_0000000002", index2, "equal index")
 }

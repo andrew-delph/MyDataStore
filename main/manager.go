@@ -331,7 +331,7 @@ func (m *Manager) startWorker(workerId int) {
 				logrus.Warnf("sync lastValidEpoch %d", lastValidEpoch)
 
 				// find most healthy node
-				err = m.PoliteStreamRequest(int(task.PartitionId), lastValidEpoch, task.UpperEpoch+1)
+				err = m.PoliteStreamRequest(int(task.PartitionId), lastValidEpoch, task.UpperEpoch+1, nil)
 
 				if err != nil {
 					logrus.Error(err)
@@ -638,11 +638,11 @@ func (m *Manager) EpochTreeLastValidRequest(partitionId int32, timeout time.Dura
 	return membersLastValid, nil
 }
 
-func (m *Manager) SyncPartitionRequest(member *RingMember, partitionId int32, lowerEpoch int64, upperEpoch int64, timeout time.Duration) error {
+func (m *Manager) SyncPartitionRequest(member *RingMember, partitionId int32, lowerEpoch int64, upperEpoch int64, buckets []int32, timeout time.Duration) error {
 	logrus.Debugf("CLIENT SyncPartitionRequest")
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	req := &rpc.RpcStreamBucketsRequest{Partition: partitionId, LowerEpoch: lowerEpoch, UpperEpoch: upperEpoch}
+	req := &rpc.RpcStreamBucketsRequest{Partition: partitionId, LowerEpoch: lowerEpoch, UpperEpoch: upperEpoch, Buckets: buckets}
 	streamClient, err := member.rpcClient.StreamBuckets(ctx, req)
 	if err != nil {
 		return errors.Wrap(err, "StreamBuckets request")
@@ -760,6 +760,7 @@ func (m *Manager) VerifyEpoch(PartitionId int, Epoch int64) error {
 
 		// compare the difference to the otherTree
 		validCount := 0
+		diffSet := utils.NewInt32Set()
 		for _, epochTreeObject := range epochTreeObjects {
 			otherTree, err = EpochTreeObjectToMerkleTree(epochTreeObject)
 			if err != nil {
@@ -771,6 +772,7 @@ func (m *Manager) VerifyEpoch(PartitionId int, Epoch int64) error {
 				logrus.Error(err)
 				continue
 			}
+			diffSet.From(diff)
 
 			if len(diff) == 0 {
 				validCount++
@@ -792,14 +794,14 @@ func (m *Manager) VerifyEpoch(PartitionId int, Epoch int64) error {
 			}
 			return nil
 		} else {
-			err = m.PoliteStreamRequest(int(partitionEpochObject.Partition), partitionEpochObject.LowerEpoch, partitionEpochObject.LowerEpoch+1)
+			err = m.PoliteStreamRequest(int(partitionEpochObject.Partition), partitionEpochObject.LowerEpoch, partitionEpochObject.LowerEpoch+1, diffSet.List())
 			err = errors.Errorf("no validate against ReadQuorum. validCount= %d", validCount)
 		}
 	}
 	return nil
 }
 
-func (m *Manager) PoliteStreamRequest(PartitionId int, LowerEpoch, UpperEpoch int64) error {
+func (m *Manager) PoliteStreamRequest(PartitionId int, LowerEpoch, UpperEpoch int64, buckets []int32) error {
 	// find most healthy node
 	// then stream from it
 	membersLastValid, err := m.EpochTreeLastValidRequest(int32(PartitionId), time.Second*10)
@@ -817,7 +819,7 @@ func (m *Manager) PoliteStreamRequest(PartitionId int, LowerEpoch, UpperEpoch in
 
 	for _, lastValid := range membersLastValid {
 		// logrus.Warnf("sync name %s lastValid %d", lastValid.member.Name, lastValid.epochTreeLastValid.LowerEpoch)
-		err := m.SyncPartitionRequest(lastValid.member, int32(PartitionId), LowerEpoch, UpperEpoch, time.Second*20)
+		err := m.SyncPartitionRequest(lastValid.member, int32(PartitionId), LowerEpoch, UpperEpoch, buckets, time.Second*20)
 		if err != nil {
 			logrus.Errorf("SyncPartitionRequest err = %v", err)
 		}
