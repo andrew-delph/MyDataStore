@@ -21,7 +21,7 @@ func TestConfigDefault(t *testing.T) {
 	assert.NotEqual(t, 0, config.Manager.ReadQuorum, "ReadQuorum wrong value")
 	assert.NotEqual(t, 0, config.Manager.PartitionCount, "PartitionCount wrong value")
 	assert.NotEqual(t, 0, config.Manager.PartitionBuckets, "PartitionBuckets wrong value")
-	assert.Equal(t, "/data", config.Manager.DataPath, "DataPath wrong value")
+	assert.Equal(t, "/data/storage", config.Manager.DataPath, "DataPath wrong value")
 	assert.NotEqual(t, 0, config.Manager.DefaultTimeout, "DefaultTimeout wrong value")
 	assert.NotEqual(t, 0, config.Manager.WokersCount, "WokersCount wrong value")
 	assert.NotEqual(t, 0, config.Manager.ReqChannelSize, "ReqChannelSize wrong value")
@@ -29,16 +29,16 @@ func TestConfigDefault(t *testing.T) {
 
 	// consensus config
 	assert.NotEqual(t, 0, config.Consensus.EpochTime, "EpochTime wrong value")
-	assert.Equal(t, "/raft", config.Consensus.DataPath, "DataPath wrong value")
+	assert.Equal(t, "/data/raft", config.Consensus.DataPath, "DataPath wrong value")
 	assert.Equal(t, false, config.Consensus.EnableLogs, "EnableLogs wrong value")
 	assert.Equal(t, true, config.Consensus.AutoBootstrap, "AutoBootstrap wrong value")
 	assert.NotEqual(t, 0, config.Consensus.BootstrapTimeout, "BootstrapTimeout wrong value")
 
 	// memberlist config
-	assert.Equal(t, []string{"store:8081"}, config.Gossip.InitMembers, "InitMembers wrong value")
+	assert.Equal(t, []string{"store:8081", "store-0:8081"}, config.Gossip.InitMembers, "InitMembers wrong value")
 
 	// storage
-	assert.Equal(t, "/data", config.Storage.DataPath, "DataPath wrong value")
+	assert.Equal(t, "/data/storage", config.Storage.DataPath, "DataPath wrong value")
 
 	// http
 	assert.NotEqual(t, 0, config.Http.DefaultTimeout, "DefaultTimeout wrong value")

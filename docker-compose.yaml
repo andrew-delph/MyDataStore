@@ -44,8 +44,8 @@ services:
       # - zookeeper
       - nginx
     restart: always
-    # tmpfs:
-    #   - /store:size=300m,mode=1777
+    tmpfs:
+      - /data/:size=300m,mode=1777
     # volumes:
     #   - /tmp/store_data:/store
 

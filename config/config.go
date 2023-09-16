@@ -18,7 +18,7 @@ type ManagerConfig struct {
 	PartitionCount       int    `mapstructure:"PARTITION_COUNT"`
 	PartitionBuckets     int    `mapstructure:"PARTITION_BUCKETS"`
 	PartitionConcurrency int64  `mapstructure:"PARTITION_CONCURRENCY"`
-	DataPath             string `mapstructure:"DATA_PATH"`
+	DataPath             string `mapstructure:"DATA_PATH"` // TODO REMOVE THIS?
 	Hostname             string
 }
 

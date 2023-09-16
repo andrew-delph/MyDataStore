@@ -8,18 +8,19 @@ manager:
   partition_concurrency: 10
   partition_count: 10
   partition_buckets: 500
-  data_path: "/data"
+  data_path: "/data/storage"
 consensus:
   epoch_time: 30
-  data_path: "/raft"
+  data_path: "/data/raft"
   enable_logs: false
   auto_bootstrap: true
   bootstrap_timeout: 1
 gossip:
   init_members:
     - "store:8081"
+    - "store-0:8081"
 storage:
-  data_path: "/data"
+  data_path: "/data/storage"
 rpc:
   port: 7070
 http:

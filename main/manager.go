@@ -125,11 +125,12 @@ func (m *Manager) startWorker(workerId int) {
 			switch task := data.(type) {
 
 			case http.HealthTask:
-				logrus.Warn("HealthTask")
 				err := m.consensusCluster.IsHealthy()
 				if err != nil {
+					logrus.Warnf("HealthTask err = %v", err)
 					task.ResCh <- err
 				} else {
+					logrus.Debug("HealthTask healthy")
 					task.ResCh <- true
 				}
 
