@@ -1,6 +1,6 @@
 manager:
-  replica_count: 3
-  read_quorum: 2
+  replica_count: 4
+  read_quorum: 3
   write_quorum: 2
   default_timeout: 2
   workers_count: 20
