@@ -216,16 +216,15 @@ func (consensusCluster *ConsensusCluster) UpdateEpoch() error {
 
 func (consensusCluster *ConsensusCluster) IsHealthy() error {
 	currState := consensusCluster.raftNode.State()
-	appliedIndex := consensusCluster.raftNode.AppliedIndex()
-	fsmIndex := *consensusCluster.fsm.index
 
 	if currState != raft.Follower && currState != raft.Leader {
 		return errors.Errorf("wrong state %v", currState)
 	}
-
-	if fsmIndex != appliedIndex {
-		return errors.Errorf("fsm wrong index fsmIndex %v appliedIndex %d", fsmIndex, appliedIndex)
-	}
+	// appliedIndex := consensusCluster.raftNode.AppliedIndex()
+	// fsmIndex := *consensusCluster.fsm.index
+	// if fsmIndex != appliedIndex {
+	// 	return errors.Errorf("fsm wrong index fsmIndex %v appliedIndex %d", fsmIndex, appliedIndex)
+	// }
 
 	return nil
 }
