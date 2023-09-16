@@ -1,5 +1,6 @@
 name: k8_dev
-
+on_project_first_start: ./dev k8-init
+on_project_exit: minikube delete
 windows:
   - editor:
       layout: tiled

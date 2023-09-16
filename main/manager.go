@@ -213,6 +213,13 @@ func (m *Manager) startWorker(workerId int) {
 					}
 				}
 
+				if m.CurrentEpoch == 0 {
+					err := m.consensusCluster.UpdateEpoch()
+					if err != nil {
+						logrus.Error("UpdateEpoch err = %v", err)
+					}
+				}
+
 			case rpc.SetValueTask:
 				logrus.Debugf("worker SetValueTask: %+v", task)
 				err := m.SetValue(task.Value)
