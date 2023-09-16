@@ -18,11 +18,13 @@ var snapshotLock sync.RWMutex
 type FSM struct {
 	Epoch int64
 	reqCh chan interface{}
+	index *uint64
 }
 
 func (fsm *FSM) Apply(logEntry *raft.Log) interface{} {
 	applyLock.Lock()
 	defer applyLock.Unlock()
+	*fsm.index = logEntry.Index
 	epoch, err := utils.DecodeBytesToInt64(logEntry.Data)
 	if err != nil {
 		logrus.Error("DecodeBytesToInt64 Error on Apply: %v", err)
@@ -31,14 +33,6 @@ func (fsm *FSM) Apply(logEntry *raft.Log) interface{} {
 	fsm.Epoch = epoch
 
 	fsm.reqCh <- EpochTask{Epoch: epoch}
-
-	// if logEntry.Index == raftNode.AppliedIndex() {
-	// 	validFSMObserver <- true
-	// } else if logEntry.Index != raftNode.AppliedIndex() {
-	// 	validFSMObserver <- false
-	// }
-
-	// epochObserver <- epoch
 
 	return epoch
 }

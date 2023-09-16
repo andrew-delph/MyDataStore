@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/raft"
 	raftboltdb "github.com/hashicorp/raft-boltdb"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
 	"github.com/andrew-delph/my-key-store/config"
@@ -27,6 +28,7 @@ type ConsensusCluster struct {
 	consensusConfig config.ConsensusConfig
 	raftNode        *raft.Raft
 	epochTick       *time.Ticker
+	fsm             *FSM
 }
 
 type LeaderChangeTask struct {
@@ -101,13 +103,13 @@ func (consensusCluster *ConsensusCluster) StartConsensusCluster() error {
 		logrus.Fatal(err)
 	}
 
-	fsm := &FSM{reqCh: consensusCluster.reqCh}
+	fsm := &FSM{reqCh: consensusCluster.reqCh, index: new(uint64)}
 
 	raftNode, err := raft.NewRaft(consensusCluster.raftConf, fsm, logStore, stableStore, snapshotStore, trans)
 	if err != nil {
 		logrus.Fatal(err)
 	}
-
+	consensusCluster.fsm = fsm
 	consensusCluster.raftNode = raftNode
 
 	// start the consensus worker
@@ -210,4 +212,20 @@ func (consensusCluster *ConsensusCluster) UpdateEpoch() error {
 	}
 	logrus.Debugf("Done.")
 	return err
+}
+
+func (consensusCluster *ConsensusCluster) IsHealthy() error {
+	currState := consensusCluster.raftNode.State()
+	appliedIndex := consensusCluster.raftNode.AppliedIndex()
+	fsmIndex := *consensusCluster.fsm.index
+
+	if currState != raft.Follower && currState != raft.Leader {
+		return errors.Errorf("wrong state %v", currState)
+	}
+
+	if fsmIndex != appliedIndex {
+		return errors.Errorf("fsm wrong index fsmIndex %v appliedIndex %d", fsmIndex, appliedIndex)
+	}
+
+	return nil
 }

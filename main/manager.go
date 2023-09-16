@@ -126,7 +126,12 @@ func (m *Manager) startWorker(workerId int) {
 
 			case http.HealthTask:
 				logrus.Warn("HealthTask")
-				task.ResCh <- true
+				err := m.consensusCluster.IsHealthy()
+				if err != nil {
+					task.ResCh <- err
+				} else {
+					task.ResCh <- true
+				}
 
 			case http.SetTask:
 				logrus.Debugf("worker SetTask: %+v", task)
