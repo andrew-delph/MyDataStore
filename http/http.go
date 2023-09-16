@@ -31,6 +31,10 @@ type GetTask struct {
 	ResCh chan interface{}
 }
 
+type HealthTask struct {
+	ResCh chan interface{}
+}
+
 func CreateHttpServer(httpConfig config.HttpConfig, reqCh chan interface{}) HttpServer {
 	return HttpServer{httpConfig: httpConfig, reqCh: reqCh}
 }
@@ -87,7 +91,34 @@ func (s HttpServer) getHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s HttpServer) healthHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "healthy")
+	resCh := make(chan interface{})
+	timeout := time.After(time.Second * time.Duration(s.httpConfig.DefaultTimeout))
+	select {
+	case s.reqCh <- HealthTask{ResCh: resCh}:
+		//
+	case <-timeout:
+		http.Error(w, "server busy", http.StatusBadRequest)
+		return
+	}
+
+	select {
+	case rawRes := <-resCh:
+		switch res := rawRes.(type) {
+		case bool:
+			if res {
+				fmt.Fprintf(w, "healthy")
+			} else {
+				http.Error(w, "not healthy", http.StatusBadRequest)
+			}
+		case error:
+			http.Error(w, res.Error(), http.StatusInternalServerError)
+		default:
+			logrus.Panicf("http unkown res type: %v", reflect.TypeOf(res))
+		}
+	case <-timeout:
+		http.Error(w, "server busy", http.StatusBadRequest)
+		return
+	}
 }
 
 func (s HttpServer) StartHttp() {

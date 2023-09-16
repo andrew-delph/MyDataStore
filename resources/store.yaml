@@ -34,12 +34,12 @@ spec:
           #     path: /
           #     port: 8080
           #   periodSeconds: 4
-          # readinessProbe:
-          #   httpGet:
-          #     path: /health
-          #     port: 8080
-          #   # initialDelaySeconds: 5
-          #   periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            # initialDelaySeconds: 5
+            periodSeconds: 5
           # livenessProbe:
           #   httpGet:
           #     path: /health

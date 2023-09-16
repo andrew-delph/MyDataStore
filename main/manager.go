@@ -48,6 +48,7 @@ type Manager struct {
 
 func NewManager(c config.Config) Manager {
 	reqCh := make(chan interface{}, c.Manager.ReqChannelSize)
+
 	httpServer := http.CreateHttpServer(c.Http, reqCh)
 	gossipCluster := gossip.CreateGossipCluster(c.Gossip, reqCh)
 	db := storage.NewBadgerStorage(c.Storage)
@@ -122,6 +123,10 @@ func (m *Manager) startWorker(workerId int) {
 				return
 			}
 			switch task := data.(type) {
+
+			case http.HealthTask:
+				logrus.Warn("HealthTask")
+				task.ResCh <- true
 
 			case http.SetTask:
 				logrus.Debugf("worker SetTask: %+v", task)

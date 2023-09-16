@@ -14,5 +14,13 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = ["http_test.go"],
+    data = ["//config:rename-test-config"],
     embed = [":go_default_library"],
+    env = {
+        "CONFIG_PATH": "../config",
+    },
+    deps = [
+        "//config:go_default_library",
+        "@com_github_stretchr_testify//assert:go_default_library",
+    ],
 )

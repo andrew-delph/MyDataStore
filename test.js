@@ -80,6 +80,22 @@ export function basic() {
   return;
 }
 
+export function health() {
+  let addr = `http://${address}/health`;
+  let baseRes = http.get(
+    addr,
+    (options = {
+      timeout: "5s",
+    })
+  );
+  check(baseRes, {
+    "Basic: status was 200": (r) =>
+      r.status === 200 || console.error(`Base Error: Status was ${r.status}`),
+  });
+
+  return;
+}
+
 export function panic() {
   let addr = `http://${address}/panic`;
   let baseRes = http.get(addr);
@@ -150,10 +166,10 @@ export function remove() {
 }
 
 // options = { duration: "2h", vus: 1 };
-// options = { iterations: 1, vus: 1 };
+options = { iterations: 20, vus: 1 };
 export default function () {
-  // leader();
-  // return;
+  health();
+  return;
 
   // the key value to insert
   let key = randomString(15);
