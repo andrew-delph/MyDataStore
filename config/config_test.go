@@ -25,6 +25,7 @@ func TestConfigDefault(t *testing.T) {
 	assert.NotEqual(t, 0, config.Manager.DefaultTimeout, "DefaultTimeout wrong value")
 	assert.NotEqual(t, 0, config.Manager.WokersCount, "WokersCount wrong value")
 	assert.NotEqual(t, 0, config.Manager.ReqChannelSize, "ReqChannelSize wrong value")
+	assert.NotEqual(t, 0, int(config.Manager.PartitionConcurrency), "PartitionConcurrency wrong value")
 
 	// consensus config
 	assert.NotEqual(t, 0, config.Consensus.EpochTime, "EpochTime wrong value")
@@ -55,6 +56,7 @@ func TestConfigOverwrite(t *testing.T) {
 	assert.Equal(t, 999, config.Manager.ReadQuorum, "ReadQuorum wrong value")
 	assert.Equal(t, 99999, config.Manager.PartitionBuckets, "PartitionBuckets wrong value")
 	assert.Equal(t, "/tmp/store/data", config.Manager.DataPath, "DataPath wrong value")
+	assert.Equal(t, int64(991), config.Manager.PartitionConcurrency, "PartitionConcurrency wrong value")
 
 	// consensus config
 	assert.Equal(t, 9, config.Consensus.EpochTime, "EpochTime wrong value")

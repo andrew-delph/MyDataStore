@@ -58,7 +58,7 @@ func NewManager(c config.Config) Manager {
 	parts := utils.NewIntSet()
 	partitionLocker := NewPartitionLocker(c.Manager.PartitionCount)
 
-	consistencyController := NewConsistencyController(5, c.Manager.PartitionCount, reqCh) // TODO get conccurency Level from config
+	consistencyController := NewConsistencyController(c.Manager.PartitionConcurrency, c.Manager.PartitionCount, reqCh)
 	return Manager{
 		config:                c,
 		reqCh:                 reqCh,

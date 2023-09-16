@@ -5,8 +5,9 @@ manager:
   default_timeout: 2
   workers_count: 20
   req_channel_size: 1000
-  partition_count: 100
+  partition_count: 10
   partition_buckets: 500
+  partition_concurrency: 5
   data_path: "/data"
 consensus:
   epoch_time: 30

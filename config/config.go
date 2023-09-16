@@ -8,17 +8,18 @@ import (
 )
 
 type ManagerConfig struct {
-	WokersCount      int `mapstructure:"WORKERS_COUNT"`
-	ReqChannelSize   int `mapstructure:"REQ_CHANNEL_SIZE"`
-	ReplicaCount     int `mapstructure:"REPLICA_COUNT"`
-	WriteQuorum      int `mapstructure:"WRITE_QUORUM"`
-	ReadQuorum       int `mapstructure:"READ_QUORUM"`
-	SaveInterval     int
-	DefaultTimeout   int    `mapstructure:"DEFAULT_TIMEOUT"`
-	PartitionCount   int    `mapstructure:"PARTITION_COUNT"`
-	PartitionBuckets int    `mapstructure:"PARTITION_BUCKETS"`
-	DataPath         string `mapstructure:"DATA_PATH"`
-	Hostname         string
+	WokersCount          int `mapstructure:"WORKERS_COUNT"`
+	ReqChannelSize       int `mapstructure:"REQ_CHANNEL_SIZE"`
+	ReplicaCount         int `mapstructure:"REPLICA_COUNT"`
+	WriteQuorum          int `mapstructure:"WRITE_QUORUM"`
+	ReadQuorum           int `mapstructure:"READ_QUORUM"`
+	SaveInterval         int
+	DefaultTimeout       int    `mapstructure:"DEFAULT_TIMEOUT"`
+	PartitionCount       int    `mapstructure:"PARTITION_COUNT"`
+	PartitionBuckets     int    `mapstructure:"PARTITION_BUCKETS"`
+	PartitionConcurrency int64  `mapstructure:"PARTITION_CONCURRENCY"`
+	DataPath             string `mapstructure:"DATA_PATH"`
+	Hostname             string
 }
 
 type ConsensusConfig struct {
