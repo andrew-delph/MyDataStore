@@ -24,6 +24,11 @@ case $1 in
         kubectl wait --namespace ingress-nginx  --for=condition=ready pod  --selector=app.kubernetes.io/component=controller  --timeout=120s
         kubectl apply -f ./resources/ingress.yaml
         ;;
+    k8-r)
+        kubectl delete statefulset store -R || true
+        kubectl delete pvc -l app=store  || true
+        ./deploy_k8.sh
+        ;;
     k8)
         tmuxinator start -p ./.tmuxinator/tmuxinator-k8.yaml
         ;;

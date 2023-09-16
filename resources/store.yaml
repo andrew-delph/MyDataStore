@@ -79,16 +79,16 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: store-node
+  name: store-external
 spec:
   selector:
     app: store
-  type: NodePort
+  # type: NodePort
   ports:
     - name: external-http
       port: 8080
       targetPort: 8080
-      nodePort: 30001
+      # nodePort: 30001
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
