@@ -8,7 +8,7 @@ NAMESPACE="default"
 
 eval $(minikube docker-env)
 
-bazel run //store:store_image
+bazel run --execution_log_json_file=events.json //main:store_image
 
 
 # kubectl delete statefulset store --ignore-not-found=true --wait=true

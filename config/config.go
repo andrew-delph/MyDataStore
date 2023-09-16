@@ -64,6 +64,7 @@ func GetDefaultConfig() Config {
 }
 
 func getConfigOverride(allow_override bool) Config {
+	logrus.Warn("CONFIG_PATH = ", os.Getenv("CONFIG_PATH"))
 	viper.AddConfigPath(os.Getenv("CONFIG_PATH"))
 
 	viper.SetConfigName("default-config")
@@ -92,6 +93,14 @@ func getConfigOverride(allow_override bool) Config {
 	config.Manager.Hostname = hostname
 	config.Gossip.Name = hostname
 	config.Consensus.Name = hostname
+
+	// // Print the JSON string
+	// settings := viper.AllSettings()
+	// jsonString, err := json.MarshalIndent(settings, "", "  ")
+	// if err != nil {
+	// 	logrus.Fatal(err)
+	// }
+	// fmt.Println(string(jsonString))
 
 	return config
 }

@@ -80,10 +80,10 @@ go_image(
 container_image(
     name = "store_image",
     base = ":go_image",
-    data_path = "/store",
-    directory = "/store",
+    data_path = "/config",
+    directory = "/config",
     env = {
-        "CONFIG_PATH": "/store/config/.",
+        "CONFIG_PATH": "/config/.",
     },
     files = ["//config:default-config"],
     ports = ["80"],

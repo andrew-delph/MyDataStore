@@ -7,10 +7,10 @@ manager:
   req_channel_size: 1000
   partition_count: 100
   partition_buckets: 500
-  data_path: "/store/data"
+  data_path: "/data"
 consensus:
   epoch_time: 30
-  data_path: "/store/raft"
+  data_path: "/raft"
   enable_logs: false
   auto_bootstrap: true
   bootstrap_timeout: 1
@@ -18,7 +18,7 @@ gossip:
   init_members:
     - "store:8081"
 storage:
-  data_path: "/store/data"
+  data_path: "/data"
 rpc:
   port: 7070
 http:

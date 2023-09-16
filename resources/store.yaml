@@ -3,7 +3,7 @@ kind: StatefulSet
 metadata:
   name: store
 spec:
-  replicas: 4
+  replicas: 6
   # minReadySeconds: 30
   updateStrategy:
     type: RollingUpdate
@@ -19,10 +19,7 @@ spec:
         app: store
     spec:
       containers:
-        - image: docker.io/andrew-delph/store:store_image
-          env:
-            - name: CLUSTER_JOIN_LIST
-              value: "store:8081,store-0:8081"
+        - image: docker.io/andrew-delph/main:store_image
           # imagePullPolicy: "Always"
           imagePullPolicy: Never
           name: store
@@ -31,18 +28,18 @@ spec:
               cpu: "200m"
           volumeMounts:
             - name: store-data-volume
-              mountPath: /store
+              mountPath: /data/
           # startupProbe:
           #   httpGet:
           #     path: /
           #     port: 8080
           #   periodSeconds: 4
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: 8080
-            # initialDelaySeconds: 5
-            periodSeconds: 5
+          # readinessProbe:
+          #   httpGet:
+          #     path: /health
+          #     port: 8080
+          #   # initialDelaySeconds: 5
+          #   periodSeconds: 5
           # livenessProbe:
           #   httpGet:
           #     path: /health

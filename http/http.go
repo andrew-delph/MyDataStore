@@ -86,9 +86,14 @@ func (s HttpServer) getHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (s HttpServer) healthHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "healthy")
+}
+
 func (s HttpServer) StartHttp() {
 	logrus.Info("starting http server")
 	http.HandleFunc("/set", s.setHandler)
 	http.HandleFunc("/get", s.getHandler)
+	http.HandleFunc("/health", s.healthHandler)
 	http.ListenAndServe(":8080", nil)
 }
