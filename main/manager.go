@@ -99,6 +99,11 @@ func (m *Manager) StartManager() {
 	signal.Notify(signals, syscall.SIGTERM)
 	<-signals
 	logrus.Warn("Received SIGTERM signal")
+
+	err = m.consensusCluster.Snapshot()
+	if err != nil {
+		logrus.Errorf("Failed to Snapshot err = %v", err)
+	}
 }
 
 func (m *Manager) startWorkers() {
@@ -202,10 +207,11 @@ func (m *Manager) startWorker(workerId int) {
 				task.ResCh <- true
 
 			case consensus.LeaderChangeTask:
+				logrus.Warnf("worker LeaderChangeTask: %+v", task)
+
 				if !task.IsLeader {
 					continue
 				}
-				logrus.Warnf("worker LeaderChangeTask: %+v", task)
 
 				for _, member := range m.gossipCluster.GetMembers() {
 					err := m.consensusCluster.AddVoter(member.Name, member.Addr.String())

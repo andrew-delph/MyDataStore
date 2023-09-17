@@ -277,3 +277,7 @@ func (consensusCluster *ConsensusCluster) Details() error {
 
 	return nil
 }
+
+func (consensusCluster *ConsensusCluster) Snapshot() error {
+	return consensusCluster.raftNode.Snapshot().Error()
+}
