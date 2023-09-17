@@ -260,14 +260,15 @@ func (consensusCluster *ConsensusCluster) IsHealthy() error {
 	currEpoch := consensusCluster.fsm.Epoch
 	currLeader := consensusCluster.raftNode.Leader()
 
+	appliedIndex := consensusCluster.raftNode.AppliedIndex()
+	fsmIndex := *consensusCluster.fsm.index
+	if fsmIndex != appliedIndex {
+		logrus.Errorf("fsm wrong index fsmIndex %v appliedIndex %d", fsmIndex, appliedIndex)
+	}
+
 	if currState != raft.Follower && currState != raft.Leader {
 		return errors.Errorf("wrong state %v. currEpoch: %d currLeader: %s", currState, currEpoch, currLeader)
 	}
-	// appliedIndex := consensusCluster.raftNode.AppliedIndex()
-	// fsmIndex := *consensusCluster.fsm.index
-	// if fsmIndex != appliedIndex {
-	// 	return errors.Errorf("fsm wrong index fsmIndex %v appliedIndex %d", fsmIndex, appliedIndex)
-	// }
 
 	return nil
 }
