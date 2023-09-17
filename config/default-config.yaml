@@ -3,7 +3,7 @@ manager:
   read_quorum: 3
   write_quorum: 2
   default_timeout: 2
-  workers_count: 20
+  workers_count: 100
   req_channel_size: 1000
   partition_concurrency: 10
   partition_count: 10

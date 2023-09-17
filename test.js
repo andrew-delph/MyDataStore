@@ -21,12 +21,12 @@ export let options = {
       // How long the test lasts
       duration: "40m",
       // How many iterations per timeUnit
-      rate: 10,
+      rate: 100,
       // Start `rate` iterations per second
       timeUnit: "1s",
       // Pre-allocate VUs
       preAllocatedVUs: 1,
-      maxVUs: 500,
+      maxVUs: 1000,
     },
     // ramping_arrival: {
     //   executor: "ramping-arrival-rate",
@@ -171,8 +171,8 @@ export function remove() {
 // options = { duration: "2h", vus: 1 };
 // options = { iterations: 20, vus: 1 };
 export default function () {
-  health();
-  return;
+  // health();
+  // return;
 
   // the key value to insert
   let key = randomString(15);
@@ -183,10 +183,10 @@ export default function () {
 
   check(setRes, {
     "set status is 200": (r) =>
-      r.status === 200 || console.error("set:", r.body),
+      r.status === 200 || console.error("set:", r.status, r.body),
   });
 
-  sleep(10);
+  sleep(5);
 
   // Get a value from the map
   let getRes = http.get(`http://${address}/get?key=${key}`);
@@ -194,6 +194,6 @@ export default function () {
   check(getRes, {
     "get status is 200": (r) => r.status === 200,
     "get the correct value": (r) =>
-      r.body === value || console.error("get:", r.body),
+      r.body === value || console.error("get:", r.status, r.body),
   });
 }
