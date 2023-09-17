@@ -6,7 +6,7 @@ windows:
       layout: tiled
       panes:
         - ibazel -run_command_after_success='./deploy_k8.sh -r' -debounce='10s' build //main:store_image
-        - kubectl get htp store-hpa -w
+        - while true; do kubectl get hpa store-hpa -w; done
         - while true; do stern statefulset/store; done
         - while true; do SECONDS=0; kubectl rollout status statefulset/store -w; if [ $SECONDS -gt 1 ]; then echo "['$(date +"%Y-%m-%d %H:%M")'] Elapsed time = $SECONDS seconds" | tee -a rollout.txt; fi; done
         -
