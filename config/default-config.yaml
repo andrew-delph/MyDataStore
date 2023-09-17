@@ -10,7 +10,7 @@ manager:
   partition_buckets: 500
   data_path: "/data/storage"
 consensus:
-  epoch_time: 5
+  epoch_time: 60
   data_path: "/data/raft"
   enable_logs: false
   auto_bootstrap: true
