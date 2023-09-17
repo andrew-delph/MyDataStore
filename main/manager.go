@@ -104,6 +104,10 @@ func (m *Manager) StartManager() {
 	if err != nil {
 		logrus.Errorf("Failed to Snapshot err = %v", err)
 	}
+	err = m.httpServer.StopHttp()
+	if err != nil {
+		logrus.Errorf("Failed to Shutdown http server err = %v", err)
+	}
 }
 
 func (m *Manager) startWorkers() {

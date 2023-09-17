@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -18,6 +19,7 @@ func testHttp() {
 type HttpServer struct {
 	httpConfig config.HttpConfig
 	reqCh      chan interface{}
+	srv        *http.Server
 }
 
 type SetTask struct {
@@ -36,7 +38,7 @@ type HealthTask struct {
 }
 
 func CreateHttpServer(httpConfig config.HttpConfig, reqCh chan interface{}) HttpServer {
-	return HttpServer{httpConfig: httpConfig, reqCh: reqCh}
+	return HttpServer{httpConfig: httpConfig, reqCh: reqCh, srv: new(http.Server)}
 }
 
 // Define a setHandler function
@@ -127,4 +129,26 @@ func (s HttpServer) StartHttp() {
 	http.HandleFunc("/get", s.getHandler)
 	http.HandleFunc("/health", s.healthHandler)
 	http.ListenAndServe(":8080", nil)
+	srv := &http.Server{
+		Addr: ":8080",
+	}
+	s.srv = srv
+
+	go func() {
+		logrus.Infof("Server is running on http://localhost:8080")
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logrus.Panic(err)
+		}
+	}()
+}
+
+func (s HttpServer) StopHttp() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	// Attempt a graceful shutdown
+	if err := s.srv.Shutdown(ctx); err != nil {
+		return err
+	}
+	return nil
 }
