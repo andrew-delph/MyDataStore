@@ -10,11 +10,11 @@ manager:
   partition_buckets: 500
   data_path: "/data/storage"
 consensus:
-  epoch_time: 30
+  epoch_time: 5
   data_path: "/data/raft"
   enable_logs: false
   auto_bootstrap: true
-  bootstrap_timeout: 1
+  bootstrap_timeout: 15
 gossip:
   init_members:
     - "store:8081"

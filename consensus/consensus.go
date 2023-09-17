@@ -37,13 +37,14 @@ type LeaderChangeTask struct {
 
 type EpochTask struct {
 	Epoch int64
+	ResCh chan interface{}
 }
 
 func CreateConsensusCluster(consensusConfig config.ConsensusConfig, reqCh chan interface{}) *ConsensusCluster {
 	raftConf := raft.DefaultConfig()
 	raftConf.LocalID = raft.ServerID(consensusConfig.Name)
-	// conf.SnapshotInterval = time.Second * 1
-	// conf.SnapshotThreshold = 1
+	// raftConf.SnapshotInterval = time.Second * 1
+	// raftConf.SnapshotThreshold = 1
 	// logrus.Infof("conf.ElectionTimeout %v", raftConf.ElectionTimeout)
 	// logrus.Infof("conf.HeartbeatTimeout %v", raftConf.HeartbeatTimeout)
 	// logrus.Infof("conf.LeaderLeaseTimeout %v", raftConf.LeaderLeaseTimeout)
@@ -167,11 +168,53 @@ func (consensusCluster *ConsensusCluster) RaftBootstrap() error {
 }
 
 func (consensusCluster *ConsensusCluster) AddVoter(nodeName, nodeIP string) error {
+	if consensusCluster.raftNode.State() != raft.Leader {
+		return nil
+	}
+
+	err := consensusCluster.raftNode.VerifyLeader().Error()
+	if err != nil {
+		return err
+	}
 	noderRaftAddr := fmt.Sprintf("%s:7000", nodeIP)
 	logrus.Debugf("AddVoter! STATE = %s nodeName = %s noderRaftAddr = %s", consensusCluster.raftNode.State(), nodeName, noderRaftAddr)
 
-	addVoterFuture := consensusCluster.raftNode.AddVoter(raft.ServerID(nodeName), raft.ServerAddress(noderRaftAddr), 0, 0)
-	return addVoterFuture.Error()
+	serverId := raft.ServerID(nodeName)
+	serverAddress := raft.ServerAddress(noderRaftAddr)
+
+	configFuture := consensusCluster.raftNode.GetConfiguration()
+	if err := configFuture.Error(); err != nil {
+		logrus.Errorf("failed to get raft configuration: %v", err)
+		return err
+	}
+
+	for _, srv := range configFuture.Configuration().Servers {
+		// If a node already exists with either the joining node's ID or address,
+		// that node may need to be removed from the config first.
+		if srv.ID == serverId || srv.Address == serverAddress {
+			// However, if *both* the ID and the address are the same, then no
+			// join is actually needed.
+			if srv.Address == serverAddress && srv.ID == serverId {
+				logrus.Warnf("node %s at %s already member of cluster, ignoring join request", nodeName, nodeIP)
+				return nil
+			}
+
+			if err := consensusCluster.RemoveServer(nodeName); err != nil {
+				logrus.Errorf("failed to remove node %s: %v", nodeName, err)
+				return err
+			}
+			logrus.Warnf("removed node %s prior to rejoin with changed ID or address", nodeName)
+		}
+	}
+
+	addVoterFuture := consensusCluster.raftNode.AddVoter(serverId, serverAddress, 0, 0)
+	err = addVoterFuture.Error()
+	if err != nil {
+		logrus.Errorf("retry AddVoter: %v", err)
+		return consensusCluster.AddVoter(nodeName, nodeIP)
+	}
+	logrus.Warnf("AddVoter Success: %s", nodeName)
+	return nil
 }
 
 func (consensusCluster *ConsensusCluster) RemoveServer(nodeName string) error {
@@ -187,17 +230,15 @@ func (consensusCluster *ConsensusCluster) State() raft.RaftState {
 	return consensusCluster.raftNode.State()
 }
 
-var globalEpoch = int64(1)
-
 func (consensusCluster *ConsensusCluster) UpdateEpoch() error {
 	err := consensusCluster.raftNode.VerifyLeader().Error()
 	if err != nil {
 		return nil
 	}
-	globalEpoch++
-	logrus.Debugf("Leader Update Epoch. Epoch = %d", globalEpoch)
+	newEpoch := consensusCluster.fsm.Epoch + 1
+	logrus.Debugf("Leader Update Epoch. Epoch = %d", newEpoch)
 
-	epochBytes, err := utils.EncodeInt64ToBytes(globalEpoch)
+	epochBytes, err := utils.EncodeInt64ToBytes(newEpoch)
 	if err != nil {
 		logrus.Errorf("EncodeInt64ToBytes Err= %v", err)
 		return err
@@ -206,9 +247,9 @@ func (consensusCluster *ConsensusCluster) UpdateEpoch() error {
 	err = logEntry.Error()
 
 	if err == nil {
-		// logrus.Warnf("Leader Update Epoch. Epoch = %d", currEpoch)
+		logrus.Warnf("Leader Update Epoch. Epoch = %d", newEpoch)
 	} else {
-		logrus.Warnf("update fsm Err= %v", err)
+		logrus.Errorf("update fsm Err= %v", err)
 	}
 	logrus.Debugf("Done.")
 	return err
@@ -216,15 +257,23 @@ func (consensusCluster *ConsensusCluster) UpdateEpoch() error {
 
 func (consensusCluster *ConsensusCluster) IsHealthy() error {
 	currState := consensusCluster.raftNode.State()
+	currEpoch := consensusCluster.fsm.Epoch
+	currLeader := consensusCluster.raftNode.Leader()
 
 	if currState != raft.Follower && currState != raft.Leader {
-		return errors.Errorf("wrong state %v", currState)
+		return errors.Errorf("wrong state %v. currEpoch: %d currLeader: %s", currState, currEpoch, currLeader)
 	}
 	// appliedIndex := consensusCluster.raftNode.AppliedIndex()
 	// fsmIndex := *consensusCluster.fsm.index
 	// if fsmIndex != appliedIndex {
 	// 	return errors.Errorf("fsm wrong index fsmIndex %v appliedIndex %d", fsmIndex, appliedIndex)
 	// }
+
+	return nil
+}
+
+func (consensusCluster *ConsensusCluster) Details() error {
+	logrus.Warnf("num peers: %v state: %s", consensusCluster.raftNode.Stats()["num_peers"], consensusCluster.raftNode.State())
 
 	return nil
 }

@@ -72,7 +72,7 @@ func NewManager(c config.Config) Manager {
 		myPartitions:          &parts,
 		partitionLocker:       partitionLocker,
 		consistencyController: consistencyController,
-		debugTick:             time.NewTicker(time.Second * 100000),
+		debugTick:             time.NewTicker(time.Second * 30),
 	}
 }
 
@@ -115,7 +115,8 @@ func (m *Manager) startWorker(workerId int) {
 	workerLoop:
 		select {
 		case <-m.debugTick.C:
-			logrus.Warnf("DEBUG TICK #members = %d", len(m.gossipCluster.GetMembers()))
+			m.consensusCluster.Details()
+			logrus.Debugf("DEBUG TICK #members = %d", len(m.gossipCluster.GetMembers()))
 
 		case data, ok := <-m.reqCh:
 			if !ok {
@@ -153,7 +154,16 @@ func (m *Manager) startWorker(workerId int) {
 				}
 
 			case gossip.JoinTask:
-				// logrus.Warnf("worker JoinTask: %+v", task)
+				logrus.Warnf("worker JoinTask: %+v", task)
+
+				err := m.consensusCluster.AddVoter(task.Name, task.IP)
+				if err != nil {
+					err = errors.Wrap(err, "gossip.JoinTask")
+					logrus.Error(err)
+				} else {
+					// logrus.Infof("AddVoter success")
+				}
+
 				_, rpcClient, err := m.rpcWrapper.CreateRpcClient(task.IP)
 				if err != nil {
 					err = errors.Wrap(err, "gossip.JoinTask")
@@ -171,16 +181,11 @@ func (m *Manager) startWorker(workerId int) {
 				currPartitions := utils.NewIntSet().From(currPartitionsList)
 				m.consistencyController.HandleHashringChange(currPartitions)
 
-				err = m.consensusCluster.AddVoter(task.Name, task.IP)
-				if err != nil {
-					err = errors.Wrap(err, "gossip.JoinTask")
-					// logrus.Error(err)
-				} else {
-					// logrus.Infof("AddVoter success")
-				}
-
 			case gossip.LeaveTask:
-				// logrus.Warnf("worker LeaveTask: %+v", task)
+				logrus.Warnf("worker LeaveTask: %+v", task)
+
+				m.consensusCluster.RemoveServer(task.Name)
+
 				m.ring.RemoveNode(task.Name)
 
 				currPartitionsList, err := m.ring.GetMyPartions()
@@ -191,24 +196,23 @@ func (m *Manager) startWorker(workerId int) {
 				currPartitions := utils.NewIntSet().From(currPartitionsList)
 				m.consistencyController.HandleHashringChange(currPartitions)
 
-				m.consensusCluster.RemoveServer(task.Name)
-
 			case consensus.EpochTask:
 				m.CurrentEpoch = task.Epoch
 				m.consistencyController.VerifyEpoch(task.Epoch)
+				task.ResCh <- true
 
 			case consensus.LeaderChangeTask:
 				if !task.IsLeader {
 					continue
 				}
-				logrus.Debugf("worker LeaderChangeTask: %+v", task)
+				logrus.Warnf("worker LeaderChangeTask: %+v", task)
 
 				for _, member := range m.gossipCluster.GetMembers() {
 					err := m.consensusCluster.AddVoter(member.Name, member.Addr.String())
 					if err != nil {
 						err = errors.Wrap(err, "gossip.JoinTask")
-						logrus.Debug(err)
-						break
+						logrus.Error(err)
+						continue
 					} else {
 						logrus.Debugf("AddVoter success")
 					}

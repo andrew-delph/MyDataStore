@@ -21,7 +21,7 @@ export let options = {
       // How long the test lasts
       duration: "40m",
       // How many iterations per timeUnit
-      rate: 50,
+      rate: 10,
       // Start `rate` iterations per second
       timeUnit: "1s",
       // Pre-allocate VUs
@@ -89,9 +89,11 @@ export function health() {
     })
   );
   check(baseRes, {
-    "Basic: status was 200": (r) =>
+    "Health: status was 200": (r) =>
       r.status === 200 ||
-      console.error(`Base Error: Status was ${r.status}. ${r.body}`),
+      console.error(
+        `Base Error:${Date.now()} Status was ${r.status}. ${r.body} `
+      ),
   });
 
   return;

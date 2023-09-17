@@ -24,15 +24,23 @@ type FSM struct {
 func (fsm *FSM) Apply(logEntry *raft.Log) interface{} {
 	applyLock.Lock()
 	defer applyLock.Unlock()
-	*fsm.index = logEntry.Index
 	epoch, err := utils.DecodeBytesToInt64(logEntry.Data)
 	if err != nil {
 		logrus.Error("DecodeBytesToInt64 Error on Apply: %v", err)
 		return nil
 	}
-	fsm.Epoch = epoch
 
-	fsm.reqCh <- EpochTask{Epoch: epoch}
+	if fsm.Epoch > epoch {
+		logrus.Warnf("epoch is less fsm %d new %d index %d old %d", fsm.Epoch, epoch, logEntry.Index, *fsm.index)
+		return nil
+	}
+	fsm.Epoch = epoch
+	*fsm.index = logEntry.Index
+	resCh := make(chan interface{})
+	fsm.reqCh <- EpochTask{Epoch: epoch, ResCh: resCh}
+	rawRes := <-resCh
+
+	logrus.Debugf("Apply res: %v", rawRes)
 
 	return epoch
 }
@@ -43,7 +51,7 @@ func (fsm *FSM) Snapshot() (raft.FSMSnapshot, error) {
 	snapshotLock.Lock()
 	defer snapshotLock.Unlock()
 
-	return &FSMSnapshot{stateValue: fsm.Epoch}, nil
+	return &FSMSnapshot{StateValue: fsm.Epoch}, nil
 }
 
 func (fsm *FSM) Restore(serialized io.ReadCloser) error {
@@ -52,17 +60,17 @@ func (fsm *FSM) Restore(serialized io.ReadCloser) error {
 		return err
 	}
 
-	fsm.Epoch = snapshot.stateValue
+	fsm.Epoch = snapshot.StateValue
+	logrus.Warnf("Restore raft %d", snapshot.StateValue)
 
 	return serialized.Close()
 }
 
 type FSMSnapshot struct {
-	stateValue int64 `json:"value"`
+	StateValue int64 `json:"value"`
 }
 
 func (fsmSnapshot *FSMSnapshot) Persist(sink raft.SnapshotSink) error {
-	// logrus.Warn("Persist!!!!!!!!!!!!!!!!!!!!!!!!1")
 	err := func() error {
 		snapshotBytes, err := json.Marshal(fsmSnapshot)
 		if err != nil {
@@ -80,7 +88,7 @@ func (fsmSnapshot *FSMSnapshot) Persist(sink raft.SnapshotSink) error {
 		return nil
 	}()
 	if err != nil {
-		logrus.Warnf("Persist ERROR = %v", err)
+		logrus.Errorf("Persist ERROR = %v", err)
 		sink.Cancel()
 		return err
 	}
