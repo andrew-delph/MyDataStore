@@ -174,6 +174,8 @@ export default function () {
   // health();
   // return;
 
+  const iterationNumber = __ITER;
+
   // the key value to insert
   let key = randomString(15);
   let value = randomString(15);
@@ -183,7 +185,8 @@ export default function () {
 
   check(setRes, {
     "set status is 200": (r) =>
-      r.status === 200 || console.error("set:", r.status, r.body),
+      r.status === 200 ||
+      console.error("set:", r.status, r.body, iterationNumber),
   });
 
   sleep(5);
@@ -194,6 +197,7 @@ export default function () {
   check(getRes, {
     "get status is 200": (r) => r.status === 200,
     "get the correct value": (r) =>
-      r.body === value || console.error("get:", r.status, r.body),
+      r.body === value ||
+      console.error("get:", r.status, r.body, iterationNumber),
   });
 }

@@ -1,7 +1,7 @@
 manager:
   replica_count: 4
-  read_quorum: 3
-  write_quorum: 2
+  read_quorum: 2
+  write_quorum: 3
   default_timeout: 2
   workers_count: 100
   req_channel_size: 1000
