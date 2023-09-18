@@ -750,8 +750,9 @@ func (m *Manager) VerifyEpoch(PartitionId int, Epoch int64) error {
 	var diff []int32
 	var data []byte
 	attempts := 0
+	attemptsLimit := 10
 	for true {
-		if attempts > 1000 {
+		if attempts > attemptsLimit {
 			logrus.Errorf("VerifyEpoch: %v attempts= %d P= %d E= %d", err, attempts, PartitionId, Epoch)
 		}
 		if err != nil {
@@ -827,7 +828,7 @@ func (m *Manager) VerifyEpoch(PartitionId int, Epoch int64) error {
 			if err != nil {
 				continue
 			}
-			if attempts > 1000 {
+			if attempts > attemptsLimit {
 				logrus.Warnf("write partitionEpochObject Partition %v LowerEpoch %v index %s attempts %d", partitionEpochObject.Partition, partitionEpochObject.LowerEpoch, index, attempts)
 			}
 			return nil

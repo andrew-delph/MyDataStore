@@ -129,7 +129,7 @@ func NewPartitionState(sema *semaphore.Weighted, partitionId int, observable rxg
 					return
 				case error:
 					err := errors.Wrap(res, "VerifyPartitionEpochEvent response")
-					logrus.Fatal(err)
+					logrus.Panic(err)
 				default:
 					logrus.Panicf("VerifyPartitionEpochEvent observer unkown res type: %v", reflect.TypeOf(res))
 				}
@@ -137,6 +137,9 @@ func NewPartitionState(sema *semaphore.Weighted, partitionId int, observable rxg
 
 		case UpdatePartitionsEvent: // TODO create test case for this
 			if event.CurrPartitions.Has(partitionId) && ps.active.CompareAndSwap(false, true) { // TODO create test case for this
+				if ps.lastEpoch < 0 {
+					return
+				}
 
 				logrus.Warnf("new partition sync %d", partitionId)
 				resCh := make(chan interface{})
@@ -146,7 +149,7 @@ func NewPartitionState(sema *semaphore.Weighted, partitionId int, observable rxg
 				case SyncPartitionResponse:
 					logrus.Debugf("sync partrition %d res = %+v", partitionId, res)
 				case error:
-					logrus.Error(errors.Wrap(res, "UpdatePartitionsEvent res"))
+					logrus.Panic(errors.Wrap(res, "UpdatePartitionsEvent res"))
 				default:
 					logrus.Panicf("UpdatePartitionsEvent observer unkown res type: %v", reflect.TypeOf(res))
 				}
