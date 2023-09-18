@@ -6,7 +6,7 @@ manager:
   workers_count: 100
   req_channel_size: 1000
   partition_concurrency: 10
-  partition_count: 10
+  partition_count: 24
   partition_buckets: 500
   data_path: "/data/storage"
 consensus:

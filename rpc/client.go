@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	datap "github.com/andrew-delph/my-key-store/datap"
 )
@@ -19,7 +20,7 @@ type (
 )
 
 func (rpcWrapper *RpcWrapper) CreateRpcClient(ip string) (*grpc.ClientConn, RpcClient, error) {
-	conn, err := grpc.Dial(fmt.Sprintf("%s:%d", ip, rpcWrapper.rpcConfig.Port), grpc.WithInsecure(), grpc.WithBlock())
+	conn, err := grpc.Dial(fmt.Sprintf("%s:%d", ip, rpcWrapper.rpcConfig.Port), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, nil, err
 	}
