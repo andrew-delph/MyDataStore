@@ -80,7 +80,7 @@ func (rpcWrapper *RpcWrapper) SetRequest(ctx context.Context, value *datap.Value
 	if err != nil {
 		return nil, err
 	}
-	rawRes := utils.RecieveChannelTimeout(resCh, 0)
+	rawRes := <-resCh
 	logrus.Debug("SetRequest res ", rawRes)
 	return &datap.StandardResponse{Message: "Value set"}, nil
 }
@@ -92,7 +92,7 @@ func (rpcWrapper *RpcWrapper) GetRequest(ctx context.Context, req *datap.GetRequ
 	if err != nil {
 		return nil, err
 	}
-	rawRes := utils.RecieveChannelTimeout(resCh, 0)
+	rawRes := utils.RecieveChannelTimeout(resCh, 5)
 	switch res := rawRes.(type) {
 	case *datap.Value:
 		return res, nil
