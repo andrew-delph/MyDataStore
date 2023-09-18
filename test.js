@@ -4,6 +4,7 @@ import http from "k6/http";
 import { check } from "k6";
 import { randomString } from "https://jslib.k6.io/k6-utils/1.2.0/index.js";
 import { textSummary } from "https://jslib.k6.io/k6-summary/0.0.2/index.js";
+import exec from "k6/execution";
 
 export let options = {
   summaryTrendStats: ["avg", "min", "med", "max"],
@@ -174,7 +175,7 @@ export default function () {
   // health();
   // return;
 
-  const iterationNumber = __ITER;
+  const iterationNumber = exec.scenario.iterationInTest;
 
   // the key value to insert
   let key = randomString(15);
@@ -186,7 +187,12 @@ export default function () {
   check(setRes, {
     "set status is 200": (r) =>
       r.status === 200 ||
-      console.error("set:", r.status, r.body, iterationNumber),
+      console.error(
+        "set:",
+        r.status,
+        `${r.body}`.replace(/\n/g, ""),
+        iterationNumber
+      ),
   });
 
   sleep(5);
@@ -198,6 +204,11 @@ export default function () {
     "get status is 200": (r) => r.status === 200,
     "get the correct value": (r) =>
       r.body === value ||
-      console.error("get:", r.status, r.body, iterationNumber),
+      console.error(
+        "get:",
+        r.status,
+        `${r.body}`.replace(/\n/g, ""),
+        iterationNumber
+      ),
   });
 }
