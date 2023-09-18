@@ -161,7 +161,7 @@ func (m *Manager) startWorker(workerId int) {
 				} else if value == nil {
 					task.ResCh <- nil
 				} else {
-					task.ResCh <- value
+					task.ResCh <- value.Value
 				}
 
 			case gossip.JoinTask:
@@ -504,6 +504,8 @@ func (m *Manager) GetRequest(key string) (*rpc.RpcValue, error) {
 	}
 	if responseCount < m.config.Manager.ReadQuorum {
 		return nil, fmt.Errorf("failed ReadQuorum. responseCount = %d", responseCount)
+	} else if recentValue == nil {
+		return nil, nil
 	} else {
 		return recentValue, nil
 	}
