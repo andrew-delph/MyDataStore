@@ -11,6 +11,7 @@ import (
 
 	"github.com/andrew-delph/my-key-store/config"
 	datap "github.com/andrew-delph/my-key-store/datap"
+	"github.com/andrew-delph/my-key-store/utils"
 
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -75,17 +76,23 @@ func (rpcWrapper *RpcWrapper) StartRpcServer() {
 func (rpcWrapper *RpcWrapper) SetRequest(ctx context.Context, value *datap.Value) (*datap.StandardResponse, error) {
 	logrus.Debugf("SERVER Handling SetRequest: key=%s value=%s epoch=%d", value.Key, value.Value, value.Epoch)
 	resCh := make(chan interface{})
-	rpcWrapper.reqCh <- SetValueTask{Value: value, ResCh: resCh}
-	res := <-resCh
-	logrus.Debug("SetRequest res ", res)
+	err := utils.WriteChannelTimeout(rpcWrapper.reqCh, SetValueTask{Value: value, ResCh: resCh}, 2)
+	if err != nil {
+		return nil, err
+	}
+	rawRes := utils.RecieveChannelTimeout(resCh, 0)
+	logrus.Debug("SetRequest res ", rawRes)
 	return &datap.StandardResponse{Message: "Value set"}, nil
 }
 
 func (rpcWrapper *RpcWrapper) GetRequest(ctx context.Context, req *datap.GetRequestMessage) (*datap.Value, error) {
 	logrus.Debugf("Handling GetRequest: key=%s ", req.Key)
 	resCh := make(chan interface{})
-	rpcWrapper.reqCh <- GetValueTask{Key: req.Key, ResCh: resCh}
-	rawRes := <-resCh
+	err := utils.WriteChannelTimeout(rpcWrapper.reqCh, GetValueTask{Key: req.Key, ResCh: resCh}, 2)
+	if err != nil {
+		return nil, err
+	}
+	rawRes := utils.RecieveChannelTimeout(resCh, 0)
 	switch res := rawRes.(type) {
 	case *datap.Value:
 		return res, nil
@@ -103,7 +110,10 @@ func (rpcWrapper *RpcWrapper) GetRequest(ctx context.Context, req *datap.GetRequ
 func (rpcWrapper *RpcWrapper) StreamBuckets(req *datap.StreamBucketsRequest, stream datap.InternalNodeService_StreamBucketsServer) error {
 	logrus.Debugf("SERVER StreamBuckets Buckets %v LowerEpoch %v UpperEpoch %v Partition %v", req.Buckets, req.LowerEpoch, req.UpperEpoch, req.Partition)
 	resCh := make(chan interface{})
-	rpcWrapper.reqCh <- StreamBucketsTask{PartitionId: req.Partition, Buckets: req.Buckets, LowerEpoch: req.LowerEpoch, UpperEpoch: req.UpperEpoch, ResCh: resCh}
+	err := utils.WriteChannelTimeout(rpcWrapper.reqCh, StreamBucketsTask{PartitionId: req.Partition, Buckets: req.Buckets, LowerEpoch: req.LowerEpoch, UpperEpoch: req.UpperEpoch, ResCh: resCh}, 2)
+	if err != nil {
+		return err
+	}
 	for {
 		select {
 		case itemObj, ok := <-resCh:
@@ -131,8 +141,11 @@ func (rpcWrapper *RpcWrapper) StreamBuckets(req *datap.StreamBucketsRequest, str
 func (rpcWrapper *RpcWrapper) GetEpochTree(ctx context.Context, req *datap.EpochTreeObject) (*datap.EpochTreeObject, error) {
 	logrus.Debugf("Handling GetEpochTree: Partition=%d LowerEpoch=%d UpperEpoch=%d", req.Partition, req.LowerEpoch, req.UpperEpoch)
 	resCh := make(chan interface{})
-	rpcWrapper.reqCh <- GetEpochTreeObjectTask{PartitionId: req.Partition, LowerEpoch: req.LowerEpoch, UpperEpoch: req.UpperEpoch, ResCh: resCh}
-	rawRes := <-resCh
+	err := utils.WriteChannelTimeout(rpcWrapper.reqCh, GetEpochTreeObjectTask{PartitionId: req.Partition, LowerEpoch: req.LowerEpoch, UpperEpoch: req.UpperEpoch, ResCh: resCh}, 2)
+	if err != nil {
+		return nil, err
+	}
+	rawRes := utils.RecieveChannelTimeout(resCh, 5)
 	switch res := rawRes.(type) {
 	case *datap.EpochTreeObject:
 		return res, nil
@@ -148,7 +161,7 @@ func (rpcWrapper *RpcWrapper) GetEpochTreeLastValid(ctx context.Context, req *da
 	logrus.Debugf("Handling GetEpochTree: Partition=%d LowerEpoch=%d UpperEpoch=%d", req.Partition, req.LowerEpoch, req.UpperEpoch)
 	resCh := make(chan interface{})
 	rpcWrapper.reqCh <- GetEpochTreeLastValidObjectTask{PartitionId: req.Partition, ResCh: resCh}
-	rawRes := <-resCh
+	rawRes := utils.RecieveChannelTimeout(resCh, 5)
 	switch res := rawRes.(type) {
 	case *datap.EpochTreeObject:
 		return res, nil
