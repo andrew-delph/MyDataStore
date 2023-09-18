@@ -100,7 +100,7 @@ spec:
     kind: StatefulSet
     name: store
   minReplicas: 5
-  maxReplicas: 20
+  maxReplicas: 10
   metrics:
     - type: Resource
       resource:

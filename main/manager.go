@@ -83,6 +83,8 @@ func (m *Manager) StartManager() {
 	var err error
 	go m.startWorkers()
 
+	go m.rpcWrapper.StartRpcServer()
+
 	err = m.consensusCluster.StartConsensusCluster()
 	if err != nil {
 		logrus.Fatal(err)
@@ -92,7 +94,6 @@ func (m *Manager) StartManager() {
 		logrus.Fatal(err)
 	}
 
-	go m.rpcWrapper.StartRpcServer()
 	go m.httpServer.StartHttp()
 
 	signals := make(chan os.Signal, 1)
@@ -417,7 +418,7 @@ func (m *Manager) SetRequest(key, value string) error {
 			defer cancel()
 			res, err := member.rpcClient.SetRequest(ctx, setReq)
 			if err != nil {
-				errorCh <- err
+				errorCh <- errors.Wrapf(err, "member %s", member.Name)
 			} else {
 				responseCh <- res
 			}
@@ -433,7 +434,7 @@ func (m *Manager) SetRequest(key, value string) error {
 		case <-responseCh:
 			responseCount++
 		case err := <-errorCh:
-			logrus.Errorf("errorCh: %v", err)
+			logrus.Errorf("SetRequest errorCh: %v", err)
 			_ = err // Handle error if necessary
 		case <-timeout:
 			return fmt.Errorf("timed out waiting for responses. responseCount = %d", responseCount)
@@ -496,7 +497,7 @@ func (m *Manager) GetRequest(key string) (*rpc.RpcValue, error) {
 				recentValue = res
 			}
 		case err := <-errorCh:
-			logrus.Debugf("GET ERROR = %v", err)
+			logrus.Debugf("GetRequest errorCh %v", err)
 
 		case <-timeout:
 			return nil, fmt.Errorf("timed out waiting for responses. responseCount = %d", responseCount)
