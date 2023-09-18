@@ -10,6 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/andrew-delph/my-key-store/config"
+	"github.com/andrew-delph/my-key-store/utils"
 )
 
 func testHttp() {
@@ -47,16 +48,14 @@ func (s HttpServer) setHandler(w http.ResponseWriter, r *http.Request) {
 	value := r.URL.Query().Get("value")
 	logrus.Debugf("http handler path = \"%s\" key = \"%s\" value: \"%s\" ", r.URL.Path, key, value)
 	resCh := make(chan interface{})
-	timeout := time.After(time.Second * time.Duration(s.httpConfig.DefaultTimeout))
-	select {
-	case s.reqCh <- SetTask{Key: key, Value: value, ResCh: resCh}:
-		//
-	case <-timeout:
-		http.Error(w, "server busy", http.StatusInternalServerError)
+
+	err := utils.WriteChannelTimeout(s.reqCh, SetTask{Key: key, Value: value, ResCh: resCh}, s.httpConfig.DefaultTimeout)
+	if err != nil {
+		http.Error(w, "server busy", http.StatusBadRequest)
 		return
 	}
 
-	rawRes := <-resCh
+	rawRes := utils.RecieveChannelTimeout(resCh, s.httpConfig.DefaultTimeout)
 	switch res := rawRes.(type) {
 	case string:
 		fmt.Fprintf(w, res)
@@ -72,16 +71,13 @@ func (s HttpServer) getHandler(w http.ResponseWriter, r *http.Request) {
 	logrus.Debugf("http handler path = \"%s\" key = \"%s\"", r.URL.Path, key)
 	resCh := make(chan interface{})
 
-	timeout := time.After(time.Second * time.Duration(s.httpConfig.DefaultTimeout))
-	select {
-	case s.reqCh <- GetTask{Key: key, ResCh: resCh}:
-		//
-	case <-timeout:
-		http.Error(w, "server busy", http.StatusInternalServerError)
+	err := utils.WriteChannelTimeout(s.reqCh, GetTask{Key: key, ResCh: resCh}, s.httpConfig.DefaultTimeout)
+	if err != nil {
+		http.Error(w, "server busy", http.StatusBadRequest)
 		return
 	}
 
-	rawRes := <-resCh
+	rawRes := utils.RecieveChannelTimeout(resCh, s.httpConfig.DefaultTimeout)
 	switch res := rawRes.(type) {
 	case string:
 		fmt.Fprintf(w, res)
@@ -94,32 +90,25 @@ func (s HttpServer) getHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s HttpServer) healthHandler(w http.ResponseWriter, r *http.Request) {
 	resCh := make(chan interface{})
-	timeout := time.After(time.Second * time.Duration(s.httpConfig.DefaultTimeout))
-	select {
-	case s.reqCh <- HealthTask{ResCh: resCh}:
-		//
-	case <-timeout:
+
+	err := utils.WriteChannelTimeout(s.reqCh, HealthTask{ResCh: resCh}, s.httpConfig.DefaultTimeout)
+	if err != nil {
 		http.Error(w, "server busy", http.StatusBadRequest)
 		return
 	}
 
-	select {
-	case rawRes := <-resCh:
-		switch res := rawRes.(type) {
-		case bool:
-			if res {
-				fmt.Fprintf(w, "healthy")
-			} else {
-				http.Error(w, "not healthy", http.StatusBadRequest)
-			}
-		case error:
-			http.Error(w, res.Error(), http.StatusInternalServerError)
-		default:
-			logrus.Panicf("http unkown res type: %v", reflect.TypeOf(res))
+	rawRes := utils.RecieveChannelTimeout(resCh, s.httpConfig.DefaultTimeout)
+	switch res := rawRes.(type) {
+	case bool:
+		if res {
+			fmt.Fprintf(w, "healthy")
+		} else {
+			http.Error(w, "not healthy", http.StatusBadRequest)
 		}
-	case <-timeout:
-		http.Error(w, "server busy", http.StatusBadRequest)
-		return
+	case error:
+		http.Error(w, res.Error(), http.StatusInternalServerError)
+	default:
+		logrus.Panicf("http unkown res type: %v", reflect.TypeOf(res))
 	}
 }
 

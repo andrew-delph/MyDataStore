@@ -263,7 +263,7 @@ func (consensusCluster *ConsensusCluster) IsHealthy() error {
 	appliedIndex := consensusCluster.raftNode.AppliedIndex()
 	fsmIndex := *consensusCluster.fsm.index
 	if fsmIndex != appliedIndex {
-		logrus.Errorf("fsm wrong index fsmIndex %v appliedIndex %d", fsmIndex, appliedIndex)
+		logrus.Debugf("fsm wrong index fsmIndex %v appliedIndex %d", fsmIndex, appliedIndex)
 	}
 
 	if currState != raft.Follower && currState != raft.Leader {

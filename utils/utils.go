@@ -130,3 +130,24 @@ func trackTime(start time.Time, limit time.Duration, name string) {
 		logrus.Warnf("trackTime: %s took %.2f seconds", name, elapsed.Seconds())
 	}
 }
+
+func WriteChannelTimeout(ch chan interface{}, value interface{}, timeoutSeconds int) error {
+	select {
+	case ch <- value:
+		return nil
+	case <-time.After(time.Duration(timeoutSeconds) * time.Second):
+		return errors.New("write operation timed out")
+	}
+}
+
+func RecieveChannelTimeout(ch chan interface{}, timeoutSeconds int) interface{} {
+	select {
+	case value, ok := <-ch:
+		if !ok {
+			return errors.New("channel closed")
+		}
+		return value
+	case <-time.After(time.Duration(timeoutSeconds) * time.Second):
+		return errors.New("receive operation timed out")
+	}
+}
