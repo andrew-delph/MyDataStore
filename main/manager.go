@@ -124,7 +124,7 @@ func (m *Manager) startWorker(workerId int) {
 	workerLoop:
 		select {
 		case <-m.debugTick.C:
-			m.consensusCluster.Details()
+			// m.consensusCluster.Details()
 			logrus.Debugf("DEBUG TICK #members = %d", len(m.gossipCluster.GetMembers()))
 
 		case data, ok := <-m.reqCh:
@@ -158,8 +158,10 @@ func (m *Manager) startWorker(workerId int) {
 				value, err := m.GetRequest(task.Key)
 				if err != nil {
 					task.ResCh <- err
+				} else if value == nil {
+					task.ResCh <- nil
 				} else {
-					task.ResCh <- value.Value
+					task.ResCh <- value
 				}
 
 			case gossip.JoinTask:
@@ -500,9 +502,7 @@ func (m *Manager) GetRequest(key string) (*rpc.RpcValue, error) {
 			return nil, fmt.Errorf("timed out waiting for responses. responseCount = %d", responseCount)
 		}
 	}
-	if recentValue == nil {
-		return nil, fmt.Errorf("value not found. responseCount = %d", responseCount)
-	} else if responseCount < m.config.Manager.ReadQuorum {
+	if responseCount < m.config.Manager.ReadQuorum {
 		return nil, fmt.Errorf("failed ReadQuorum. responseCount = %d", responseCount)
 	} else {
 		return recentValue, nil
@@ -716,6 +716,10 @@ func (m *Manager) SyncPartitionRequest(member *RingMember, partitionId int32, lo
 			syncedValue, err := m.GetRequest(value.Key)
 			if err != nil {
 				logrus.Errorf("FAILED TO SYNC KEY = %s err = %v", value.Key, err)
+				continue
+			}
+			if syncedValue == nil {
+				logrus.Errorf("SYNC NOT FOUND KEY = %s err = %v", value.Key, err)
 				continue
 			}
 			err = m.SetValue(syncedValue)

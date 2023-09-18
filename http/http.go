@@ -81,6 +81,8 @@ func (s HttpServer) getHandler(w http.ResponseWriter, r *http.Request) {
 	switch res := rawRes.(type) {
 	case string:
 		fmt.Fprintf(w, res)
+	case nil:
+		http.Error(w, "value not found", http.StatusNotFound)
 	case error:
 		http.Error(w, res.Error(), http.StatusInternalServerError)
 	default:

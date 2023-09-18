@@ -3,7 +3,7 @@ kind: StatefulSet
 metadata:
   name: store
 spec:
-  replicas: 4
+  replicas: 5
   # minReadySeconds: 30
   updateStrategy:
     type: RollingUpdate
@@ -99,7 +99,7 @@ spec:
     apiVersion: apps/v1
     kind: StatefulSet
     name: store
-  minReplicas: 4
+  minReplicas: 5
   maxReplicas: 20
   metrics:
     - type: Resource
