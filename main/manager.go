@@ -423,7 +423,6 @@ func (m *Manager) SetRequest(key, value string) error {
 				responseCh <- res
 			}
 		}()
-		// break
 	}
 
 	timeout := time.After(time.Second * time.Duration(m.config.Manager.DefaultTimeout))
@@ -843,7 +842,7 @@ func (m *Manager) VerifyEpoch(PartitionId int, Epoch int64) error {
 			return nil
 		} else {
 			err = m.PoliteStreamRequest(int(partitionEpochObject.Partition), partitionEpochObject.LowerEpoch, partitionEpochObject.LowerEpoch+1, diffSet.List())
-			err = errors.Errorf("validCount= %d against ReadQuorum %d", validCount, m.config.Manager.ReadQuorum)
+			err = errors.Errorf("validCount= %d against ReadQuorum %d err = %v", validCount, m.config.Manager.ReadQuorum, err)
 		}
 	}
 }
@@ -871,7 +870,7 @@ func (m *Manager) PoliteStreamRequest(PartitionId int, LowerEpoch, UpperEpoch in
 		err := m.SyncPartitionRequest(lastValid.member, int32(PartitionId), LowerEpoch, UpperEpoch, buckets, time.Second*60)
 		if err != nil {
 			logrus.Errorf("SyncPartitionRequest err = %v", err)
-		} else {
+		} else if lastValid.epochTreeLastValid.Valid == true {
 			return nil
 		}
 	}
