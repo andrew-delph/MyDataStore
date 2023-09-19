@@ -841,7 +841,7 @@ func (m *Manager) VerifyEpoch(PartitionId int, Epoch int64) error {
 			partitionValidEpochGague.WithLabelValues(partitionLabel, epochLabel).Set(1)
 			return nil
 		} else {
-			err = m.PoliteStreamRequest(int(partitionEpochObject.Partition), partitionEpochObject.LowerEpoch, partitionEpochObject.LowerEpoch+1, diffSet.List())
+			err = m.PoliteStreamRequest(int(partitionEpochObject.Partition), Epoch, Epoch+1, diffSet.List())
 			err = errors.Errorf("validCount= %d against ReadQuorum %d err = %v", validCount, m.config.Manager.ReadQuorum, err)
 		}
 	}
