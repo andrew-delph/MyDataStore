@@ -753,7 +753,12 @@ func (m *Manager) VerifyEpoch(PartitionId int, Epoch int64) error {
 	var data []byte
 	attempts := 0
 	attemptsLimit := 2
-	for true {
+	partitionLabel := fmt.Sprintf("%d", PartitionId)
+	logrus.Debug("partitionLabel = ", partitionLabel)
+	epochLabel := fmt.Sprintf("%d", Epoch)
+	logrus.Debug("epochLabel = ", epochLabel)
+	for {
+		partitionVerifyEpochAttemptsGague.WithLabelValues(partitionLabel, epochLabel).Inc()
 		if attempts > attemptsLimit {
 			logrus.Errorf("VerifyEpoch: %v attempts= %d P= %d E= %d", err, attempts, PartitionId, Epoch)
 		}
@@ -833,13 +838,14 @@ func (m *Manager) VerifyEpoch(PartitionId int, Epoch int64) error {
 			if attempts > attemptsLimit {
 				logrus.Warnf("write partitionEpochObject Partition %v LowerEpoch %v index %s attempts %d", partitionEpochObject.Partition, partitionEpochObject.LowerEpoch, index, attempts)
 			}
+
+			partitionValidEpochGague.WithLabelValues(partitionLabel, epochLabel).Set(1)
 			return nil
 		} else {
 			err = m.PoliteStreamRequest(int(partitionEpochObject.Partition), partitionEpochObject.LowerEpoch, partitionEpochObject.LowerEpoch+1, diffSet.List())
 			err = errors.Errorf("validCount= %d against ReadQuorum %d", validCount, m.config.Manager.ReadQuorum)
 		}
 	}
-	return nil
 }
 
 func (m *Manager) PoliteStreamRequest(PartitionId int, LowerEpoch, UpperEpoch int64, buckets []int32) error {
@@ -858,7 +864,7 @@ func (m *Manager) PoliteStreamRequest(PartitionId int, LowerEpoch, UpperEpoch in
 		return errors.New("membersLastValid is 0")
 	}
 
-	logrus.Warnf("sort f:%d %s l:%d %s #%d", membersLastValid[0].epochTreeLastValid.LowerEpoch, membersLastValid[0].member.Name, membersLastValid[len(membersLastValid)-1].epochTreeLastValid.LowerEpoch, membersLastValid[len(membersLastValid)-1].member.Name, len(membersLastValid))
+	logrus.Debugf("sort f:%d %s l:%d %s #%d", membersLastValid[0].epochTreeLastValid.LowerEpoch, membersLastValid[0].member.Name, membersLastValid[len(membersLastValid)-1].epochTreeLastValid.LowerEpoch, membersLastValid[len(membersLastValid)-1].member.Name, len(membersLastValid))
 
 	for _, lastValid := range membersLastValid {
 		// logrus.Warnf("sync name %s lastValid %d", lastValid.member.Name, lastValid.epochTreeLastValid.LowerEpoch)

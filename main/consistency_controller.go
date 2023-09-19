@@ -130,7 +130,6 @@ func NewPartitionState(sema *semaphore.Weighted, partitionId int, observable rxg
 				switch res := rawRes.(type) {
 				case VerifyPartitionEpochResponse:
 					logrus.Debugf("VerifyPartitionEpochResponse E= %d res = %+v", ps.lastEpoch, res)
-					return
 				case error:
 					err := errors.Wrap(res, "VerifyPartitionEpochEvent response")
 					logrus.Error(err)
@@ -161,9 +160,9 @@ func NewPartitionState(sema *semaphore.Weighted, partitionId int, observable rxg
 			partitionLabel := fmt.Sprintf("%d", partitionId)
 			logrus.Debug("partitionLabel = ", partitionLabel)
 			if ps.active.Load() {
-				activePartitionGague.WithLabelValues(partitionLabel).Set(1)
+				partitionActiveGague.WithLabelValues(partitionLabel).Set(1)
 			} else {
-				activePartitionGague.WithLabelValues(partitionLabel).Set(0)
+				partitionActiveGague.WithLabelValues(partitionLabel).Set(0)
 			}
 
 			if event.CurrPartitions.Has(partitionId) != ps.active.Load() {

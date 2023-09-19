@@ -6,12 +6,28 @@ import (
 )
 
 var (
-	activePartitionGague = promauto.NewGaugeVec(
+	partitionActiveGague = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "partition_active",
 			Help: "If a partition is active on a node",
 		},
 		[]string{"partitionId"},
+	)
+
+	partitionVerifyEpochAttemptsGague = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "partition_verify_epoch_attempts",
+			Help: "the number of attempts to verify an epoch",
+		},
+		[]string{"partitionId", "epoch"},
+	)
+
+	partitionValidEpochGague = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "partition_valid_epoch",
+			Help: "the last epoch of a partition",
+		},
+		[]string{"partitionId", "epoch"},
 	)
 
 	healthyPartitionsGauge = promauto.NewGaugeVec(
