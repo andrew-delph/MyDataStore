@@ -79,8 +79,6 @@ func (ring Hashring) GetClosestN(key string, count int, includeSelf bool) ([]con
 		return members, err
 	}
 
-	logrus.Fatal("GetClosestN includeSelf") // error since no reason for now
-
 	var membersFilter []consistent.Member
 	for _, member := range members {
 		// add everyone but self
@@ -96,8 +94,6 @@ func (ring Hashring) GetClosestNForPartition(partitionId, count int, includeSelf
 	if includeSelf || err != nil {
 		return members, err
 	}
-
-	logrus.Fatal("GetClosestNForPartition includeSelf") // error since no reason for now
 
 	var membersFilter []consistent.Member
 	for _, member := range members {

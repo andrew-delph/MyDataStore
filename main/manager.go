@@ -634,7 +634,7 @@ type MemberEpochTreeLastValid struct {
 }
 
 func (m *Manager) EpochTreeLastValidRequest(partitionId int32, timeout time.Duration) ([]MemberEpochTreeLastValid, error) {
-	nodes, err := m.ring.GetClosestNForPartition(int(partitionId), m.config.Manager.ReplicaCount, true)
+	nodes, err := m.ring.GetClosestNForPartition(int(partitionId), m.config.Manager.ReplicaCount, false)
 	if err != nil {
 		return nil, err
 	}
@@ -716,7 +716,8 @@ func (m *Manager) SyncPartitionRequest(member *RingMember, partitionId int32, lo
 			logrus.Debugf("GetValue ALREADY SYNCED!!!!!!!!!!!!!!!! KEY = %s", value.Key)
 			continue
 		} else {
-			syncedValue, err := m.GetRequest(value.Key)
+			getReq := &rpc.RpcGetRequestMessage{Key: value.Key}
+			syncedValue, err := member.rpcClient.GetRequest(ctx, getReq)
 			if err != nil {
 				logrus.Errorf("FAILED TO SYNC KEY = %s err = %v", value.Key, err)
 				continue
@@ -751,7 +752,7 @@ func (m *Manager) VerifyEpoch(PartitionId int, Epoch int64) error {
 	var diff []int32
 	var data []byte
 	attempts := 0
-	attemptsLimit := 10
+	attemptsLimit := 2
 	for true {
 		if attempts > attemptsLimit {
 			logrus.Errorf("VerifyEpoch: %v attempts= %d P= %d E= %d", err, attempts, PartitionId, Epoch)
@@ -854,8 +855,10 @@ func (m *Manager) PoliteStreamRequest(PartitionId int, LowerEpoch, UpperEpoch in
 	})
 
 	if len(membersLastValid) == 0 {
-		return err
+		return errors.New("membersLastValid is 0")
 	}
+
+	logrus.Warnf("sort f:%d %s l:%d %s #%d", membersLastValid[0].epochTreeLastValid.LowerEpoch, membersLastValid[0].member.Name, membersLastValid[len(membersLastValid)-1].epochTreeLastValid.LowerEpoch, membersLastValid[len(membersLastValid)-1].member.Name, len(membersLastValid))
 
 	for _, lastValid := range membersLastValid {
 		// logrus.Warnf("sync name %s lastValid %d", lastValid.member.Name, lastValid.epochTreeLastValid.LowerEpoch)
