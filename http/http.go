@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 
 	"github.com/andrew-delph/my-key-store/config"
@@ -119,6 +120,7 @@ func (s HttpServer) StartHttp() {
 	http.HandleFunc("/set", s.setHandler)
 	http.HandleFunc("/get", s.getHandler)
 	http.HandleFunc("/health", s.healthHandler)
+	http.Handle("/metrics", promhttp.Handler())
 	http.ListenAndServe(":8080", nil)
 	srv := &http.Server{
 		Addr: ":8080",
