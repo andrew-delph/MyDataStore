@@ -22,7 +22,7 @@ export let options = {
       // How long the test lasts
       duration: "40m",
       // How many iterations per timeUnit
-      rate: 200,
+      rate: 1,
       // Start `rate` iterations per second
       timeUnit: "1s",
       // Pre-allocate VUs
@@ -83,19 +83,14 @@ export function basic() {
 
 export function health() {
   let addr = `http://${address}/health`;
-  let baseRes = http.get(
-    addr,
-    (options = {
-      timeout: "5s",
-    })
-  );
+  let baseRes = http.get(addr);
   check(baseRes, {
-    "Health: status was 200": (r) =>
-      r.status === 200 ||
-      console.error(
-        `Base Error:${Date.now()} Status was ${r.status}. ${r.body} `
-      ),
+    "Health: status was 200": (r) => r.status === 200,
   });
+
+  if (baseRes.status != 200) {
+    console.error(`Status:`, baseRes.status);
+  }
 
   return;
 }
@@ -170,11 +165,8 @@ export function remove() {
 }
 
 // options = { duration: "2h", vus: 1 };
-// options = { iterations: 20, vus: 1 };
+// options = { iterations: 100, vus: 1 };
 export default function () {
-  // health();
-  // return;
-
   const iterationNumber = exec.scenario.iterationInTest;
 
   // the key value to insert

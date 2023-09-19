@@ -39,6 +39,10 @@ type HealthTask struct {
 	ResCh chan interface{}
 }
 
+type ReadyTask struct {
+	ResCh chan interface{}
+}
+
 func CreateHttpServer(httpConfig config.HttpConfig, reqCh chan interface{}) HttpServer {
 	return HttpServer{httpConfig: httpConfig, reqCh: reqCh, srv: new(http.Server)}
 }
@@ -96,19 +100,51 @@ func (s HttpServer) healthHandler(w http.ResponseWriter, r *http.Request) {
 
 	err := utils.WriteChannelTimeout(s.reqCh, HealthTask{ResCh: resCh}, s.httpConfig.DefaultTimeout)
 	if err != nil {
+		logrus.Warnf("health err = %v", err)
 		http.Error(w, "server busy", http.StatusBadRequest)
 		return
 	}
 
-	rawRes := utils.RecieveChannelTimeout(resCh, s.httpConfig.DefaultTimeout)
+	rawRes := utils.RecieveChannelTimeout(resCh, 10)
 	switch res := rawRes.(type) {
 	case bool:
 		if res {
+			logrus.Warnf("health check bool = %v", res)
 			fmt.Fprintf(w, "healthy")
 		} else {
+			logrus.Warnf("health check bool = %v", res)
 			http.Error(w, "not healthy", http.StatusBadRequest)
 		}
 	case error:
+		logrus.Warnf("health check err = %v", res)
+		http.Error(w, res.Error(), http.StatusInternalServerError)
+	default:
+		logrus.Panicf("http unkown res type: %v", reflect.TypeOf(res))
+	}
+}
+
+func (s HttpServer) readyHandler(w http.ResponseWriter, r *http.Request) {
+	resCh := make(chan interface{})
+
+	err := utils.WriteChannelTimeout(s.reqCh, ReadyTask{ResCh: resCh}, s.httpConfig.DefaultTimeout)
+	if err != nil {
+		logrus.Warnf("ready err = %v", err)
+		http.Error(w, "server busy", http.StatusBadRequest)
+		return
+	}
+
+	rawRes := utils.RecieveChannelTimeout(resCh, 10)
+	switch res := rawRes.(type) {
+	case bool:
+		if res {
+			logrus.Warnf("ready check bool = %v", res)
+			fmt.Fprintf(w, "healthy")
+		} else {
+			logrus.Warnf("ready check bool = %v", res)
+			http.Error(w, "not healthy", http.StatusBadRequest)
+		}
+	case error:
+		logrus.Warnf("ready check err = %v", res)
 		http.Error(w, res.Error(), http.StatusInternalServerError)
 	default:
 		logrus.Panicf("http unkown res type: %v", reflect.TypeOf(res))
@@ -120,6 +156,7 @@ func (s HttpServer) StartHttp() {
 	http.HandleFunc("/set", s.setHandler)
 	http.HandleFunc("/get", s.getHandler)
 	http.HandleFunc("/health", s.healthHandler)
+	http.HandleFunc("/ready", s.readyHandler)
 	http.Handle("/metrics", promhttp.Handler())
 	http.ListenAndServe(":8080", nil)
 	srv := &http.Server{

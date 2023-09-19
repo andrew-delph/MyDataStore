@@ -3,7 +3,7 @@ kind: StatefulSet
 metadata:
   name: store
 spec:
-  replicas: 10
+  replicas: 5
   # minReadySeconds: 30
   updateStrategy:
     type: RollingUpdate
@@ -36,7 +36,7 @@ spec:
           #   periodSeconds: 4
           readinessProbe:
             httpGet:
-              path: /health
+              path: /ready
               port: 8080
             initialDelaySeconds: 20
             periodSeconds: 5
@@ -89,22 +89,22 @@ spec:
       port: 8080
       targetPort: 8080
       # nodePort: 30001
-# ---
-# apiVersion: autoscaling/v2
-# kind: HorizontalPodAutoscaler
-# metadata:
-#   name: store-hpa
-# spec:
-#   scaleTargetRef:
-#     apiVersion: apps/v1
-#     kind: StatefulSet
-#     name: store
-#   minReplicas: 5
-#   maxReplicas: 10
-#   metrics:
-#     - type: Resource
-#       resource:
-#         name: cpu
-#         target:
-#           type: Utilization
-#           averageUtilization: 70
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: store-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    name: store
+  minReplicas: 5
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

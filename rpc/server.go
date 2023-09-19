@@ -118,7 +118,7 @@ func (rpcWrapper *RpcWrapper) StreamBuckets(req *datap.StreamBucketsRequest, str
 		select {
 		case itemObj, ok := <-resCh:
 			if !ok {
-				logrus.Debug("SERVER StreamBuckets channel closed")
+				logrus.Error("SERVER StreamBuckets channel closed")
 				return nil
 			}
 			switch item := itemObj.(type) {
@@ -129,7 +129,7 @@ func (rpcWrapper *RpcWrapper) StreamBuckets(req *datap.StreamBucketsRequest, str
 					return err
 				}
 			case error:
-				logrus.Errorf("StreamBuckets err = %v", item)
+				logrus.Errorf("SERVER StreamBuckets err = %v", item)
 				return item
 			default:
 				logrus.Panicf("http unkown res type: %v", reflect.TypeOf(item))

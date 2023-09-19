@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/reactivex/rxgo/v2"
@@ -72,6 +73,8 @@ type ConsistencyController struct {
 	observationCh    chan rxgo.Item
 	partitionsStates []*PartitionState
 	observable       rxgo.Observable
+	sema             *semaphore.Weighted
+	concurrencyLevel int64
 }
 
 func NewConsistencyController(concurrencyLevel int64, partitionCount int, reqCh chan interface{}) *ConsistencyController {
@@ -84,7 +87,7 @@ func NewConsistencyController(concurrencyLevel int64, partitionCount int, reqCh 
 		partitionsStates = append(partitionsStates, NewPartitionState(sema, i, observable, reqCh))
 	}
 	observable.Connect(context.Background())
-	return &ConsistencyController{observationCh: ch, partitionsStates: partitionsStates, observable: observable}
+	return &ConsistencyController{observationCh: ch, partitionsStates: partitionsStates, observable: observable, sema: sema, concurrencyLevel: concurrencyLevel}
 }
 
 func (cc *ConsistencyController) HandleHashringChange(currPartitions utils.IntSet) error {
@@ -99,6 +102,16 @@ func (cc *ConsistencyController) VerifyEpoch(Epoch int64) {
 
 func (cc *ConsistencyController) PublishEvent(event interface{}) {
 	cc.observationCh <- rxgo.Of(event)
+}
+
+func (cc *ConsistencyController) IsBusy() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+	err := cc.sema.Acquire(ctx, cc.concurrencyLevel)
+	if err == nil {
+		cc.sema.Release(cc.concurrencyLevel)
+	}
+	return nil
 }
 
 type PartitionState struct {

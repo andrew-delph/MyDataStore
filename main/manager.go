@@ -140,10 +140,26 @@ func (m *Manager) startWorker(workerId int) {
 				if err != nil {
 					logrus.Warnf("HealthTask err = %v", err)
 					task.ResCh <- err
-				} else {
-					logrus.Debug("HealthTask healthy")
-					task.ResCh <- true
+					continue
 				}
+
+				task.ResCh <- true
+			case http.ReadyTask:
+				err := m.consensusCluster.IsHealthy()
+				if err != nil {
+					logrus.Warnf("y err = %v", err)
+					task.ResCh <- err
+					continue
+				}
+
+				err = m.consistencyController.IsBusy()
+				if err != nil {
+					logrus.Warnf("HealthTask err = %v", err)
+					task.ResCh <- err
+					continue
+				}
+
+				task.ResCh <- true
 
 			case http.SetTask:
 				logrus.Debugf("worker SetTask: %+v", task)
@@ -834,9 +850,9 @@ func (m *Manager) VerifyEpoch(PartitionId int, Epoch int64) error {
 			if err != nil {
 				continue
 			}
-			if attempts > attemptsLimit {
-				logrus.Warnf("write partitionEpochObject Partition %v LowerEpoch %v index %s attempts %d", partitionEpochObject.Partition, partitionEpochObject.LowerEpoch, index, attempts)
-			}
+			// if attempts > attemptsLimit {
+			logrus.Warnf("verified P=%v E=%v attempts %d", partitionEpochObject.Partition, partitionEpochObject.LowerEpoch, attempts)
+			// }
 
 			partitionValidEpochGague.WithLabelValues(partitionLabel, epochLabel).Set(1)
 			return nil
