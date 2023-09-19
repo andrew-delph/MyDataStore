@@ -1,4 +1,5 @@
 name: dc_dev
+on_project_first_start: docker-compose up -d prometheus
 on_project_exit: docker-compose down
 windows:
   - editor:
