@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"sync"
 	"sync/atomic"
@@ -156,6 +157,15 @@ func NewPartitionState(sema *semaphore.Weighted, partitionId int, observable rxg
 			} else if !event.CurrPartitions.Has(partitionId) && ps.active.CompareAndSwap(true, false) {
 				logrus.Warnf("updated lost partition active %d", partitionId)
 			}
+
+			partitionLabel := fmt.Sprintf("%d", partitionId)
+			logrus.Debug("partitionLabel = ", partitionLabel)
+			if ps.active.Load() {
+				activePartitionGague.WithLabelValues(partitionLabel).Set(1)
+			} else {
+				activePartitionGague.WithLabelValues(partitionLabel).Set(0)
+			}
+
 			if event.CurrPartitions.Has(partitionId) != ps.active.Load() {
 				logrus.Fatal("active partition did not switch") // remove this once unit tested
 			}

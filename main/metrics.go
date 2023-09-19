@@ -6,6 +6,14 @@ import (
 )
 
 var (
+	activePartitionGague = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "partition_active",
+			Help: "If a partition is active on a node",
+		},
+		[]string{"partitionId"},
+	)
+
 	healthyPartitionsGauge = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "node_partitions_healthy",
