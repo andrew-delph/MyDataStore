@@ -23,6 +23,8 @@ case $1 in
         minikube addons enable ingress
         kubectl wait --namespace ingress-nginx  --for=condition=ready pod  --selector=app.kubernetes.io/component=controller  --timeout=120s
         kubectl apply -f ./resources/ingress.yaml
+        kubectl apply -f ./resources/prom.yaml
+        kubectl create configmap prometheus-config --from-file=prometheus.yml || true
         ;;
     k8-r)
         kubectl delete statefulset store -R || true
