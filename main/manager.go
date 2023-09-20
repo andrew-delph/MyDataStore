@@ -379,7 +379,7 @@ func (m *Manager) startWorker(workerId int) {
 					lastValidEpoch = epochTreeObjectLastValid.LowerEpoch
 				}
 
-				logrus.Warnf("sync lastValidEpoch %d", lastValidEpoch)
+				logrus.Debugf("sync lastValidEpoch %d", lastValidEpoch)
 
 				// find most healthy node
 				err = m.PoliteStreamRequest(int(task.PartitionId), lastValidEpoch, task.UpperEpoch+1, nil)
