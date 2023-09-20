@@ -133,12 +133,6 @@ func NewPartitionState(sema *semaphore.Weighted, partitionId int, observable rxg
 
 func (ps *PartitionState) StartConsumer() error {
 	ps.observable.DoOnNext(func(item interface{}) {
-		err := ps.sema.Acquire(context.Background(), 1)
-		if err != nil {
-			logrus.Error(err)
-		} else {
-			defer ps.sema.Release(1)
-		}
 		switch event := item.(type) {
 		case VerifyPartitionEpochEvent: // TODO create test case for this
 			ps.lastEpoch = event.Epoch - 2
@@ -175,6 +169,12 @@ func (ps *PartitionState) StartConsumer() error {
 }
 
 func (ps *PartitionState) VerifyPartitionEpoch(Epoch int64) {
+	err := ps.sema.Acquire(context.Background(), 1)
+	if err != nil {
+		logrus.Error(err)
+	} else {
+		defer ps.sema.Release(1)
+	}
 	resCh := make(chan interface{})
 	logrus.Debugf("Verify partition %d epoch %d", ps.partitionId, Epoch)
 	ps.reqCh <- VerifyPartitionEpochRequestTask{PartitionId: ps.partitionId, Epoch: Epoch, ResCh: resCh}
@@ -191,6 +191,12 @@ func (ps *PartitionState) VerifyPartitionEpoch(Epoch int64) {
 }
 
 func (ps *PartitionState) SyncPartition() {
+	err := ps.sema.Acquire(context.Background(), 1)
+	if err != nil {
+		logrus.Error(err)
+	} else {
+		defer ps.sema.Release(1)
+	}
 	logrus.Warnf("new partition sync %d", ps.partitionId)
 	resCh := make(chan interface{})
 	ps.reqCh <- SyncPartitionTask{PartitionId: int32(ps.partitionId), ResCh: resCh, UpperEpoch: ps.lastEpoch}
