@@ -3,12 +3,12 @@ kind: StatefulSet
 metadata:
   name: store
 spec:
-  replicas: 5
+  replicas: 10
   # minReadySeconds: 30
   updateStrategy:
     type: RollingUpdate
     rollingUpdate:
-      maxUnavailable: 1
+      maxUnavailable: 50%
   selector:
     matchLabels:
       app: store
@@ -99,12 +99,12 @@ spec:
     apiVersion: apps/v1
     kind: StatefulSet
     name: store
-  minReplicas: 5
-  maxReplicas: 10
+  minReplicas: 10
+  maxReplicas: 20
   metrics:
     - type: Resource
       resource:
         name: cpu
         target:
           type: Utilization
-          averageUtilization: 70
+          averageUtilization: 40

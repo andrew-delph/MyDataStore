@@ -118,7 +118,7 @@ func (rpcWrapper *RpcWrapper) StreamBuckets(req *datap.StreamBucketsRequest, str
 		select {
 		case itemObj, ok := <-resCh:
 			if !ok {
-				logrus.Error("SERVER StreamBuckets channel closed")
+				logrus.Debug("SERVER StreamBuckets channel closed")
 				return nil
 			}
 			switch item := itemObj.(type) {

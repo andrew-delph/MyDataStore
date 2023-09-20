@@ -22,12 +22,12 @@ export let options = {
       // How long the test lasts
       duration: "40m",
       // How many iterations per timeUnit
-      rate: 1,
+      rate: 200,
       // Start `rate` iterations per second
       timeUnit: "1s",
       // Pre-allocate VUs
       preAllocatedVUs: 400,
-      maxVUs: 1000,
+      maxVUs: 2000,
     },
     // ramping_arrival: {
     //   executor: "ramping-arrival-rate",
