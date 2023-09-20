@@ -109,14 +109,14 @@ func (s HttpServer) healthHandler(w http.ResponseWriter, r *http.Request) {
 	switch res := rawRes.(type) {
 	case bool:
 		if res {
-			logrus.Warnf("health check bool = %v", res)
+			logrus.Debugf("health check bool = %v", res)
 			fmt.Fprintf(w, "healthy")
 		} else {
-			logrus.Warnf("health check bool = %v", res)
+			logrus.Errorf("health check bool = %v", res)
 			http.Error(w, "not healthy", http.StatusBadRequest)
 		}
 	case error:
-		logrus.Warnf("health check err = %v", res)
+		logrus.Errorf("health check err = %v", res)
 		http.Error(w, res.Error(), http.StatusInternalServerError)
 	default:
 		logrus.Panicf("http unkown res type: %v", reflect.TypeOf(res))
@@ -137,14 +137,14 @@ func (s HttpServer) readyHandler(w http.ResponseWriter, r *http.Request) {
 	switch res := rawRes.(type) {
 	case bool:
 		if res {
-			logrus.Warnf("ready check bool = %v", res)
+			logrus.Debugf("ready check bool = %v", res)
 			fmt.Fprintf(w, "healthy")
 		} else {
-			logrus.Warnf("ready check bool = %v", res)
+			logrus.Errorf("ready check bool = %v", res)
 			http.Error(w, "not healthy", http.StatusBadRequest)
 		}
 	case error:
-		logrus.Warnf("ready check err = %v", res)
+		logrus.Errorf("ready check err = %v", res)
 		http.Error(w, res.Error(), http.StatusInternalServerError)
 	default:
 		logrus.Panicf("http unkown res type: %v", reflect.TypeOf(res))

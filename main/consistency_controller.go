@@ -182,7 +182,7 @@ func (ps *PartitionState) VerifyPartitionEpoch(Epoch int64) {
 	rawRes := <-resCh
 	switch res := rawRes.(type) {
 	case VerifyPartitionEpochResponse:
-		logrus.Warnf("VerifyPartitionEpoch E= %d res = %+v", Epoch, res)
+		logrus.Debugf("VerifyPartitionEpoch E= %d res = %+v", Epoch, res)
 	case error:
 		err := errors.Wrap(res, "VerifyPartitionEpoch")
 		logrus.Error(err)
@@ -206,7 +206,7 @@ func (ps *PartitionState) SyncPartition(UpperEpoch int64) {
 	switch res := rawRes.(type) {
 	case SyncPartitionResponse:
 		if res.Valid {
-			logrus.Warnf("SyncPartition:  sync partrition %d res = %+v", ps.partitionId, res)
+			logrus.Debugf("SyncPartition:  sync partrition %d res = %+v", ps.partitionId, res)
 		} else {
 			logrus.Errorf("SyncPartition:  err partrition %d res = %+v", ps.partitionId, res)
 		}

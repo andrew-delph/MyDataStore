@@ -152,12 +152,12 @@ func (m *Manager) startWorker(workerId int) {
 					continue
 				}
 
-				err = m.consistencyController.IsBusy()
-				if err != nil {
-					logrus.Warnf("HealthTask err = %v", err)
-					task.ResCh <- err
-					continue
-				}
+				// err = m.consistencyController.IsBusy()
+				// if err != nil {
+				// 	logrus.Warnf("HealthTask err = %v", err)
+				// 	task.ResCh <- err
+				// 	continue
+				// }
 
 				task.ResCh <- true
 
