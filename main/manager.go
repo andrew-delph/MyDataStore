@@ -385,9 +385,10 @@ func (m *Manager) startWorker(workerId int) {
 				err = m.PoliteStreamRequest(int(task.PartitionId), lastValidEpoch, task.UpperEpoch+1, nil)
 
 				if err != nil {
-					task.ResCh <- err
+					logrus.Error(err)
+					task.ResCh <- SyncPartitionResponse{Valid: false, LowerEpoch: lastValidEpoch, UpperEpoch: task.UpperEpoch + 1}
 				} else {
-					task.ResCh <- SyncPartitionResponse{LowerEpoch: lastValidEpoch, UpperEpoch: task.UpperEpoch + 1}
+					task.ResCh <- SyncPartitionResponse{Valid: true, LowerEpoch: lastValidEpoch, UpperEpoch: task.UpperEpoch + 1}
 				}
 
 			default:
@@ -759,94 +760,93 @@ func (m *Manager) VerifyEpoch(PartitionId int, Epoch int64) error {
 	logrus.Debug("partitionLabel = ", partitionLabel)
 	epochLabel := fmt.Sprintf("%d", Epoch)
 	logrus.Debug("epochLabel = ", epochLabel)
-	for {
-		partitionVerifyEpochAttemptsGague.WithLabelValues(partitionLabel, epochLabel).Inc()
-		if attempts > attemptsLimit {
-			logrus.Errorf("VerifyEpoch: %v attempts= %d P= %d E= %d", err, attempts, PartitionId, Epoch)
-		}
-		if err != nil {
-			time.Sleep(time.Second * 4)
-		}
-		attempts++
+	partitionVerifyEpochAttemptsGague.WithLabelValues(partitionLabel, epochLabel).Inc()
+	if attempts > attemptsLimit {
+		logrus.Errorf("VerifyEpoch: %v attempts= %d P= %d E= %d", err, attempts, PartitionId, Epoch)
+	}
+	if err != nil {
+		time.Sleep(time.Second * 4)
+	}
+	attempts++
 
-		myTree, err = m.RawPartitionMerkleTree(PartitionId, Epoch, Epoch+1)
+	myTree, err = m.RawPartitionMerkleTree(PartitionId, Epoch, Epoch+1)
+	if err != nil {
+		return err
+	}
+	// serialize
+	partitionEpochObject, err = MerkleTreeToPartitionEpochObject(myTree, PartitionId, Epoch, Epoch+1)
+	if err != nil {
+		return err
+	}
+	data, err = proto.Marshal(partitionEpochObject)
+	if err != nil {
+		return err
+	}
+
+	// save to db
+	index, err = BuildEpochTreeObjectIndex(PartitionId, Epoch)
+	if err != nil {
+		return err
+	}
+	err = m.db.Put([]byte(index), data)
+	if err != nil {
+		return err
+	}
+
+	var epochTreeObjects []*rpc.RpcEpochTreeObject
+
+	epochTreeObjects, err = m.EpochTreeObjectRequest(PartitionId, Epoch, time.Second*20)
+	if err != nil {
+		return err
+	}
+
+	// if len(epochTreeObjects) < m.config.Manager.ReadQuorum {
+	// 	err = errors.Errorf("need more trees #%d", len(epochTreeObjects))
+	// 	continue
+	// }
+	// TODO do we need this?
+
+	// compare the difference to the otherTree
+	validCount := 0
+	diffSet := utils.NewInt32Set()
+	for _, epochTreeObject := range epochTreeObjects {
+		otherTree, err = EpochTreeObjectToMerkleTree(epochTreeObject)
 		if err != nil {
+			logrus.Error(err)
 			continue
 		}
-		// serialize
-		partitionEpochObject, err = MerkleTreeToPartitionEpochObject(myTree, PartitionId, Epoch, Epoch+1)
+		diff, err = DifferentMerkleTreeBuckets(myTree, otherTree)
 		if err != nil {
+			logrus.Error(err)
 			continue
 		}
+		diffSet.From(diff)
+
+		if len(diff) == 0 {
+			validCount++
+		}
+	}
+
+	if validCount >= m.config.Manager.ReadQuorum {
+		partitionEpochObject.Valid = true
 		data, err = proto.Marshal(partitionEpochObject)
 		if err != nil {
-			continue
-		}
-
-		// save to db
-		index, err = BuildEpochTreeObjectIndex(PartitionId, Epoch)
-		if err != nil {
-			continue
+			return err
 		}
 		err = m.db.Put([]byte(index), data)
 		if err != nil {
-			continue
+			return err
 		}
-
-		var epochTreeObjects []*rpc.RpcEpochTreeObject
-
-		epochTreeObjects, err = m.EpochTreeObjectRequest(PartitionId, Epoch, time.Second*20)
-		if err != nil {
-			continue
-		}
-
-		// if len(epochTreeObjects) < m.config.Manager.ReadQuorum {
-		// 	err = errors.Errorf("need more trees #%d", len(epochTreeObjects))
-		// 	continue
+		// if attempts > attemptsLimit {
+		logrus.Warnf("verified P=%v E=%v attempts %d", partitionEpochObject.Partition, partitionEpochObject.LowerEpoch, attempts)
 		// }
-		// TODO do we need this?
 
-		// compare the difference to the otherTree
-		validCount := 0
-		diffSet := utils.NewInt32Set()
-		for _, epochTreeObject := range epochTreeObjects {
-			otherTree, err = EpochTreeObjectToMerkleTree(epochTreeObject)
-			if err != nil {
-				logrus.Error(err)
-				continue
-			}
-			diff, err = DifferentMerkleTreeBuckets(myTree, otherTree)
-			if err != nil {
-				logrus.Error(err)
-				continue
-			}
-			diffSet.From(diff)
-
-			if len(diff) == 0 {
-				validCount++
-			}
-		}
-
-		if validCount >= m.config.Manager.ReadQuorum {
-			partitionEpochObject.Valid = true
-			data, err = proto.Marshal(partitionEpochObject)
-			if err != nil {
-				continue
-			}
-			err = m.db.Put([]byte(index), data)
-			if err != nil {
-				continue
-			}
-			// if attempts > attemptsLimit {
-			logrus.Warnf("verified P=%v E=%v attempts %d", partitionEpochObject.Partition, partitionEpochObject.LowerEpoch, attempts)
-			// }
-
-			partitionValidEpochGague.WithLabelValues(partitionLabel, epochLabel).Set(1)
-			return nil
-		} else {
-			err = m.PoliteStreamRequest(int(partitionEpochObject.Partition), Epoch, Epoch+1, diffSet.List())
-			err = errors.Errorf("validCount= %d against ReadQuorum %d err = %v", validCount, m.config.Manager.ReadQuorum, err)
-		}
+		partitionValidEpochGague.WithLabelValues(partitionLabel, epochLabel).Set(1)
+		return nil
+	} else {
+		err = m.PoliteStreamRequest(int(partitionEpochObject.Partition), Epoch, Epoch+1, diffSet.List())
+		err = errors.Errorf("validCount= %d against ReadQuorum %d err = %v", validCount, m.config.Manager.ReadQuorum, err)
+		return err
 	}
 }
 
