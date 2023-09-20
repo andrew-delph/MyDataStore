@@ -58,7 +58,8 @@ type SyncPartitionTask struct {
 }
 
 type SyncPartitionResponse struct {
-	Valid bool
+	LowerEpoch int64
+	UpperEpoch int64
 }
 
 type UpdatePartitionsEvent struct {
@@ -145,46 +146,22 @@ func (ps *PartitionState) StartConsumer() error {
 				return
 			}
 			if ps.active.Load() {
-				resCh := make(chan interface{})
-				logrus.Debugf("Verify partition %d epoch %d", ps.partitionId, ps.lastEpoch)
-				ps.reqCh <- VerifyPartitionEpochRequestTask{PartitionId: ps.partitionId, Epoch: ps.lastEpoch, ResCh: resCh}
-				rawRes := <-resCh
-				switch res := rawRes.(type) {
-				case VerifyPartitionEpochResponse:
-					logrus.Debugf("VerifyPartitionEpochResponse E= %d res = %+v", ps.lastEpoch, res)
-				case error:
-					err := errors.Wrap(res, "VerifyPartitionEpochEvent response")
-					logrus.Error(err)
-				default:
-					logrus.Panicf("VerifyPartitionEpochEvent observer unkown res type: %v", reflect.TypeOf(res))
-				}
+				go ps.VerifyPartitionEpoch(ps.lastEpoch)
 			}
 
 		case UpdatePartitionsEvent: // TODO create test case for this
-			if event.CurrPartitions.Has(ps.partitionId) && ps.active.CompareAndSwap(false, true) { // TODO create test case for this
-
-				logrus.Warnf("new partition sync %d", ps.partitionId)
-				resCh := make(chan interface{})
-				ps.reqCh <- SyncPartitionTask{PartitionId: int32(ps.partitionId), ResCh: resCh, UpperEpoch: ps.lastEpoch}
-				rawRes := <-resCh
-				switch res := rawRes.(type) {
-				case SyncPartitionResponse:
-					logrus.Debugf("sync partrition %d res = %+v", ps.partitionId, res)
-				case error:
-					logrus.Error(errors.Wrap(res, "UpdatePartitionsEvent res"))
-				default:
-					logrus.Panicf("UpdatePartitionsEvent observer unkown res type: %v", reflect.TypeOf(res))
-				}
-			} else if !event.CurrPartitions.Has(ps.partitionId) && ps.active.CompareAndSwap(true, false) {
-				logrus.Warnf("updated lost partition active %d", ps.partitionId)
-			}
-
 			partitionLabel := fmt.Sprintf("%d", ps.partitionId)
 			logrus.Debug("partitionLabel = ", partitionLabel)
 			if ps.active.Load() {
 				partitionActiveGague.WithLabelValues(partitionLabel).Set(1)
 			} else {
 				partitionActiveGague.WithLabelValues(partitionLabel).Set(0)
+			}
+
+			if event.CurrPartitions.Has(ps.partitionId) && ps.active.CompareAndSwap(false, true) { // TODO create test case for this
+				go ps.SyncPartition()
+			} else if !event.CurrPartitions.Has(ps.partitionId) && ps.active.CompareAndSwap(true, false) {
+				logrus.Warnf("updated lost partition active %d", ps.partitionId)
 			}
 
 			if event.CurrPartitions.Has(ps.partitionId) != ps.active.Load() {
@@ -195,4 +172,37 @@ func (ps *PartitionState) StartConsumer() error {
 		}
 	})
 	return nil
+}
+
+func (ps *PartitionState) VerifyPartitionEpoch(Epoch int64) {
+	resCh := make(chan interface{})
+	logrus.Debugf("Verify partition %d epoch %d", ps.partitionId, Epoch)
+	ps.reqCh <- VerifyPartitionEpochRequestTask{PartitionId: ps.partitionId, Epoch: Epoch, ResCh: resCh}
+	rawRes := <-resCh
+	switch res := rawRes.(type) {
+	case VerifyPartitionEpochResponse:
+		logrus.Debugf("VerifyPartitionEpochResponse E= %d res = %+v", Epoch, res)
+	case error:
+		err := errors.Wrap(res, "VerifyPartitionEpochEvent response")
+		logrus.Error(err)
+	default:
+		logrus.Panicf("VerifyPartitionEpochEvent observer unkown res type: %v", reflect.TypeOf(res))
+	}
+}
+
+func (ps *PartitionState) SyncPartition() {
+	logrus.Warnf("new partition sync %d", ps.partitionId)
+	resCh := make(chan interface{})
+	ps.reqCh <- SyncPartitionTask{PartitionId: int32(ps.partitionId), ResCh: resCh, UpperEpoch: ps.lastEpoch}
+	rawRes := <-resCh
+	switch res := rawRes.(type) {
+	case SyncPartitionResponse:
+		logrus.Warnf("PartitionState:  sync partrition %d res = %+v", ps.partitionId, res)
+	case nil:
+		logrus.Warnf("PartitionState: DOESNT NEED TO SYNC")
+	case error:
+		logrus.Error(errors.Wrap(res, "SyncPartition"))
+	default:
+		logrus.Panicf("PartitionState: unkown res type: %v", reflect.TypeOf(res))
+	}
 }

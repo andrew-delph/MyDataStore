@@ -370,7 +370,7 @@ func (m *Manager) startWorker(workerId int) {
 					continue
 				} else if epochTreeObjectLastValid != nil && epochTreeObjectLastValid.LowerEpoch >= task.UpperEpoch { // TODO validate this is the correct compare
 					logrus.Warn("DOESNT NEED TO SYNC")
-					task.ResCh <- SyncPartitionResponse{Valid: true}
+					task.ResCh <- nil
 					continue
 				}
 
@@ -385,23 +385,10 @@ func (m *Manager) startWorker(workerId int) {
 				err = m.PoliteStreamRequest(int(task.PartitionId), lastValidEpoch, task.UpperEpoch+1, nil)
 
 				if err != nil {
-					logrus.Error(err)
+					task.ResCh <- err
+				} else {
+					task.ResCh <- SyncPartitionResponse{LowerEpoch: lastValidEpoch, UpperEpoch: task.UpperEpoch + 1}
 				}
-
-				logrus.Warnf("--- sync VerifyEpoch %d to %d", lastValidEpoch+1, task.UpperEpoch)
-
-				for i := lastValidEpoch + 1; i <= task.UpperEpoch; i++ {
-					err := m.VerifyEpoch(int(task.PartitionId), i)
-					if err != nil {
-						logrus.Fatalf("SyncPartitionTask VerifyEpoch PartitionId %d Epoch %d err = %v", task.PartitionId, i, err)
-					} else {
-						logrus.Warnf("[SYNC] VerifyEpoch PartitionId %d Epoch %d", task.PartitionId, i)
-					}
-				}
-
-				task.ResCh <- SyncPartitionResponse{Valid: true}
-
-				// stream from healthest node...
 
 			default:
 				logrus.Panicf("worker unkown task type: %v", reflect.TypeOf(task))
