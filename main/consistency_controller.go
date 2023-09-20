@@ -84,7 +84,9 @@ func NewConsistencyController(concurrencyLevel int64, partitionCount int, reqCh 
 	observable := rxgo.FromChannel(ch, rxgo.WithPublishStrategy())
 	var partitionsStates []*PartitionState
 	for i := 0; i < partitionCount; i++ {
-		partitionsStates = append(partitionsStates, NewPartitionState(sema, i, observable, reqCh))
+		partitionState := NewPartitionState(sema, i, observable, reqCh)
+		partitionState.StartConsumer()
+		partitionsStates = append(partitionsStates, partitionState)
 	}
 	observable.Connect(context.Background())
 	return &ConsistencyController{observationCh: ch, partitionsStates: partitionsStates, observable: observable, sema: sema, concurrencyLevel: concurrencyLevel}
@@ -118,16 +120,23 @@ type PartitionState struct {
 	partitionId int
 	active      atomic.Bool
 	lastEpoch   int64
+	sema        *semaphore.Weighted
+	observable  rxgo.Observable
+	reqCh       chan interface{}
 }
 
 func NewPartitionState(sema *semaphore.Weighted, partitionId int, observable rxgo.Observable, reqCh chan interface{}) *PartitionState {
-	ps := &PartitionState{partitionId: partitionId}
-	observable.DoOnNext(func(item interface{}) {
-		err := sema.Acquire(context.Background(), 1)
+	ps := &PartitionState{partitionId: partitionId, observable: observable, sema: sema, reqCh: reqCh}
+	return ps
+}
+
+func (ps *PartitionState) StartConsumer() error {
+	ps.observable.DoOnNext(func(item interface{}) {
+		err := ps.sema.Acquire(context.Background(), 1)
 		if err != nil {
 			logrus.Error(err)
 		} else {
-			defer sema.Release(1)
+			defer ps.sema.Release(1)
 		}
 		switch event := item.(type) {
 		case VerifyPartitionEpochEvent: // TODO create test case for this
@@ -137,8 +146,8 @@ func NewPartitionState(sema *semaphore.Weighted, partitionId int, observable rxg
 			}
 			if ps.active.Load() {
 				resCh := make(chan interface{})
-				logrus.Debugf("Verify partition %d epoch %d", partitionId, ps.lastEpoch)
-				reqCh <- VerifyPartitionEpochRequestTask{PartitionId: partitionId, Epoch: ps.lastEpoch, ResCh: resCh}
+				logrus.Debugf("Verify partition %d epoch %d", ps.partitionId, ps.lastEpoch)
+				ps.reqCh <- VerifyPartitionEpochRequestTask{PartitionId: ps.partitionId, Epoch: ps.lastEpoch, ResCh: resCh}
 				rawRes := <-resCh
 				switch res := rawRes.(type) {
 				case VerifyPartitionEpochResponse:
@@ -152,25 +161,25 @@ func NewPartitionState(sema *semaphore.Weighted, partitionId int, observable rxg
 			}
 
 		case UpdatePartitionsEvent: // TODO create test case for this
-			if event.CurrPartitions.Has(partitionId) && ps.active.CompareAndSwap(false, true) { // TODO create test case for this
+			if event.CurrPartitions.Has(ps.partitionId) && ps.active.CompareAndSwap(false, true) { // TODO create test case for this
 
-				logrus.Warnf("new partition sync %d", partitionId)
+				logrus.Warnf("new partition sync %d", ps.partitionId)
 				resCh := make(chan interface{})
-				reqCh <- SyncPartitionTask{PartitionId: int32(partitionId), ResCh: resCh, UpperEpoch: ps.lastEpoch}
+				ps.reqCh <- SyncPartitionTask{PartitionId: int32(ps.partitionId), ResCh: resCh, UpperEpoch: ps.lastEpoch}
 				rawRes := <-resCh
 				switch res := rawRes.(type) {
 				case SyncPartitionResponse:
-					logrus.Debugf("sync partrition %d res = %+v", partitionId, res)
+					logrus.Debugf("sync partrition %d res = %+v", ps.partitionId, res)
 				case error:
 					logrus.Error(errors.Wrap(res, "UpdatePartitionsEvent res"))
 				default:
 					logrus.Panicf("UpdatePartitionsEvent observer unkown res type: %v", reflect.TypeOf(res))
 				}
-			} else if !event.CurrPartitions.Has(partitionId) && ps.active.CompareAndSwap(true, false) {
-				logrus.Warnf("updated lost partition active %d", partitionId)
+			} else if !event.CurrPartitions.Has(ps.partitionId) && ps.active.CompareAndSwap(true, false) {
+				logrus.Warnf("updated lost partition active %d", ps.partitionId)
 			}
 
-			partitionLabel := fmt.Sprintf("%d", partitionId)
+			partitionLabel := fmt.Sprintf("%d", ps.partitionId)
 			logrus.Debug("partitionLabel = ", partitionLabel)
 			if ps.active.Load() {
 				partitionActiveGague.WithLabelValues(partitionLabel).Set(1)
@@ -178,12 +187,12 @@ func NewPartitionState(sema *semaphore.Weighted, partitionId int, observable rxg
 				partitionActiveGague.WithLabelValues(partitionLabel).Set(0)
 			}
 
-			if event.CurrPartitions.Has(partitionId) != ps.active.Load() {
+			if event.CurrPartitions.Has(ps.partitionId) != ps.active.Load() {
 				logrus.Fatal("active partition did not switch") // remove this once unit tested
 			}
 		default:
 			logrus.Warn("unknown PartitionState event : %v", reflect.TypeOf(event))
 		}
 	})
-	return ps
+	return nil
 }
