@@ -487,12 +487,13 @@ func (m *Manager) GetRequest(key string) (*rpc.RpcValue, error) {
 	for i := 0; i < m.config.Manager.ReplicaCount && responseCount < m.config.Manager.ReadQuorum; i++ {
 		select {
 		case res := <-responseCh:
-			responseCount++
 
 			if res == nil {
 				// not found
 				continue
 			}
+
+			responseCount++ // Include not found as a valid response?
 
 			if recentValue == nil {
 				recentValue = res
@@ -500,7 +501,7 @@ func (m *Manager) GetRequest(key string) (*rpc.RpcValue, error) {
 				recentValue = res
 			}
 		case err := <-errorCh:
-			logrus.Debugf("GetRequest errorCh %v", err)
+			logrus.Errorf("GetRequest errorCh %v", err)
 
 		case <-timeout:
 			return nil, fmt.Errorf("timed out waiting for responses. responseCount = %d", responseCount)
@@ -720,7 +721,7 @@ func (m *Manager) SyncPartitionRequest(member *RingMember, partitionId int32, lo
 			continue
 		} else {
 			getReq := &rpc.RpcGetRequestMessage{Key: value.Key}
-			syncedValue, err := member.rpcClient.GetRequest(ctx, getReq)
+			syncedValue, err := member.rpcClient.GetRequest(context.Background(), getReq)
 			if err != nil {
 				logrus.Errorf("FAILED TO SYNC KEY = %s err = %v", value.Key, err)
 				continue
@@ -754,20 +755,11 @@ func (m *Manager) VerifyEpoch(PartitionId int, Epoch int64) error {
 	var index string
 	var diff []int32
 	var data []byte
-	attempts := 0
-	attemptsLimit := 2
 	partitionLabel := fmt.Sprintf("%d", PartitionId)
 	logrus.Debug("partitionLabel = ", partitionLabel)
 	epochLabel := fmt.Sprintf("%d", Epoch)
 	logrus.Debug("epochLabel = ", epochLabel)
 	partitionVerifyEpochAttemptsGague.WithLabelValues(partitionLabel, epochLabel).Inc()
-	if attempts > attemptsLimit {
-		logrus.Errorf("VerifyEpoch: %v attempts= %d P= %d E= %d", err, attempts, PartitionId, Epoch)
-	}
-	if err != nil {
-		time.Sleep(time.Second * 4)
-	}
-	attempts++
 
 	myTree, err = m.RawPartitionMerkleTree(PartitionId, Epoch, Epoch+1)
 	if err != nil {
@@ -837,9 +829,7 @@ func (m *Manager) VerifyEpoch(PartitionId int, Epoch int64) error {
 		if err != nil {
 			return err
 		}
-		// if attempts > attemptsLimit {
-		logrus.Warnf("verified P=%v E=%v attempts %d", partitionEpochObject.Partition, partitionEpochObject.LowerEpoch, attempts)
-		// }
+		// logrus.Debugf("verified P=%v E=%v", partitionEpochObject.Partition, partitionEpochObject.LowerEpoch)
 
 		partitionValidEpochGague.WithLabelValues(partitionLabel, epochLabel).Set(1)
 		return nil

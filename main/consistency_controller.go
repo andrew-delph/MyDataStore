@@ -185,7 +185,7 @@ func (ps *PartitionState) VerifyPartitionEpoch(Epoch int64) {
 		logrus.Debugf("VerifyPartitionEpoch E= %d res = %+v", Epoch, res)
 	case error:
 		err := errors.Wrap(res, "VerifyPartitionEpoch")
-		logrus.Error(err)
+		logrus.Debug(err)
 		go ps.VerifyPartitionEpoch(Epoch)
 	default:
 		logrus.Panicf(" response unkown res type: %v", reflect.TypeOf(res))
@@ -208,7 +208,7 @@ func (ps *PartitionState) SyncPartition(UpperEpoch int64) {
 		if res.Valid {
 			logrus.Debugf("SyncPartition:  sync partrition %d res = %+v", ps.partitionId, res)
 		} else {
-			logrus.Errorf("SyncPartition:  err partrition %d res = %+v", ps.partitionId, res)
+			logrus.Debugf("SyncPartition:  err partrition %d res = %+v", ps.partitionId, res)
 		}
 		for i := res.LowerEpoch; i < res.UpperEpoch; i++ {
 			go ps.VerifyPartitionEpoch(i)
