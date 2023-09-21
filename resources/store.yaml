@@ -3,7 +3,7 @@ kind: StatefulSet
 metadata:
   name: store
 spec:
-  replicas: 10
+  replicas: 20
   # minReadySeconds: 30
   updateStrategy:
     type: RollingUpdate
@@ -25,7 +25,7 @@ spec:
           name: store
           resources:
             limits:
-              cpu: "200m"
+              cpu: "500m"
           volumeMounts:
             - name: store-data-volume
               mountPath: /data/
@@ -44,7 +44,7 @@ spec:
             httpGet:
               path: /health
               port: 8080
-            initialDelaySeconds: 60
+            initialDelaySeconds: 120
             periodSeconds: 15
       restartPolicy: Always
       serviceAccountName: ""
@@ -89,22 +89,22 @@ spec:
       port: 8080
       targetPort: 8080
       # nodePort: 30001
----
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: store-hpa
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: StatefulSet
-    name: store
-  minReplicas: 10
-  maxReplicas: 20
-  metrics:
-    - type: Resource
-      resource:
-        name: cpu
-        target:
-          type: Utilization
-          averageUtilization: 40
+# ---
+# apiVersion: autoscaling/v2
+# kind: HorizontalPodAutoscaler
+# metadata:
+#   name: store-hpa
+# spec:
+#   scaleTargetRef:
+#     apiVersion: apps/v1
+#     kind: StatefulSet
+#     name: store
+#   minReplicas: 10
+#   maxReplicas: 30
+#   metrics:
+#     - type: Resource
+#       resource:
+#         name: cpu
+#         target:
+#           type: Utilization
+#           averageUtilization: 40

@@ -17,4 +17,7 @@ go_test(
     name = "go_default_test",
     srcs = ["hashring_test.go"],
     embed = [":go_default_library"],
+    env = {
+        "CONFIG_PATH": "../config",
+    },
 )

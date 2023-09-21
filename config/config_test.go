@@ -16,29 +16,30 @@ func TestConfigDefault(t *testing.T) {
 	config := GetDefaultConfig()
 
 	// manager config
-	assert.NotEqual(t, 0, config.Manager.ReplicaCount, "ReplicaCount wrong value")
-	assert.NotEqual(t, 0, config.Manager.WriteQuorum, "WriteQuorum wrong value")
-	assert.NotEqual(t, 0, config.Manager.ReadQuorum, "ReadQuorum wrong value")
-	assert.NotEqual(t, 0, config.Manager.PartitionCount, "PartitionCount wrong value")
-	assert.NotEqual(t, 0, config.Manager.PartitionBuckets, "PartitionBuckets wrong value")
-	assert.Equal(t, "/data/storage", config.Manager.DataPath, "DataPath wrong value")
-	assert.NotEqual(t, 0, config.Manager.DefaultTimeout, "DefaultTimeout wrong value")
-	assert.NotEqual(t, 0, config.Manager.WokersCount, "WokersCount wrong value")
-	assert.NotEqual(t, 0, config.Manager.ReqChannelSize, "ReqChannelSize wrong value")
-	assert.NotEqual(t, 0, int(config.Manager.PartitionConcurrency), "PartitionConcurrency wrong value")
+	assert.NotEqualValues(t, 0, config.Manager.ReplicaCount, "ReplicaCount wrong value")
+	assert.NotEqualValues(t, 0, config.Manager.WriteQuorum, "WriteQuorum wrong value")
+	assert.NotEqualValues(t, 0, config.Manager.ReadQuorum, "ReadQuorum wrong value")
+	assert.NotEqualValues(t, 0, config.Manager.PartitionCount, "PartitionCount wrong value")
+	assert.NotEqualValues(t, 0, config.Manager.PartitionBuckets, "PartitionBuckets wrong value")
+	assert.EqualValues(t, "/data/storage", config.Manager.DataPath, "DataPath wrong value")
+	assert.NotEqualValues(t, 0, config.Manager.DefaultTimeout, "DefaultTimeout wrong value")
+	assert.NotEqualValues(t, 0, config.Manager.WokersCount, "WokersCount wrong value")
+	assert.NotEqualValues(t, 0, config.Manager.ReqChannelSize, "ReqChannelSize wrong value")
+	assert.NotEqualValues(t, 0, int(config.Manager.PartitionConcurrency), "PartitionConcurrency wrong value")
+	assert.NotEqualValues(t, 0, config.Manager.Load, "PartitionConcurrency wrong value")
 
 	// consensus config
-	assert.NotEqual(t, 0, config.Consensus.EpochTime, "EpochTime wrong value")
-	assert.Equal(t, "/data/raft", config.Consensus.DataPath, "DataPath wrong value")
-	assert.Equal(t, false, config.Consensus.EnableLogs, "EnableLogs wrong value")
-	assert.Equal(t, true, config.Consensus.AutoBootstrap, "AutoBootstrap wrong value")
-	assert.NotEqual(t, 0, config.Consensus.BootstrapTimeout, "BootstrapTimeout wrong value")
+	assert.NotEqualValues(t, 0, config.Consensus.EpochTime, "EpochTime wrong value")
+	assert.EqualValues(t, "/data/raft", config.Consensus.DataPath, "DataPath wrong value")
+	assert.EqualValues(t, false, config.Consensus.EnableLogs, "EnableLogs wrong value")
+	assert.EqualValues(t, true, config.Consensus.AutoBootstrap, "AutoBootstrap wrong value")
+	assert.NotEqualValues(t, 0, config.Consensus.BootstrapTimeout, "BootstrapTimeout wrong value")
 
 	// memberlist config
-	assert.Equal(t, []string{"store:8081", "store-0:8081"}, config.Gossip.InitMembers, "InitMembers wrong value")
+	assert.EqualValues(t, []string{"store:8081", "store-0:8081"}, config.Gossip.InitMembers, "InitMembers wrong value")
 
 	// storage
-	assert.Equal(t, "/data/storage", config.Storage.DataPath, "DataPath wrong value")
+	assert.EqualValues(t, "/data/storage", config.Storage.DataPath, "DataPath wrong value")
 
 	// http
 	assert.NotEqual(t, 0, config.Http.DefaultTimeout, "DefaultTimeout wrong value")
@@ -51,26 +52,26 @@ func TestConfigOverwrite(t *testing.T) {
 	config := GetConfig()
 
 	// manager config
-	assert.Equal(t, 9, config.Manager.ReplicaCount, "ReplicaCount wrong value")
-	assert.Equal(t, 99, config.Manager.WriteQuorum, "WriteQuorum wrong value")
-	assert.Equal(t, 999, config.Manager.ReadQuorum, "ReadQuorum wrong value")
-	assert.Equal(t, 99999, config.Manager.PartitionBuckets, "PartitionBuckets wrong value")
-	assert.Equal(t, "/tmp/store/data", config.Manager.DataPath, "DataPath wrong value")
-	assert.Equal(t, int64(991), config.Manager.PartitionConcurrency, "PartitionConcurrency wrong value")
+	assert.EqualValues(t, 9, config.Manager.ReplicaCount, "ReplicaCount wrong value")
+	assert.EqualValues(t, 99, config.Manager.WriteQuorum, "WriteQuorum wrong value")
+	assert.EqualValues(t, 999, config.Manager.ReadQuorum, "ReadQuorum wrong value")
+	assert.EqualValues(t, 99999, config.Manager.PartitionBuckets, "PartitionBuckets wrong value")
+	assert.EqualValues(t, "/tmp/store/data", config.Manager.DataPath, "DataPath wrong value")
+	assert.EqualValues(t, int64(991), config.Manager.PartitionConcurrency, "PartitionConcurrency wrong value")
 
 	// consensus config
-	assert.Equal(t, 9, config.Consensus.EpochTime, "EpochTime wrong value")
-	assert.Equal(t, "/tmp/store/raft", config.Consensus.DataPath, "DataPath wrong value")
-	assert.Equal(t, true, config.Consensus.EnableLogs, "EnableLogs wrong value")
-	assert.Equal(t, false, config.Consensus.AutoBootstrap, "AutoBootstrap wrong value")
-	assert.Equal(t, 1, config.Consensus.BootstrapTimeout, "BootstrapTimeout wrong value")
+	assert.EqualValues(t, 9, config.Consensus.EpochTime, "EpochTime wrong value")
+	assert.EqualValues(t, "/tmp/store/raft", config.Consensus.DataPath, "DataPath wrong value")
+	assert.EqualValues(t, true, config.Consensus.EnableLogs, "EnableLogs wrong value")
+	assert.EqualValues(t, false, config.Consensus.AutoBootstrap, "AutoBootstrap wrong value")
+	assert.EqualValues(t, 1, config.Consensus.BootstrapTimeout, "BootstrapTimeout wrong value")
 
 	// memberlist config
-	assert.Equal(t, []string{"test:1", "test:2"}, config.Gossip.InitMembers, "InitMembers wrong value")
+	assert.EqualValues(t, []string{"test:1", "test:2"}, config.Gossip.InitMembers, "InitMembers wrong value")
 
-	assert.Equal(t, "/tmp/store/data", config.Storage.DataPath, "DataPath wrong value")
+	assert.EqualValues(t, "/tmp/store/data", config.Storage.DataPath, "DataPath wrong value")
 
-	assert.Equal(t, 33, config.Http.DefaultTimeout, "Http.DefaultTimeout wrong value")
+	assert.EqualValues(t, 33, config.Http.DefaultTimeout, "Http.DefaultTimeout wrong value")
 }
 
 func TestErrors(t *testing.T) {

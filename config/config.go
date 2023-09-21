@@ -14,11 +14,12 @@ type ManagerConfig struct {
 	WriteQuorum          int `mapstructure:"WRITE_QUORUM"`
 	ReadQuorum           int `mapstructure:"READ_QUORUM"`
 	SaveInterval         int
-	DefaultTimeout       int    `mapstructure:"DEFAULT_TIMEOUT"`
-	PartitionCount       int    `mapstructure:"PARTITION_COUNT"`
-	PartitionBuckets     int    `mapstructure:"PARTITION_BUCKETS"`
-	PartitionConcurrency int64  `mapstructure:"PARTITION_CONCURRENCY"`
-	DataPath             string `mapstructure:"DATA_PATH"` // TODO REMOVE THIS?
+	DefaultTimeout       int     `mapstructure:"DEFAULT_TIMEOUT"`
+	PartitionCount       int     `mapstructure:"PARTITION_COUNT"`
+	Load                 float64 `mapstructure:"LOAD"`
+	PartitionBuckets     int     `mapstructure:"PARTITION_BUCKETS"`
+	PartitionConcurrency int64   `mapstructure:"PARTITION_CONCURRENCY"`
+	DataPath             string  `mapstructure:"DATA_PATH"` // TODO REMOVE THIS?
 	Hostname             string
 }
 

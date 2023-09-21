@@ -3,14 +3,9 @@ package hashring
 import (
 	"github.com/buraksezer/consistent"
 	"github.com/cespare/xxhash"
-	"github.com/sirupsen/logrus"
 
 	"github.com/andrew-delph/my-key-store/config"
 )
-
-func testHashring() {
-	logrus.Warn("HASRING")
-}
 
 type Hashring struct {
 	managerConfig    config.ManagerConfig
@@ -22,7 +17,7 @@ func CreateHashring(managerConfig config.ManagerConfig) *Hashring {
 	consistentConfig := consistent.Config{
 		PartitionCount:    managerConfig.PartitionCount,
 		ReplicationFactor: managerConfig.ReplicaCount,
-		Load:              1.2,
+		Load:              managerConfig.Load,
 		Hasher:            hasher{},
 	}
 	Consistent := consistent.New(nil, consistentConfig)

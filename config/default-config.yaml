@@ -1,20 +1,21 @@
 manager:
   replica_count: 5
-  read_quorum: 4
+  read_quorum: 2
   write_quorum: 3
   default_timeout: 2
-  workers_count: 100
   req_channel_size: 1000
-  partition_concurrency: 1
-  partition_count: 24
-  partition_buckets: 500
+  workers_count: 100
+  partition_concurrency: 2
+  partition_count: 1000
+  partition_buckets: 1000
   data_path: "/data/storage"
+  load: 1.25
 consensus:
   epoch_time: 300
   data_path: "/data/raft"
   enable_logs: false
   auto_bootstrap: true
-  bootstrap_timeout: 15
+  bootstrap_timeout: 40
 gossip:
   init_members:
     - "store:8081"
