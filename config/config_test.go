@@ -27,6 +27,7 @@ func TestConfigDefault(t *testing.T) {
 	assert.NotEqualValues(t, 0, config.Manager.ReqChannelSize, "ReqChannelSize wrong value")
 	assert.NotEqualValues(t, 0, int(config.Manager.PartitionConcurrency), "PartitionConcurrency wrong value")
 	assert.NotEqualValues(t, 0, config.Manager.Load, "PartitionConcurrency wrong value")
+	assert.NotEqualValues(t, 0, config.Manager.PartitionReplicas, "PartitionReplicas wrong value")
 
 	// consensus config
 	assert.NotEqualValues(t, 0, config.Consensus.EpochTime, "EpochTime wrong value")

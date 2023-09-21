@@ -20,7 +20,7 @@ func (m TestMember) String() string {
 func TestHashringLoad(t *testing.T) {
 	c1 := config.GetConfig().Manager
 	c1.PartitionCount = 100
-	c1.ReplicaCount = 3
+	c1.PartitionReplicas = 3
 	c1.Load = 1.25
 	hr1 := CreateHashring(c1)
 	hr1.AddNode(TestMember("test1"))
@@ -73,15 +73,18 @@ func TestHashringLoad(t *testing.T) {
 func TestHashringRelocation(t *testing.T) {
 	m := 30
 	p := 200
-	n := 5
-	l := 100.1
+	n := 1
+	l := 1.5
 
+	total := 0
 	for i := 3; i < m; i++ {
-		diffTest(i, p, n, l)
+		total = total + diffTest(i, p, n, l)
 	}
+
+	logrus.Info("total= ", total)
 }
 
-func diffTest(m, p, n int, l float64) {
+func diffTest(m, p, n int, l float64) int {
 	cfg := consistent.Config{
 		PartitionCount:    p,
 		ReplicationFactor: n,
@@ -122,9 +125,11 @@ func diffTest(m, p, n int, l float64) {
 
 	after, _ := c.GetClosestN([]byte("key"), n)
 
-	logrus.Infof("diff: %v                            m:%d", findDifferentCount(before, after), m)
+	diff := findDifferentCount(before, after)
+	logrus.Infof("diff: %v                            m:%d", diff, m)
 
 	// logrus.Infof("%d%% of the partitions are relocated", (100*changed)/cfg.PartitionCount)
+	return diff
 }
 
 func findDifferentCount(slice1, slice2 []consistent.Member) int {
