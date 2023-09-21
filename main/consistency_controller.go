@@ -170,6 +170,9 @@ func (ps *PartitionState) StartConsumer() error {
 }
 
 func (ps *PartitionState) VerifyPartitionEpoch(Epoch int64) {
+	if ps.active.Load() == false {
+		return
+	}
 	err := ps.sema.Acquire(context.Background(), 1)
 	if err != nil {
 		logrus.Fatal(err)

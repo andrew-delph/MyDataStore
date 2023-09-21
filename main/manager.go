@@ -147,7 +147,7 @@ func (m *Manager) startWorker(workerId int) {
 			case http.ReadyTask:
 				err := m.consensusCluster.IsHealthy()
 				if err != nil {
-					logrus.Warnf("y err = %v", err)
+					logrus.Warnf("IsHealthy err = %v", err)
 					task.ResCh <- err
 					continue
 				}
