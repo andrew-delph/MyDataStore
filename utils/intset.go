@@ -38,6 +38,7 @@ func (s IntSet) List() []int {
 }
 
 func (setA IntSet) Difference(setB IntSet) IntSet {
+	// returns the list of items which not included in setB
 	result := NewIntSet()
 	for value := range setA {
 		if _, exists := setB[value]; !exists {

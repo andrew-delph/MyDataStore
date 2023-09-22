@@ -77,6 +77,7 @@ type ConsistencyController struct {
 	observable       rxgo.Observable
 	sema             *semaphore.Weighted
 	concurrencyLevel int64
+	currPartitions   utils.IntSet
 }
 
 func NewConsistencyController(concurrencyLevel int64, partitionCount int, reqCh chan interface{}) *ConsistencyController {
@@ -95,6 +96,10 @@ func NewConsistencyController(concurrencyLevel int64, partitionCount int, reqCh 
 }
 
 func (cc *ConsistencyController) HandleHashringChange(currPartitions utils.IntSet) error {
+	gained := len(currPartitions.Difference(cc.currPartitions))
+	lost := len(cc.currPartitions.Difference(currPartitions))
+	logrus.Warnf("partitions lost  %d gained %d", lost, gained)
+	cc.currPartitions = currPartitions
 	cc.PublishEvent(UpdatePartitionsEvent{CurrPartitions: currPartitions})
 	return nil
 }
