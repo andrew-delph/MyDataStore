@@ -3,6 +3,8 @@ package gossip
 import (
 	"io"
 	"log"
+	"net"
+	"time"
 
 	"github.com/hashicorp/memberlist"
 	"github.com/sirupsen/logrus"
@@ -34,15 +36,31 @@ type LeaveTask struct {
 func CreateGossipCluster(gossipConfig config.GossipConfig, reqCh chan interface{}) *GossipCluster {
 	gossipCluster := &GossipCluster{list: new(memberlist.Memberlist)}
 
-	memberlistConfig := memberlist.DefaultLocalConfig()
-	memberlistConfig.Logger = log.New(io.Discard, "", 0)
+	memberlistConfig := memberlist.DefaultWANConfig()
+	if gossipConfig.EnableLogs == false {
+		memberlistConfig.Logger = log.New(io.Discard, "", 0)
+	}
 	memberlistConfig.BindPort = 8081
 	memberlistConfig.AdvertisePort = 8081
 	memberlistConfig.Delegate = &Delegate{}
 	memberlistConfig.Events = &EventDelegate{
 		reqCh: reqCh,
 	}
+	memberlistConfig.Conflict = &ConflictDelegate{
+		reqCh: reqCh,
+	}
 	memberlistConfig.Name = gossipConfig.Name
+
+	// set the AdvertiseAddr
+	ipAddresses, err := net.LookupIP(gossipConfig.Name)
+	if err != nil {
+		logrus.Fatalf("Error resolving IP address for %s: %v\n", gossipConfig.Name, err)
+	}
+	memberlistConfig.AdvertiseAddr = ipAddresses[0].String()
+	logrus.Warnf("AdvertiseAddr = %s", ipAddresses[0].String())
+
+	// behavior configurations
+	memberlistConfig.DeadNodeReclaimTime = time.Duration(time.Nanosecond * 1)
 
 	gossipCluster.memberlistConfig = memberlistConfig
 	gossipCluster.gossipConfig = gossipConfig
@@ -108,4 +126,14 @@ func (e *EventDelegate) NotifyLeave(node *memberlist.Node) {
 // NotifyUpdate is invoked when a node is updated.
 func (e *EventDelegate) NotifyUpdate(n *memberlist.Node) {
 	logrus.Warnf("Node updated: %s\n", n.Name)
+}
+
+type ConflictDelegate struct {
+	reqCh chan interface{}
+}
+
+func (c *ConflictDelegate) NotifyConflict(existing, other *memberlist.Node) {
+	logrus.Warnf("NotifyConflict: %s %s Addr: %s %s", existing, other, existing.Addr, other.Addr)
+	existing.Addr = other.Addr
+	c.reqCh <- JoinTask{Name: other.Name, IP: other.Addr.String()}
 }

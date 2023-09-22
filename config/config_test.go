@@ -36,8 +36,9 @@ func TestConfigDefault(t *testing.T) {
 	assert.EqualValues(t, true, config.Consensus.AutoBootstrap, "AutoBootstrap wrong value")
 	assert.NotEqualValues(t, 0, config.Consensus.BootstrapTimeout, "BootstrapTimeout wrong value")
 
-	// memberlist config
+	// gossip config
 	assert.EqualValues(t, []string{"store:8081", "store-0:8081"}, config.Gossip.InitMembers, "InitMembers wrong value")
+	assert.EqualValues(t, false, config.Gossip.EnableLogs, "EnableLogs wrong value")
 
 	// storage
 	assert.EqualValues(t, "/data/storage", config.Storage.DataPath, "DataPath wrong value")

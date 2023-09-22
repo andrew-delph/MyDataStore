@@ -12,12 +12,13 @@ manager:
   data_path: "/data/storage"
   load: 2.1
 consensus:
-  epoch_time: 300
+  epoch_time: 20
   data_path: "/data/raft"
   enable_logs: false
   auto_bootstrap: true
-  bootstrap_timeout: 40
+  bootstrap_timeout: 10
 gossip:
+  enable_logs: false
   init_members:
     - "store:8081"
     - "store-0:8081"
@@ -26,4 +27,4 @@ storage:
 rpc:
   port: 7070
 http:
-  default_timeout: 1
+  default_timeout: 3

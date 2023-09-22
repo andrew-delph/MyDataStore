@@ -195,7 +195,7 @@ func (consensusCluster *ConsensusCluster) AddVoter(nodeName, nodeIP string) erro
 			// However, if *both* the ID and the address are the same, then no
 			// join is actually needed.
 			if srv.Address == serverAddress && srv.ID == serverId {
-				logrus.Warnf("node %s at %s already member of cluster, ignoring join request", nodeName, nodeIP)
+				logrus.Debugf("node %s at %s already member of cluster, ignoring join request", nodeName, nodeIP)
 				return nil
 			}
 
@@ -203,7 +203,7 @@ func (consensusCluster *ConsensusCluster) AddVoter(nodeName, nodeIP string) erro
 				logrus.Errorf("failed to remove node %s: %v", nodeName, err)
 				return err
 			}
-			logrus.Warnf("removed node %s prior to rejoin with changed ID or address", nodeName)
+			logrus.Debugf("removed node %s prior to rejoin with changed ID or address", nodeName)
 		}
 	}
 

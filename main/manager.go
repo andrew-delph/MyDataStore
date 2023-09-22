@@ -72,7 +72,7 @@ func NewManager(c config.Config) Manager {
 		myPartitions:          &parts,
 		partitionLocker:       partitionLocker,
 		consistencyController: consistencyController,
-		debugTick:             time.NewTicker(time.Second * 30),
+		debugTick:             time.NewTicker(time.Second * 5),
 	}
 }
 
@@ -126,7 +126,12 @@ func (m *Manager) startWorker(workerId int) {
 		select {
 		case <-m.debugTick.C:
 			// m.consensusCluster.Details()
-			logrus.Debugf("DEBUG TICK #members = %d", len(m.gossipCluster.GetMembers()))
+			err := m.consensusCluster.IsHealthy()
+			if err != nil {
+				logrus.Debugf("IsHealthy err = %v", err)
+			}
+			// logrus.Warnf("DEBUG TICK #members = %d", len(m.gossipCluster.GetMembers()))
+			// logrus.Warn(m.config.Manager.Hostname)
 
 		case data, ok := <-m.reqCh:
 			if !ok {
@@ -199,6 +204,7 @@ func (m *Manager) startWorker(workerId int) {
 					continue
 				}
 
+				m.ring.RemoveNode(task.Name)
 				m.ring.AddNode(CreateRingMember(task.Name, rpcClient))
 
 				currPartitionsList, err := m.ring.GetMyPartions()

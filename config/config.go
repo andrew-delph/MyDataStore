@@ -36,6 +36,7 @@ type ConsensusConfig struct {
 type GossipConfig struct {
 	InitMembers []string `mapstructure:"INIT_MEMBERS"`
 	Name        string
+	EnableLogs  bool `mapstructure:"ENABLE_LOGS"`
 }
 
 type StorageConfig struct {

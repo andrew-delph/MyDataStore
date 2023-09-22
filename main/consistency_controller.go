@@ -156,7 +156,7 @@ func (ps *PartitionState) StartConsumer() error {
 			if event.CurrPartitions.Has(ps.partitionId) && ps.active.CompareAndSwap(false, true) { // TODO create test case for this
 				go ps.SyncPartition(ps.lastEpoch)
 			} else if !event.CurrPartitions.Has(ps.partitionId) && ps.active.CompareAndSwap(true, false) {
-				logrus.Warnf("updated lost partition active %d", ps.partitionId)
+				logrus.Debugf("updated lost partition active %d", ps.partitionId)
 			}
 
 			if event.CurrPartitions.Has(ps.partitionId) != ps.active.Load() {

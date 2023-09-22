@@ -11,10 +11,34 @@ import (
 	"github.com/andrew-delph/my-key-store/config"
 )
 
-type TestMember string
+type TestMember struct {
+	name string
+	test string
+}
 
 func (m TestMember) String() string {
-	return string(m)
+	return m.name
+}
+
+func TestHashringRejoin(t *testing.T) {
+	// This test proves how AddNode works. it will not override the node.
+	c1 := config.GetConfig().Manager
+	c1.PartitionCount = 100
+	c1.PartitionReplicas = 3
+	c1.Load = 1.25
+	hr1 := CreateHashring(c1)
+	hr1.AddNode(TestMember{name: "test1", test: "1"})
+	hr1.AddNode(TestMember{name: "test1", test: "2"})
+
+	node := hr1.GetMembers()[0]
+
+	member, ok := node.(TestMember)
+	if !ok {
+		t.Error("failed to decode node")
+		t.FailNow()
+	}
+
+	assert.EqualValues(t, "1", member.test, "member.test wrong value")
 }
 
 func TestHashringLoad(t *testing.T) {
@@ -23,9 +47,9 @@ func TestHashringLoad(t *testing.T) {
 	c1.PartitionReplicas = 3
 	c1.Load = 1.25
 	hr1 := CreateHashring(c1)
-	hr1.AddNode(TestMember("test1"))
-	hr1.AddNode(TestMember("test2"))
-	hr1.AddNode(TestMember("test3"))
+	hr1.AddNode(TestMember{name: "test1"})
+	hr1.AddNode(TestMember{name: "test2"})
+	hr1.AddNode(TestMember{name: "test3"})
 
 	// c2 := config.GetConfig().Manager
 	// c2.PartitionCount = 100
@@ -35,13 +59,13 @@ func TestHashringLoad(t *testing.T) {
 	c2 := c1
 
 	hr2 := CreateHashring(c2)
-	hr2.AddNode(TestMember("test1"))
-	hr2.AddNode(TestMember("test2"))
+	hr2.AddNode(TestMember{name: "test1"})
+	hr2.AddNode(TestMember{name: "test2"})
 
-	hr2.AddNode(TestMember("testx"))
+	hr2.AddNode(TestMember{name: "testx"})
 	hr2.RemoveNode("testx")
 
-	hr2.AddNode(TestMember("test3"))
+	hr2.AddNode(TestMember{name: "test3"})
 
 	hr1_1, _ := hr1.GetMemberPartions("test1")
 	hr2_1, _ := hr2.GetMemberPartions("test1")
@@ -93,7 +117,7 @@ func diffTest(m, p, n int, l float64) int {
 	}
 	members := []consistent.Member{}
 	for i := 0; i < m; i++ {
-		member := TestMember(fmt.Sprintf("n%d", i))
+		member := TestMember{name: fmt.Sprintf("n%d", i)}
 		members = append(members, member)
 	}
 	// Modify PartitionCount, ReplicationFactor and Load to increase or decrease
@@ -110,7 +134,7 @@ func diffTest(m, p, n int, l float64) int {
 	before, _ := c.GetClosestNForPartition(1, n)
 
 	// Add a new member
-	mem := TestMember(fmt.Sprintf("n%d", m+1))
+	mem := TestMember{name: fmt.Sprintf("n%d", m+1)}
 	c.Add(mem)
 
 	// Get the new layout and compare with the previous
