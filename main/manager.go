@@ -105,9 +105,20 @@ func (m *Manager) StartManager() {
 	if err != nil {
 		logrus.Errorf("Failed to Snapshot err = %v", err)
 	}
-	err = m.httpServer.StopHttp()
+
+	err = m.consensusCluster.Shutdown()
 	if err != nil {
-		logrus.Errorf("Failed to Shutdown http server err = %v", err)
+		logrus.Errorf("Failed to consensus Shutdown err = %v", err)
+	}
+
+	err = m.gossipCluster.Leave()
+	if err != nil {
+		logrus.Errorf("Failed to gossip Leave err = %v", err)
+	}
+
+	err = m.httpServer.Shutdown()
+	if err != nil {
+		logrus.Errorf("Failed to http Shutdown err = %v", err)
 	}
 }
 
@@ -152,7 +163,7 @@ func (m *Manager) startWorker(workerId int) {
 			case http.ReadyTask:
 				err := m.consensusCluster.IsHealthy()
 				if err != nil {
-					logrus.Warnf("IsHealthy err = %v", err)
+					logrus.Debugf("IsHealthy err = %v", err)
 					task.ResCh <- err
 					continue
 				}

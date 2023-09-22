@@ -282,3 +282,11 @@ func (consensusCluster *ConsensusCluster) Details() error {
 func (consensusCluster *ConsensusCluster) Snapshot() error {
 	return consensusCluster.raftNode.Snapshot().Error()
 }
+
+func (consensusCluster *ConsensusCluster) Shutdown() error {
+	err := consensusCluster.raftNode.VerifyLeader().Error()
+	if err != nil {
+		return nil
+	}
+	return consensusCluster.raftNode.LeadershipTransfer().Error()
+}

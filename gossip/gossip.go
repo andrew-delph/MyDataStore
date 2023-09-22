@@ -80,6 +80,10 @@ func (gossipCluster *GossipCluster) Join() error {
 	return err
 }
 
+func (gossipCluster *GossipCluster) Leave() error {
+	return gossipCluster.list.Leave(time.Second * 5)
+}
+
 func (gossipCluster *GossipCluster) GetMembers() []*memberlist.Node {
 	return gossipCluster.list.Members()
 }

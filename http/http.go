@@ -172,7 +172,7 @@ func (s HttpServer) StartHttp() {
 	}()
 }
 
-func (s HttpServer) StopHttp() error {
+func (s HttpServer) Shutdown() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
