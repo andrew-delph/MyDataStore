@@ -3,6 +3,7 @@ package hashring
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/buraksezer/consistent"
 	"github.com/sirupsen/logrus"
@@ -25,10 +26,13 @@ func TestHashringRejoin(t *testing.T) {
 	c1 := config.GetConfig().Manager
 	c1.PartitionCount = 100
 	c1.PartitionReplicas = 3
+	c1.RingDebounce = 0.1
 	c1.Load = 1.25
-	hr1 := CreateHashring(c1)
+	hr1 := CreateHashring(c1, nil)
 	hr1.AddNode(TestMember{name: "test1", test: "1"})
 	hr1.AddNode(TestMember{name: "test1", test: "2"})
+
+	hr1.updateRing()
 
 	node := hr1.GetMembers()[0]
 
@@ -46,7 +50,7 @@ func TestHashringLoad(t *testing.T) {
 	c1.PartitionCount = 100
 	c1.PartitionReplicas = 3
 	c1.Load = 1.25
-	hr1 := CreateHashring(c1)
+	hr1 := CreateHashring(c1, nil)
 	hr1.AddNode(TestMember{name: "test1"})
 	hr1.AddNode(TestMember{name: "test2"})
 	hr1.AddNode(TestMember{name: "test3"})
@@ -58,7 +62,7 @@ func TestHashringLoad(t *testing.T) {
 
 	c2 := c1
 
-	hr2 := CreateHashring(c2)
+	hr2 := CreateHashring(c2, nil)
 	hr2.AddNode(TestMember{name: "test1"})
 	hr2.AddNode(TestMember{name: "test2"})
 
@@ -181,4 +185,30 @@ func findDifferentCount(slice1, slice2 []consistent.Member) int {
 	differentCount += len(uniqueElements)
 
 	return differentCount
+}
+
+func TestHashringDebcouneUpdate(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
+	reqCh := make(chan interface{}, 10)
+
+	c := config.GetConfig().Manager
+	c.PartitionCount = 100
+	c.PartitionReplicas = 2
+	c.RingDebounce = 0.5
+	c.Load = 1.25
+	hr := CreateHashring(c, reqCh)
+
+	hr.AddNode(TestMember{name: "test1"})
+	hr.AddNode(TestMember{name: "test2"})
+	hr.RemoveNode("test2")
+	hr.AddNode(TestMember{name: "test3"})
+
+	assert.EqualValues(t, 0, len(hr.GetMembers()), "wrong number of members")
+
+	time.Sleep(time.Duration(0.6 * float64(time.Second)))
+	assert.EqualValues(t, 2, len(hr.GetMembers()), "wrong number of members")
+	assert.EqualValues(t, 1, len(reqCh), "reqCh wrong size")
 }

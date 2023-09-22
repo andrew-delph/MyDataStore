@@ -22,6 +22,7 @@ type ManagerConfig struct {
 	PartitionConcurrency int64   `mapstructure:"PARTITION_CONCURRENCY"`
 	DataPath             string  `mapstructure:"DATA_PATH"` // TODO REMOVE THIS?
 	Hostname             string
+	RingDebounce         float64 `mapstructure:"RING_DEBOUNCE"`
 }
 
 type ConsensusConfig struct {

@@ -80,6 +80,14 @@ def go_repositories():
         version = "v1.0.1",
     )
     go_repository(
+        name = "com_github_bep_debounce",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/bep/debounce",
+        sum = "h1:v67fRdBA9UQu2NhLFXrSg0Brw7CexQekrBwDMM8bzeY=",
+        version = "v1.2.1",
+    )
+
+    go_repository(
         name = "com_github_boltdb_bolt",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/boltdb/bolt",

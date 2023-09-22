@@ -53,7 +53,7 @@ func NewManager(c config.Config) Manager {
 	gossipCluster := gossip.CreateGossipCluster(c.Gossip, reqCh)
 	db := storage.NewBadgerStorage(c.Storage)
 	consensusCluster := consensus.CreateConsensusCluster(c.Consensus, reqCh)
-	ring := hashring.CreateHashring(c.Manager)
+	ring := hashring.CreateHashring(c.Manager, reqCh)
 
 	rpcWrapper := rpc.CreateRpcWrapper(c.Rpc, reqCh)
 	parts := utils.NewIntSet()
@@ -218,28 +218,10 @@ func (m *Manager) startWorker(workerId int) {
 				m.ring.RemoveNode(task.Name)
 				m.ring.AddNode(CreateRingMember(task.Name, rpcClient))
 
-				currPartitionsList, err := m.ring.GetMyPartions()
-				if err != nil {
-					logrus.Error(err)
-					continue
-				}
-				currPartitions := utils.NewIntSet().From(currPartitionsList)
-				m.consistencyController.HandleHashringChange(currPartitions)
-
 			case gossip.LeaveTask:
 				logrus.Warnf("worker LeaveTask: %+v", task)
-
 				m.consensusCluster.RemoveServer(task.Name)
-
 				m.ring.RemoveNode(task.Name)
-
-				currPartitionsList, err := m.ring.GetMyPartions()
-				if err != nil {
-					logrus.Error(err)
-					continue
-				}
-				currPartitions := utils.NewIntSet().From(currPartitionsList)
-				m.consistencyController.HandleHashringChange(currPartitions)
 
 			case consensus.EpochTask:
 				m.CurrentEpoch = task.Epoch
@@ -406,6 +388,12 @@ func (m *Manager) startWorker(workerId int) {
 				} else {
 					task.ResCh <- SyncPartitionResponse{Valid: true, LowerEpoch: lastValidEpoch, UpperEpoch: task.UpperEpoch + 1}
 				}
+
+			case hashring.PartitionsUpdate:
+				logrus.Warnf("worker PartitionsUpdate #%+v", len(task.MyPartitions))
+
+				currPartitions := utils.NewIntSet().From(task.MyPartitions)
+				m.consistencyController.HandleHashringChange(currPartitions)
 
 			default:
 				logrus.Panicf("worker unkown task type: %v", reflect.TypeOf(task))

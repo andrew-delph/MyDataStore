@@ -47,6 +47,11 @@ func CreateHttpServer(httpConfig config.HttpConfig, reqCh chan interface{}) Http
 	return HttpServer{httpConfig: httpConfig, reqCh: reqCh, srv: new(http.Server)}
 }
 
+func redirectRequest(w http.ResponseWriter, r *http.Request) {
+	requestedURL := r.URL.String()
+	http.Redirect(w, r, requestedURL, http.StatusFound)
+}
+
 // Define a setHandler function
 func (s HttpServer) setHandler(w http.ResponseWriter, r *http.Request) {
 	key := r.URL.Query().Get("key")
@@ -56,7 +61,7 @@ func (s HttpServer) setHandler(w http.ResponseWriter, r *http.Request) {
 
 	err := utils.WriteChannelTimeout(s.reqCh, SetTask{Key: key, Value: value, ResCh: resCh}, s.httpConfig.DefaultTimeout)
 	if err != nil {
-		http.Error(w, "server busy", http.StatusBadRequest)
+		redirectRequest(w, r)
 		return
 	}
 
@@ -78,7 +83,7 @@ func (s HttpServer) getHandler(w http.ResponseWriter, r *http.Request) {
 
 	err := utils.WriteChannelTimeout(s.reqCh, GetTask{Key: key, ResCh: resCh}, s.httpConfig.DefaultTimeout)
 	if err != nil {
-		http.Error(w, "server busy", http.StatusBadRequest)
+		redirectRequest(w, r)
 		return
 	}
 
