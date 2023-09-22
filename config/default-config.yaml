@@ -5,10 +5,10 @@ manager:
   default_timeout: 2
   req_channel_size: 1000
   workers_count: 100
-  partition_concurrency: 2
-  partition_count: 1000
+  partition_concurrency: 20
+  partition_count: 100
   partition_buckets: 1000
-  partition_replicas: 1
+  partition_replicas: 3
   data_path: "/data/storage"
   load: 2.1
 consensus:

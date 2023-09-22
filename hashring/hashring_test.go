@@ -107,7 +107,7 @@ func diffTest(m, p, n int, l float64) int {
 		owners[partID] = c.GetPartitionOwner(partID).String()
 	}
 
-	before, _ := c.GetClosestN([]byte("key"), n)
+	before, _ := c.GetClosestNForPartition(1, n)
 
 	// Add a new member
 	mem := TestMember(fmt.Sprintf("n%d", m+1))
@@ -123,7 +123,7 @@ func diffTest(m, p, n int, l float64) int {
 		}
 	}
 
-	after, _ := c.GetClosestN([]byte("key"), n)
+	after, _ := c.GetClosestNForPartition(1, n)
 
 	diff := findDifferentCount(before, after)
 	logrus.Infof("diff: %v                            m:%d", diff, m)

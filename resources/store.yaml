@@ -25,7 +25,7 @@ spec:
           name: store
           resources:
             limits:
-              cpu: "500m"
+              cpu: "200m"
           volumeMounts:
             - name: store-data-volume
               mountPath: /data/
