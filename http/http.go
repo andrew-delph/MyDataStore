@@ -100,7 +100,7 @@ func (s HttpServer) healthHandler(w http.ResponseWriter, r *http.Request) {
 
 	err := utils.WriteChannelTimeout(s.reqCh, HealthTask{ResCh: resCh}, s.httpConfig.DefaultTimeout)
 	if err != nil {
-		logrus.Warnf("health err = %v", err)
+		logrus.Debugf("health err = %v", err)
 		http.Error(w, "server busy", http.StatusBadRequest)
 		return
 	}
@@ -112,11 +112,11 @@ func (s HttpServer) healthHandler(w http.ResponseWriter, r *http.Request) {
 			logrus.Debugf("health check bool = %v", res)
 			fmt.Fprintf(w, "healthy")
 		} else {
-			logrus.Errorf("health check bool = %v", res)
+			logrus.Debugf("health check bool = %v", res)
 			http.Error(w, "not healthy", http.StatusBadRequest)
 		}
 	case error:
-		logrus.Errorf("health check err = %v", res)
+		logrus.Debugf("health check err = %v", res)
 		http.Error(w, res.Error(), http.StatusInternalServerError)
 	default:
 		logrus.Panicf("http unkown res type: %v", reflect.TypeOf(res))
@@ -128,7 +128,7 @@ func (s HttpServer) readyHandler(w http.ResponseWriter, r *http.Request) {
 
 	err := utils.WriteChannelTimeout(s.reqCh, ReadyTask{ResCh: resCh}, s.httpConfig.DefaultTimeout)
 	if err != nil {
-		logrus.Warnf("ready err = %v", err)
+		logrus.Debugf("ready err = %v", err)
 		http.Error(w, "server busy", http.StatusBadRequest)
 		return
 	}
@@ -140,11 +140,11 @@ func (s HttpServer) readyHandler(w http.ResponseWriter, r *http.Request) {
 			logrus.Debugf("ready check bool = %v", res)
 			fmt.Fprintf(w, "healthy")
 		} else {
-			logrus.Errorf("ready check bool = %v", res)
+			logrus.Debugf("ready check bool = %v", res)
 			http.Error(w, "not healthy", http.StatusBadRequest)
 		}
 	case error:
-		logrus.Errorf("ready check err = %v", res)
+		logrus.Debugf("ready check err = %v", res)
 		http.Error(w, res.Error(), http.StatusInternalServerError)
 	default:
 		logrus.Panicf("http unkown res type: %v", reflect.TypeOf(res))
