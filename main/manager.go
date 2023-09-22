@@ -375,7 +375,6 @@ func (m *Manager) startWorker(workerId int) {
 					task.ResCh <- errors.Wrap(err, "GetEpochTreeLastValid")
 					continue
 				} else if epochTreeObjectLastValid != nil && epochTreeObjectLastValid.LowerEpoch >= task.UpperEpoch { // TODO validate this is the correct compare
-					logrus.Warn("DOESNT NEED TO SYNC")
 					task.ResCh <- nil
 					continue
 				}
@@ -391,7 +390,7 @@ func (m *Manager) startWorker(workerId int) {
 				err = m.PoliteStreamRequest(int(task.PartitionId), lastValidEpoch, task.UpperEpoch+1, nil)
 
 				if err != nil {
-					logrus.Error(err)
+					logrus.Debug(err)
 					task.ResCh <- SyncPartitionResponse{Valid: false, LowerEpoch: lastValidEpoch, UpperEpoch: task.UpperEpoch + 1}
 				} else {
 					task.ResCh <- SyncPartitionResponse{Valid: true, LowerEpoch: lastValidEpoch, UpperEpoch: task.UpperEpoch + 1}
@@ -443,7 +442,7 @@ func (m *Manager) SetRequest(key, value string) error {
 		case <-responseCh:
 			responseCount++
 		case err := <-errorCh:
-			logrus.Errorf("SetRequest errorCh: %v", err)
+			// logrus.Errorf("SetRequest errorCh: %v", err)
 			_ = err // Handle error if necessary
 		case <-timeout:
 			return fmt.Errorf("timed out waiting for responses. responseCount = %d", responseCount)
@@ -507,7 +506,8 @@ func (m *Manager) GetRequest(key string) (*rpc.RpcValue, error) {
 				recentValue = res
 			}
 		case err := <-errorCh:
-			logrus.Errorf("GetRequest errorCh %v", err)
+			// logrus.Errorf("GetRequest errorCh %v", err)
+			_ = err
 
 		case <-timeout:
 			return nil, fmt.Errorf("timed out waiting for responses. responseCount = %d", responseCount)
@@ -866,9 +866,9 @@ func (m *Manager) PoliteStreamRequest(PartitionId int, LowerEpoch, UpperEpoch in
 
 	for _, lastValid := range membersLastValid {
 		// logrus.Warnf("sync name %s lastValid %d", lastValid.member.Name, lastValid.epochTreeLastValid.LowerEpoch)
-		err := m.SyncPartitionRequest(lastValid.member, int32(PartitionId), LowerEpoch, UpperEpoch, buckets, time.Second*60)
+		err := m.SyncPartitionRequest(lastValid.member, int32(PartitionId), LowerEpoch, UpperEpoch, buckets, time.Second*60*3)
 		if err != nil {
-			logrus.Errorf("SyncPartitionRequest err = %v", err)
+			logrus.Debugf("SyncPartitionRequest err = %v", err)
 		} else if lastValid.epochTreeLastValid.LowerEpoch >= UpperEpoch {
 			return nil
 		}

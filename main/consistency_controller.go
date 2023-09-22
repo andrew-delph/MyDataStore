@@ -202,7 +202,7 @@ func (ps *PartitionState) SyncPartition(UpperEpoch int64) {
 	} else {
 		defer ps.sema.Release(1)
 	}
-	logrus.Warnf("new partition sync %d", ps.partitionId)
+	logrus.Debugf("new partition sync %d", ps.partitionId)
 	resCh := make(chan interface{})
 	ps.reqCh <- SyncPartitionTask{PartitionId: int32(ps.partitionId), ResCh: resCh, UpperEpoch: UpperEpoch}
 	rawRes := <-resCh
@@ -217,9 +217,9 @@ func (ps *PartitionState) SyncPartition(UpperEpoch int64) {
 			go ps.VerifyPartitionEpoch(i)
 		}
 	case nil:
-		logrus.Warnf("SyncPartition: DOESNT NEED TO SYNC")
+		logrus.Debugf("SyncPartition: DOESNT NEED TO SYNC")
 	case error:
-		logrus.Error(errors.Wrap(res, "SyncPartition"))
+		logrus.Debug(errors.Wrap(res, "SyncPartition"))
 		time.Sleep(time.Second * 10)
 		go ps.SyncPartition(UpperEpoch)
 	default:
