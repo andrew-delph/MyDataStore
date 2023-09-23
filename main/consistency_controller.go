@@ -100,7 +100,8 @@ func (cc *ConsistencyController) HandleHashringChange(currPartitions utils.IntSe
 	lost := len(cc.currPartitions.Difference(currPartitions))
 	partitionsLost.Add(float64(lost))
 	partitionsGained.Add(float64(gained))
-	if lost >= 0 || gained > 0 {
+	partitionsTotal.Set(float64(len(currPartitions.List())))
+	if lost > 0 || gained > 0 {
 		logrus.Warnf("partitions lost  %d gained %d", lost, gained)
 	}
 	cc.currPartitions = currPartitions
@@ -157,9 +158,9 @@ func (ps *PartitionState) StartConsumer() error {
 			partitionLabel := fmt.Sprintf("%d", ps.partitionId)
 			logrus.Debug("partitionLabel = ", partitionLabel)
 			if ps.active.Load() {
-				partitionActiveGague.WithLabelValues(partitionLabel).Set(1)
+				partitionActive.WithLabelValues(partitionLabel).Set(1)
 			} else {
-				partitionActiveGague.WithLabelValues(partitionLabel).Set(0)
+				partitionActive.WithLabelValues(partitionLabel).Set(0)
 			}
 
 			if event.CurrPartitions.Has(ps.partitionId) && ps.active.CompareAndSwap(false, true) { // TODO create test case for this
