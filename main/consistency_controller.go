@@ -100,7 +100,9 @@ func (cc *ConsistencyController) HandleHashringChange(currPartitions utils.IntSe
 	lost := len(cc.currPartitions.Difference(currPartitions))
 	partitionsLost.Add(float64(lost))
 	partitionsGained.Add(float64(gained))
-	logrus.Warnf("partitions lost  %d gained %d", lost, gained)
+	if lost >= 0 || gained > 0 {
+		logrus.Warnf("partitions lost  %d gained %d", lost, gained)
+	}
 	cc.currPartitions = currPartitions
 	cc.PublishEvent(UpdatePartitionsEvent{CurrPartitions: currPartitions})
 	return nil

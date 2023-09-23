@@ -49,6 +49,7 @@ func CreateHttpServer(httpConfig config.HttpConfig, reqCh chan interface{}) Http
 
 func redirectRequest(w http.ResponseWriter, r *http.Request) {
 	requestedURL := r.URL.String()
+	logrus.Warn("requestedURL ", requestedURL)
 	http.Redirect(w, r, requestedURL, http.StatusFound)
 }
 

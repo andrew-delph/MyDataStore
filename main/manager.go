@@ -198,7 +198,7 @@ func (m *Manager) startWorker(workerId int) {
 				}
 
 			case gossip.JoinTask:
-				logrus.Warnf("worker JoinTask: %+v", task)
+				logrus.Debugf("worker JoinTask: %+v", task)
 
 				err := m.consensusCluster.AddVoter(task.Name, task.IP)
 				if err != nil {
@@ -219,7 +219,7 @@ func (m *Manager) startWorker(workerId int) {
 				m.ring.AddNode(CreateRingMember(task.Name, rpcClient))
 
 			case gossip.LeaveTask:
-				logrus.Warnf("worker LeaveTask: %+v", task)
+				logrus.Debugf("worker LeaveTask: %+v", task)
 				m.consensusCluster.RemoveServer(task.Name)
 				m.ring.RemoveNode(task.Name)
 
