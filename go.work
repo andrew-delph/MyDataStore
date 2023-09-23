@@ -1,13 +1,19 @@
 go 1.20
 
-use ./store
 use ./config
-use ./storage
-use ./http
-use ./main
-use ./gossip
-use ./consensus
-use ./utils
-use ./hashring
-use ./rpc
 
+use ./storage
+
+use ./http
+
+use ./main
+
+use ./gossip
+
+use ./consensus
+
+use ./utils
+
+use ./hashring
+
+use ./rpc
