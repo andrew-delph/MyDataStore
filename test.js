@@ -20,7 +20,7 @@ export let options = {
     constant_arrival: {
       executor: "constant-arrival-rate",
       // How long the test lasts
-      duration: "40m",
+      duration: "2h",
       // How many iterations per timeUnit
       rate: 50,
       // Start `rate` iterations per second
