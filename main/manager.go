@@ -390,7 +390,7 @@ func (m *Manager) startWorker(workerId int) {
 				}
 
 			case hashring.PartitionsUpdate:
-				logrus.Warnf("worker PartitionsUpdate #%+v", len(task.MyPartitions))
+				logrus.Debugf("worker PartitionsUpdate #%+v", len(task.MyPartitions))
 
 				currPartitions := utils.NewIntSet().From(task.MyPartitions)
 				m.consistencyController.HandleHashringChange(currPartitions)

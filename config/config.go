@@ -69,7 +69,7 @@ func GetDefaultConfig() Config {
 }
 
 func getConfigOverride(allow_override bool) Config {
-	logrus.Warn("CONFIG_PATH = ", os.Getenv("CONFIG_PATH"))
+	logrus.Debugf("CONFIG_PATH = ", os.Getenv("CONFIG_PATH"))
 	viper.AddConfigPath(os.Getenv("CONFIG_PATH"))
 
 	viper.SetConfigName("default-config")
@@ -81,7 +81,7 @@ func getConfigOverride(allow_override bool) Config {
 	if allow_override {
 		viper.SetConfigName("config")
 		if err := viper.MergeInConfig(); err != nil {
-			logrus.Errorf("Error reading user defined config file, %s", err)
+			logrus.Debugf("Error reading user defined config file, %s", err)
 		}
 	}
 

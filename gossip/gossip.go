@@ -57,7 +57,7 @@ func CreateGossipCluster(gossipConfig config.GossipConfig, reqCh chan interface{
 		logrus.Fatalf("Error resolving IP address for %s: %v\n", gossipConfig.Name, err)
 	}
 	memberlistConfig.AdvertiseAddr = ipAddresses[0].String()
-	logrus.Warnf("AdvertiseAddr = %s", ipAddresses[0].String())
+	logrus.Debugf("AdvertiseAddr = %s", ipAddresses[0].String())
 
 	// behavior configurations
 	memberlistConfig.DeadNodeReclaimTime = time.Duration(time.Nanosecond * 1)
