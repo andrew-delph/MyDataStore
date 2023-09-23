@@ -54,19 +54,17 @@ var (
 		[]string{"hostname"},
 	)
 
-	partitionsLost = promauto.NewGaugeVec(
-		prometheus.GaugeOpts{
+	partitionsLost = promauto.NewCounter(
+		prometheus.CounterOpts{
 			Name: "partitions_lost",
 			Help: "number of partitions lost",
 		},
-		[]string{"test"},
 	)
 
-	partitionsGained = promauto.NewGaugeVec(
-		prometheus.GaugeOpts{
+	partitionsGained = promauto.NewCounter(
+		prometheus.CounterOpts{
 			Name: "partitions_gained",
 			Help: "number of partitions gained",
 		},
-		[]string{"test"},
 	)
 )

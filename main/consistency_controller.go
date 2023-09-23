@@ -98,9 +98,8 @@ func NewConsistencyController(concurrencyLevel int64, partitionCount int, reqCh 
 func (cc *ConsistencyController) HandleHashringChange(currPartitions utils.IntSet) error {
 	gained := len(currPartitions.Difference(cc.currPartitions))
 	lost := len(cc.currPartitions.Difference(currPartitions))
-	partitionsLost.WithLabelValues("test").Set(float64(lost))
-	partitionsGained.WithLabelValues("test").Set(float64(gained))
-	andrewGauge.WithLabelValues("test").Inc()
+	partitionsLost.Add(float64(lost))
+	partitionsGained.Add(float64(gained))
 	logrus.Warnf("partitions lost  %d gained %d", lost, gained)
 	cc.currPartitions = currPartitions
 	cc.PublishEvent(UpdatePartitionsEvent{CurrPartitions: currPartitions})
