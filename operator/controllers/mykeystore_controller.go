@@ -142,9 +142,11 @@ func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			log.Info("Performing Finalizer Operations for MyKeyStore before delete CR")
 
 			// Let's add here an status "Downgrade" to define that this resource begin its process to be terminated.
-			meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{Type: typeDegradedMyKeyStore,
+			meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
+				Type:   typeDegradedMyKeyStore,
 				Status: metav1.ConditionUnknown, Reason: "Finalizing",
-				Message: fmt.Sprintf("Performing finalizer operations for the custom resource: %s ", mykeystore.Name)})
+				Message: fmt.Sprintf("Performing finalizer operations for the custom resource: %s ", mykeystore.Name),
+			})
 
 			if err := r.Status().Update(ctx, mykeystore); err != nil {
 				log.Error(err, "Failed to update MyKeyStore status")
@@ -168,9 +170,11 @@ func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 				return ctrl.Result{}, err
 			}
 
-			meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{Type: typeDegradedMyKeyStore,
+			meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
+				Type:   typeDegradedMyKeyStore,
 				Status: metav1.ConditionTrue, Reason: "Finalizing",
-				Message: fmt.Sprintf("Finalizer operations for custom resource %s name were successfully accomplished", mykeystore.Name)})
+				Message: fmt.Sprintf("Finalizer operations for custom resource %s name were successfully accomplished", mykeystore.Name),
+			})
 
 			if err := r.Status().Update(ctx, mykeystore); err != nil {
 				log.Error(err, "Failed to update MyKeyStore status")
@@ -201,9 +205,11 @@ func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			log.Error(err, "Failed to define new Deployment resource for MyKeyStore")
 
 			// The following implementation will update the status
-			meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{Type: typeAvailableMyKeyStore,
+			meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
+				Type:   typeAvailableMyKeyStore,
 				Status: metav1.ConditionFalse, Reason: "Reconciling",
-				Message: fmt.Sprintf("Failed to create Deployment for the custom resource (%s): (%s)", mykeystore.Name, err)})
+				Message: fmt.Sprintf("Failed to create Deployment for the custom resource (%s): (%s)", mykeystore.Name, err),
+			})
 
 			if err := r.Status().Update(ctx, mykeystore); err != nil {
 				log.Error(err, "Failed to update MyKeyStore status")
@@ -252,9 +258,11 @@ func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			}
 
 			// The following implementation will update the status
-			meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{Type: typeAvailableMyKeyStore,
+			meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
+				Type:   typeAvailableMyKeyStore,
 				Status: metav1.ConditionFalse, Reason: "Resizing",
-				Message: fmt.Sprintf("Failed to update the size for the custom resource (%s): (%s)", mykeystore.Name, err)})
+				Message: fmt.Sprintf("Failed to update the size for the custom resource (%s): (%s)", mykeystore.Name, err),
+			})
 
 			if err := r.Status().Update(ctx, mykeystore); err != nil {
 				log.Error(err, "Failed to update MyKeyStore status")
@@ -271,9 +279,11 @@ func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	// The following implementation will update the status
-	meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{Type: typeAvailableMyKeyStore,
+	meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
+		Type:   typeAvailableMyKeyStore,
 		Status: metav1.ConditionTrue, Reason: "Reconciling",
-		Message: fmt.Sprintf("Deployment for custom resource (%s) with %d replicas created successfully", mykeystore.Name, size)})
+		Message: fmt.Sprintf("Deployment for custom resource (%s) with %d replicas created successfully", mykeystore.Name, size),
+	})
 
 	if err := r.Status().Update(ctx, mykeystore); err != nil {
 		log.Error(err, "Failed to update MyKeyStore status")
@@ -305,7 +315,8 @@ func (r *MyKeyStoreReconciler) doFinalizerOperationsForMyKeyStore(cr *cachev1alp
 
 // deploymentForMyKeyStore returns a MyKeyStore Deployment object
 func (r *MyKeyStoreReconciler) deploymentForMyKeyStore(
-	mykeystore *cachev1alpha1.MyKeyStore) (*appsv1.Deployment, error) {
+	mykeystore *cachev1alpha1.MyKeyStore,
+) (*appsv1.Deployment, error) {
 	ls := labelsForMyKeyStore(mykeystore.Name)
 	replicas := mykeystore.Spec.Size
 
@@ -359,7 +370,7 @@ func (r *MyKeyStoreReconciler) deploymentForMyKeyStore(
 					//	},
 					//},
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsNonRoot: &[]bool{true}[0],
+						RunAsNonRoot: &[]bool{false}[0],
 						// IMPORTANT: seccomProfile was introduced with Kubernetes 1.19
 						// If you are looking for to produce solutions to be supported
 						// on lower versions you must remove this option.
@@ -374,7 +385,7 @@ func (r *MyKeyStoreReconciler) deploymentForMyKeyStore(
 						// Ensure restrictive context for the container
 						// More info: https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted
 						SecurityContext: &corev1.SecurityContext{
-							RunAsNonRoot:             &[]bool{true}[0],
+							RunAsNonRoot:             &[]bool{false}[0],
 							AllowPrivilegeEscalation: &[]bool{false}[0],
 							Capabilities: &corev1.Capabilities{
 								Drop: []corev1.Capability{
@@ -404,7 +415,8 @@ func labelsForMyKeyStore(name string) map[string]string {
 	if err == nil {
 		imageTag = strings.Split(image, ":")[1]
 	}
-	return map[string]string{"app.kubernetes.io/name": "MyKeyStore",
+	return map[string]string{
+		"app.kubernetes.io/name":       "MyKeyStore",
 		"app.kubernetes.io/instance":   name,
 		"app.kubernetes.io/version":    imageTag,
 		"app.kubernetes.io/part-of":    "operator",
@@ -415,7 +427,7 @@ func labelsForMyKeyStore(name string) map[string]string {
 // imageForMyKeyStore gets the Operand image which is managed by this controller
 // from the MYKEYSTORE_IMAGE environment variable defined in the config/manager/manager.yaml
 func imageForMyKeyStore() (string, error) {
-	var imageEnvVar = "MYKEYSTORE_IMAGE"
+	imageEnvVar := "MYKEYSTORE_IMAGE"
 	image, found := os.LookupEnv(imageEnvVar)
 	if !found {
 		return "", fmt.Errorf("Unable to find %s environment variable with the image", imageEnvVar)

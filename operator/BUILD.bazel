@@ -21,5 +21,9 @@ go_library(
 go_binary(
     name = "operator",
     embed = [":go_default_library"],
+    env = {
+        # "MYKEYSTORE_IMAGE": "docker.io/andrew-delph/main:store_image",
+        "MYKEYSTORE_IMAGE": "strm/helloworld-http:latest",
+    },
     visibility = ["//visibility:public"],
 )
