@@ -23,17 +23,17 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// MyKeyStoreSpec defines the desired state of MyKeyStore
-type MyKeyStoreSpec struct {
+// TestKindSpec defines the desired state of TestKind
+type TestKindSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of MyKeyStore. Edit mykeystore_types.go to remove/update
+	// Foo is an example field of TestKind. Edit testkind_types.go to remove/update
 	Foo string `json:"foo,omitempty"`
 }
 
-// MyKeyStoreStatus defines the observed state of MyKeyStore
-type MyKeyStoreStatus struct {
+// TestKindStatus defines the observed state of TestKind
+type TestKindStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 }
@@ -41,24 +41,24 @@ type MyKeyStoreStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// MyKeyStore is the Schema for the mykeystores API
-type MyKeyStore struct {
+// TestKind is the Schema for the testkinds API
+type TestKind struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   MyKeyStoreSpec   `json:"spec,omitempty"`
-	Status MyKeyStoreStatus `json:"status,omitempty"`
+	Spec   TestKindSpec   `json:"spec,omitempty"`
+	Status TestKindStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// MyKeyStoreList contains a list of MyKeyStore
-type MyKeyStoreList struct {
+// TestKindList contains a list of TestKind
+type TestKindList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []MyKeyStore `json:"items"`
+	Items           []TestKind `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&MyKeyStore{}, &MyKeyStoreList{})
+	SchemeBuilder.Register(&TestKind{}, &TestKindList{})
 }

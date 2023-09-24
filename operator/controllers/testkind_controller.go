@@ -24,29 +24,29 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	dbv1alpha1 "github.com/andrew-delph/my-key-store/api/v1alpha1"
+	mydomainv1alpha1 "command-line-arguments/api/v1alpha1"
 )
 
-// MyKeyStoreReconciler reconciles a MyKeyStore object
-type MyKeyStoreReconciler struct {
+// TestKindReconciler reconciles a TestKind object
+type TestKindReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=db.andrewdelph.com,resources=mykeystores,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=db.andrewdelph.com,resources=mykeystores/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=db.andrewdelph.com,resources=mykeystores/finalizers,verbs=update
+//+kubebuilder:rbac:groups=my.domain,resources=testkinds,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=my.domain,resources=testkinds/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=my.domain,resources=testkinds/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 // TODO(user): Modify the Reconcile function to compare the state specified by
-// the MyKeyStore object against the actual cluster state, and then
+// the TestKind object against the actual cluster state, and then
 // perform operations to make the cluster state reflect the state specified by
 // the user.
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
-func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *TestKindReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
 
 	// TODO(user): your logic here
@@ -55,8 +55,8 @@ func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *MyKeyStoreReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *TestKindReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&dbv1alpha1.MyKeyStore{}).
+		For(&mydomainv1alpha1.TestKind{}).
 		Complete(r)
 }

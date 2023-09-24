@@ -1,27 +1,27 @@
-# permissions for end users to view mykeystores.
+# permissions for end users to view testkinds.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:
     app.kubernetes.io/name: clusterrole
-    app.kubernetes.io/instance: mykeystore-viewer-role
+    app.kubernetes.io/instance: testkind-viewer-role
     app.kubernetes.io/component: rbac
     app.kubernetes.io/created-by: operator
     app.kubernetes.io/part-of: operator
     app.kubernetes.io/managed-by: kustomize
-  name: mykeystore-viewer-role
+  name: testkind-viewer-role
 rules:
 - apiGroups:
-  - db.andrewdelph.com
+  - my.domain
   resources:
-  - mykeystores
+  - testkinds
   verbs:
   - get
   - list
   - watch
 - apiGroups:
-  - db.andrewdelph.com
+  - my.domain
   resources:
-  - mykeystores/status
+  - testkinds/status
   verbs:
   - get

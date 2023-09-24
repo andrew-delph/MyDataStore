@@ -1,4 +1,4 @@
-module github.com/andrew-delph/my-key-store
+module command-line-arguments
 
 go 1.19
 

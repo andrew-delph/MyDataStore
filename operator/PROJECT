@@ -2,22 +2,21 @@
 # This file is used to track the info used to scaffold your project
 # and allow the plugins properly work.
 # More info: https://book.kubebuilder.io/reference/project-config.html
-domain: andrewdelph.com
+domain: my.domain
 layout:
 - go.kubebuilder.io/v3
 plugins:
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}
 projectName: operator
-repo: github.com/andrew-delph/my-key-store
+repo: command-line-arguments
 resources:
 - api:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: andrewdelph.com
-  group: db
-  kind: MyKeyStore
-  path: github.com/andrew-delph/my-key-store/api/v1alpha1
+  domain: my.domain
+  kind: TestKind
+  path: command-line-arguments/api/v1alpha1
   version: v1alpha1
 version: "3"

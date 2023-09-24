@@ -1,12 +1,12 @@
-apiVersion: db.andrewdelph.com/v1alpha1
-kind: MyKeyStore
+apiVersion: my.domain/v1alpha1
+kind: TestKind
 metadata:
   labels:
-    app.kubernetes.io/name: mykeystore
-    app.kubernetes.io/instance: mykeystore-sample
+    app.kubernetes.io/name: testkind
+    app.kubernetes.io/instance: testkind-sample
     app.kubernetes.io/part-of: operator
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/created-by: operator
-  name: mykeystore-sample
+  name: testkind-sample
 spec:
   # TODO(user): Add fields here
