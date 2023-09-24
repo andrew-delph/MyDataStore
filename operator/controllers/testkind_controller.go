@@ -19,6 +19,8 @@ package controllers
 import (
 	"context"
 
+	"github.com/sirupsen/logrus"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -47,9 +49,13 @@ type TestKindReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
 func (r *TestKindReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	x := log.FromContext(ctx)
+
+	x.Info("TESTING!")
 
 	println("1111111111111111111111111111")
+
+	logrus.Warn("HI")
 
 	// TODO(user): your logic here
 
