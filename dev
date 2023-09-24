@@ -69,7 +69,9 @@ case $1 in
             echo "Error: The argument must be a positive integer."
             exit 1
         fi
-        docker-compose up -d --scale store=$2
+        # docker-compose up -d --scale store=$2
+        kubectl scale statefulset store --replicas=$2
+
         ;;
     *)
         echo "Invalid argument."

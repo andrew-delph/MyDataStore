@@ -2,8 +2,11 @@ package storage
 
 import (
 	"fmt"
+	"sync"
 	"testing"
+	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/andrew-delph/my-key-store/config"
@@ -14,21 +17,32 @@ type StorageCallback func(t *testing.T, storage Storage)
 func AllStorage(t *testing.T, storageCallback StorageCallback) {
 	var storage Storage
 	var err error
+	var startTime time.Time
+	var endTime time.Time
+	var elapsedTime time.Duration
 	c := config.GetConfig()
 
 	c.Storage.DataPath = t.TempDir()
 
 	storage = NewLevelDbStorage(c.Storage)
+	startTime = time.Now()
 	storageCallback(t, storage)
+	endTime = time.Now()
+	elapsedTime = endTime.Sub(startTime)
 	err = storage.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
+	logrus.Warnf("%s: [leveldb] elapsed: %v", t.Name(), elapsedTime)
 
 	c.Storage.DataPath = t.TempDir()
 
 	storage = NewBadgerStorage(c.Storage)
+	startTime = time.Now()
 	storageCallback(t, storage)
+	endTime = time.Now()
+	elapsedTime = endTime.Sub(startTime)
+	logrus.Warnf("%s: [badger] elapsed: %v", t.Name(), elapsedTime)
 	err = storage.Close()
 	if err != nil {
 		t.Fatal(err)
@@ -164,4 +178,33 @@ func TestStorageBenchmark(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
+	AllStorage(t, storageBenchmark)
+}
+
+func storageBenchmark(t *testing.T, storage Storage) {
+	writeValuesNum := 100
+	numGoroutines := 100
+	var wg sync.WaitGroup
+	wg.Add(numGoroutines)
+
+	for i := 0; i < numGoroutines; i++ {
+		go func(id int) {
+			defer wg.Done()
+			trx := storage.NewTransaction(true)
+			defer trx.Discard()
+			for i := 0; i < writeValuesNum; i++ {
+				key := []byte(fmt.Sprintf("goroutine%d_", id) + testIndex(i))
+				value := []byte(fmt.Sprintf("goroutine%d_", id) + fmt.Sprintf("%d", i))
+				err := trx.Set(key, value)
+				if err != nil {
+					t.Error(err)
+				}
+			}
+			err := trx.Commit()
+			if err != nil {
+				t.Error(err)
+			}
+		}(i)
+	}
+	wg.Wait()
 }

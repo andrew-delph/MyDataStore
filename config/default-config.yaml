@@ -1,12 +1,12 @@
 manager:
   replica_count: 5
   read_quorum: 2
-  write_quorum: 3
+  write_quorum: 2
   default_timeout: 5
   req_channel_size: 1000
   workers_count: 100
-  partition_concurrency: 1
-  partition_count: 100
+  partition_concurrency: 25
+  partition_count: 1000
   partition_buckets: 1000
   partition_replicas: 2
   data_path: "/data/storage"

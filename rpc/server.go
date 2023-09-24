@@ -67,7 +67,7 @@ func (rpcWrapper *RpcWrapper) StartRpcServer() {
 	if err != nil {
 		logrus.Fatalf("failed to listen: %v", err)
 	}
-	logrus.Infof("server listening at %v", lis.Addr())
+	logrus.Debugf("server listening at %v", lis.Addr())
 	if err := rpcWrapper.grpc.Serve(lis); err != nil {
 		logrus.Fatalf("failed to serve: %v", err)
 	}
@@ -125,11 +125,11 @@ func (rpcWrapper *RpcWrapper) StreamBuckets(req *datap.StreamBucketsRequest, str
 			case *datap.Value:
 				err := stream.Send(item)
 				if err != nil {
-					logrus.Errorf("SERVER StreamBuckets err = %v", err)
+					logrus.Debugf("SERVER StreamBuckets err = %v", err)
 					return err
 				}
 			case error:
-				logrus.Errorf("SERVER StreamBuckets err = %v", item)
+				logrus.Debugf("SERVER StreamBuckets err = %v", item)
 				return item
 			default:
 				logrus.Panicf("http unkown res type: %v", reflect.TypeOf(item))

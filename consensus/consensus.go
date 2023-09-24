@@ -66,7 +66,7 @@ func CreateConsensusCluster(consensusConfig config.ConsensusConfig, reqCh chan i
 }
 
 func (consensusCluster *ConsensusCluster) StartConsensusCluster() error {
-	logrus.Warn("StartConsensusCluster")
+	logrus.Debug("StartConsensusCluster")
 
 	consensusCluster.epochTick = time.NewTicker(time.Duration(consensusCluster.consensusConfig.EpochTime) * time.Second)
 
