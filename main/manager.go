@@ -220,7 +220,7 @@ func (m *Manager) startWorker(workerId int) {
 				m.ring.AddNode(CreateRingMember(task.Name, rpcClient))
 
 			case gossip.LeaveTask:
-				logrus.Debugf("worker LeaveTask: %+v", task)
+				logrus.Warnf("worker LeaveTask: %+v", task)
 				m.consensusCluster.RemoveServer(task.Name)
 				m.ring.RemoveNode(task.Name)
 

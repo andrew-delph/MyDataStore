@@ -158,7 +158,7 @@ func (s HttpServer) readyHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s HttpServer) StartHttp() {
-	logrus.Info("starting http server")
+	logrus.Debug("starting http server")
 	http.HandleFunc("/set", s.setHandler)
 	http.HandleFunc("/get", s.getHandler)
 	http.HandleFunc("/health", s.healthHandler)
@@ -171,7 +171,7 @@ func (s HttpServer) StartHttp() {
 	s.srv = srv
 
 	go func() {
-		logrus.Infof("Server is running on http://localhost:8080")
+		logrus.Debugf("Server is running on http://localhost:8080")
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logrus.Panic(err)
 		}
