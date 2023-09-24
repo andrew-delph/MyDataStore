@@ -7,7 +7,7 @@ go_library(
         "testkind_types.go",
         "zz_generated.deepcopy.go",
     ],
-    importpath = "github.com/andrew-delph/my-key-store/operator/api/v1alpha1",
+    importpath = "command-line-arguments/api/v1alpha1",  # keep
     visibility = ["//visibility:public"],
     deps = [
         "@io_k8s_apimachinery//pkg/apis/meta/v1:go_default_library",
