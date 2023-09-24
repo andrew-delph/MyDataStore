@@ -1,5 +1,5 @@
 manager:
-  replica_count: 4
+  replica_count: 5
   read_quorum: 2
   write_quorum: 2
   default_timeout: 5
