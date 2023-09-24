@@ -49,6 +49,8 @@ type TestKindReconciler struct {
 func (r *TestKindReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
 
+	println("1111111111111111111111111111")
+
 	// TODO(user): your logic here
 
 	return ctrl.Result{}, nil
@@ -56,6 +58,7 @@ func (r *TestKindReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *TestKindReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	println("222222222222222222222222222222222")
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&mydomainv1alpha1.TestKind{}).
 		Complete(r)
