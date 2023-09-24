@@ -6,8 +6,26 @@ domain: andrewdelph.com
 layout:
 - go.kubebuilder.io/v3
 plugins:
+  deploy-image.go.kubebuilder.io/v1-alpha:
+    resources:
+    - domain: andrewdelph.com
+      group: cache
+      kind: MyKeyStore
+      options:
+        image: docker.io/andrew-delph/main:store_image
+      version: v1alpha1
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}
 projectName: operator
 repo: github.com/andrew-delph/my-key-store/operator
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: andrewdelph.com
+  group: cache
+  kind: MyKeyStore
+  path: github.com/andrew-delph/my-key-store/operator/api/v1alpha1
+  version: v1alpha1
 version: "3"

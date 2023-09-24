@@ -533,6 +533,14 @@ def go_repositories():
         version = "v1.8.0",
     )
     go_repository(
+        name = "com_github_go_task_slim_sprig",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/go-task/slim-sprig",
+        sum = "h1:p104kn46Q8WdvHunIJ9dAyjPVtrBPhSr3KT2yUst43I=",
+        version = "v0.0.0-20210107165309-348f09dbbbc0",
+    )
+
+    go_repository(
         name = "com_github_goccy_go_json",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/goccy/go-json",
@@ -661,8 +669,8 @@ def go_repositories():
         name = "com_github_google_pprof",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/google/pprof",
-        sum = "h1:LR89qFljJ48s990kEKGsk213yIJDPI4205OKOzbURK8=",
-        version = "v0.0.0-20201218002935-b9804c9f04c2",
+        sum = "h1:yAJXTCF9TqKcTiHJAE8dj7HMvPfh66eeA2JYW7eFpSE=",
+        version = "v0.0.0-20210407192527-94a9f03dee38",
     )
     go_repository(
         name = "com_github_google_renameio",

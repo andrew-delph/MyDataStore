@@ -72,6 +72,9 @@ spec:
         - --leader-elect
         image: controller:latest
         name: manager
+        env:
+        - name: MYKEYSTORE_IMAGE
+          value: docker.io/andrew-delph/main:store_image
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
