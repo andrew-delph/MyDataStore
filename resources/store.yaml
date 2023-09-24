@@ -3,7 +3,7 @@ kind: StatefulSet
 metadata:
   name: store
 spec:
-  replicas: 20
+  replicas: 6
   # minReadySeconds: 30
   updateStrategy:
     type: RollingUpdate
