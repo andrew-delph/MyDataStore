@@ -36,7 +36,6 @@ import (
 
 var _ = Describe("MyKeyStore controller", func() {
 	Context("MyKeyStore controller test", func() {
-
 		const MyKeyStoreName = "test-mykeystore"
 
 		ctx := context.Background()
@@ -118,9 +117,11 @@ var _ = Describe("MyKeyStore controller", func() {
 			Eventually(func() error {
 				if mykeystore.Status.Conditions != nil && len(mykeystore.Status.Conditions) != 0 {
 					latestStatusCondition := mykeystore.Status.Conditions[len(mykeystore.Status.Conditions)-1]
-					expectedLatestStatusCondition := metav1.Condition{Type: typeAvailableMyKeyStore,
+					expectedLatestStatusCondition := metav1.Condition{
+						Type:   typeAvailableMyKeyStore,
 						Status: metav1.ConditionTrue, Reason: "Reconciling",
-						Message: fmt.Sprintf("Deployment for custom resource (%s) with %d replicas created successfully", mykeystore.Name, mykeystore.Spec.Size)}
+						Message: fmt.Sprintf("Deployment for custom resource (%s) with %d replicas created successfully", mykeystore.Name, mykeystore.Spec.Size),
+					}
 					if latestStatusCondition != expectedLatestStatusCondition {
 						return fmt.Errorf("The latest status condition added to the mykeystore instance is not as expected")
 					}

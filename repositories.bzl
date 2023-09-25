@@ -330,6 +330,7 @@ def go_repositories():
         sum = "h1:yUdfgN0XgIJw7foRItutHYUIhlcKzcSf5vDpdhQAKTc=",
         version = "v0.0.0-20180725130230-947c36da3153",
     )
+
     go_repository(
         name = "com_github_emicklei_go_restful_v3",
         build_file_proto_mode = "disable_global",
@@ -1090,6 +1091,7 @@ def go_repositories():
         sum = "h1:fD57ERR4JtEqsWbfPhv4DMiApHyliiK5xCTNVSPiaAs=",
         version = "v0.0.0-20200227124842-a10e7caefd8e",
     )
+
     go_repository(
         name = "com_github_nytimes_gziphandler",
         build_file_proto_mode = "disable_global",
@@ -2512,6 +2514,7 @@ def go_repositories():
         sum = "h1:+70TFaan3hfJzs+7VK2o+OGxg8HsuBr/5f6tVAjDu6E=",
         version = "v0.0.0-20221012153701-172d655c2280",
     )
+
     go_repository(
         name = "io_k8s_sigs_apiserver_network_proxy_konnectivity_client",
         build_file_proto_mode = "disable_global",

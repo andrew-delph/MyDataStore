@@ -19,7 +19,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -28,6 +27,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -35,6 +35,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	"github.com/sirupsen/logrus"
 
 	cachev1alpha1 "github.com/andrew-delph/my-key-store/operator/api/v1alpha1"
 )
@@ -80,6 +82,7 @@ type MyKeyStoreReconciler struct {
 // - About Controllers: https://kubernetes.io/docs/concepts/architecture/controller/
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
 func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	logrus.Info("calling Reconcile req = ", req.String())
 	log := log.FromContext(ctx)
 
 	// Fetch the MyKeyStore instance
@@ -341,34 +344,6 @@ func (r *MyKeyStoreReconciler) deploymentForMyKeyStore(
 					Labels: ls,
 				},
 				Spec: corev1.PodSpec{
-					// TODO(user): Uncomment the following code to configure the nodeAffinity expression
-					// according to the platforms which are supported by your solution. It is considered
-					// best practice to support multiple architectures. build your manager image using the
-					// makefile target docker-buildx. Also, you can use docker manifest inspect <image>
-					// to check what are the platforms supported.
-					// More info: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity
-					//Affinity: &corev1.Affinity{
-					//	NodeAffinity: &corev1.NodeAffinity{
-					//		RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
-					//			NodeSelectorTerms: []corev1.NodeSelectorTerm{
-					//				{
-					//					MatchExpressions: []corev1.NodeSelectorRequirement{
-					//						{
-					//							Key:      "kubernetes.io/arch",
-					//							Operator: "In",
-					//							Values:   []string{"amd64", "arm64", "ppc64le", "s390x"},
-					//						},
-					//						{
-					//							Key:      "kubernetes.io/os",
-					//							Operator: "In",
-					//							Values:   []string{"linux"},
-					//						},
-					//					},
-					//				},
-					//			},
-					//		},
-					//	},
-					//},
 					SecurityContext: &corev1.PodSecurityContext{
 						RunAsNonRoot: &[]bool{false}[0],
 						// IMPORTANT: seccomProfile was introduced with Kubernetes 1.19
@@ -427,12 +402,15 @@ func labelsForMyKeyStore(name string) map[string]string {
 // imageForMyKeyStore gets the Operand image which is managed by this controller
 // from the MYKEYSTORE_IMAGE environment variable defined in the config/manager/manager.yaml
 func imageForMyKeyStore() (string, error) {
-	imageEnvVar := "MYKEYSTORE_IMAGE"
-	image, found := os.LookupEnv(imageEnvVar)
-	if !found {
-		return "", fmt.Errorf("Unable to find %s environment variable with the image", imageEnvVar)
-	}
-	return image, nil
+	// metricsv "k8s.io/metrics/pkg/apis/metrics/v1beta1"
+	// _ = &metricsv.PodMetrics{}
+	return "strm/helloworld-http:latest", nil
+	// imageEnvVar := "MYKEYSTORE_IMAGE"
+	// image, found := os.LookupEnv(imageEnvVar)
+	// if !found {
+	// 	return "", fmt.Errorf("Unable to find %s environment variable with the image", imageEnvVar)
+	// }
+	// return image, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
