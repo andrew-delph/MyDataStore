@@ -251,6 +251,7 @@ func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// via the Size spec of the Custom Resource which we are reconciling.
 	size := mykeystore.Spec.Size
 	if *found.Spec.Replicas != size {
+		logrus.Warn("WRONG NUMBER OF REPLICAS")
 		found.Spec.Replicas = &size
 		if err = r.Update(ctx, found); err != nil {
 			log.Error(err, "Failed to update Deployment",
