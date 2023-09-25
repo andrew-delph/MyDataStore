@@ -4,11 +4,12 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ctrl "sigs.k8s.io/controller-runtime"
 
 	cachev1alpha1 "github.com/andrew-delph/my-key-store/operator/api/v1alpha1"
 )
 
-func getStatefulSet(mykeystore *cachev1alpha1.MyKeyStore) (*appsv1.StatefulSet, error) {
+func (r *MyKeyStoreReconciler) getStatefulSet(mykeystore *cachev1alpha1.MyKeyStore) (*appsv1.StatefulSet, error) {
 	ls := labelsForMyKeyStore(mykeystore.Name)
 	replicas := mykeystore.Spec.Size
 
@@ -61,6 +62,9 @@ func getStatefulSet(mykeystore *cachev1alpha1.MyKeyStore) (*appsv1.StatefulSet, 
 				},
 			},
 		},
+	}
+	if err := ctrl.SetControllerReference(mykeystore, dep, r.Scheme); err != nil {
+		return nil, err
 	}
 	return dep, nil
 }

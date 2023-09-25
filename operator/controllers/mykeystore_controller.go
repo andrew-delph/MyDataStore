@@ -207,8 +207,9 @@ func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	err = r.Get(ctx, types.NamespacedName{Name: mykeystore.Name, Namespace: mykeystore.Namespace}, found)
 	if err != nil && apierrors.IsNotFound(err) {
 		// Define a new deployment
-		dep, err := getStatefulSet(mykeystore)
+		dep, err := r.getStatefulSet(mykeystore)
 		if err != nil {
+
 			log.Error(err, "Failed to define new Deployment resource for MyKeyStore")
 
 			// The following implementation will update the status
