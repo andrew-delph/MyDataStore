@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "mykeystore_controller.go",
+        "result.go",
         "statefulset.go",
     ],
     importpath = "github.com/andrew-delph/my-key-store/operator/controllers",

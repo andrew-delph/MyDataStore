@@ -23,6 +23,7 @@ import (
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -140,7 +141,9 @@ func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// indicated by the deletion timestamp being set.
 	isMyKeyStoreMarkedToBeDeleted := mykeystore.GetDeletionTimestamp() != nil
 	if isMyKeyStoreMarkedToBeDeleted {
+
 		if controllerutil.ContainsFinalizer(mykeystore, mykeystoreFinalizer) {
+
 			log.Info("Performing Finalizer Operations for MyKeyStore before delete CR")
 
 			// Let's add here an status "Downgrade" to define that this resource begin its process to be terminated.
@@ -291,7 +294,7 @@ func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		log.Error(err, "Failed to update MyKeyStore status")
 		return ctrl.Result{}, err
 	}
-
+	logrus.Info("DONE")
 	return ctrl.Result{}, nil
 }
 
@@ -350,8 +353,12 @@ func imageForMyKeyStore() (string, error) {
 // Note that the Deployment will be also watched in order to ensure its
 // desirable state on the cluster
 func (r *MyKeyStoreReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// corev1 "k8s.io/api/core/v1"
+	// networkingv1 "k8s.io/api/networking/v1"
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&cachev1alpha1.MyKeyStore{}).
-		Owns(&appsv1.Deployment{}).
+		Owns(&appsv1.StatefulSet{}).
+		// Owns(&corev1.Service{}).
+		// Owns(&networkingv1.Ingress{}).
 		Complete(r)
 }

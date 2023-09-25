@@ -64,3 +64,7 @@ func getStatefulSet(mykeystore *cachev1alpha1.MyKeyStore) (*appsv1.StatefulSet, 
 	}
 	return dep, nil
 }
+
+// func findStatefulSet(mykeystore *cachev1alpha1.MyKeyStore) (*appsv1.StatefulSet, error) {
+// 	return dep, nil
+// }
