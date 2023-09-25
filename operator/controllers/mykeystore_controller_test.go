@@ -107,9 +107,9 @@ var _ = Describe("MyKeyStore controller", func() {
 			})
 			Expect(err).To(Not(HaveOccurred()))
 
-			By("Checking if Deployment was successfully created in the reconciliation")
+			By("Checking if StatefulSet was successfully created in the reconciliation")
 			Eventually(func() error {
-				found := &appsv1.Deployment{}
+				found := &appsv1.StatefulSet{}
 				return k8sClient.Get(ctx, typeNamespaceName, found)
 			}, time.Minute, time.Second).Should(Succeed())
 
@@ -120,7 +120,7 @@ var _ = Describe("MyKeyStore controller", func() {
 					expectedLatestStatusCondition := metav1.Condition{
 						Type:   typeAvailableMyKeyStore,
 						Status: metav1.ConditionTrue, Reason: "Reconciling",
-						Message: fmt.Sprintf("Deployment for custom resource (%s) with %d replicas created successfully", mykeystore.Name, mykeystore.Spec.Size),
+						Message: fmt.Sprintf("StatefulSet for custom resource (%s) with %d replicas created successfully", mykeystore.Name, mykeystore.Spec.Size),
 					}
 					if latestStatusCondition != expectedLatestStatusCondition {
 						return fmt.Errorf("The latest status condition added to the mykeystore instance is not as expected")

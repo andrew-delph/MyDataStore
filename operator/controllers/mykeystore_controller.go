@@ -23,7 +23,6 @@ import (
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -199,11 +198,11 @@ func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	// Check if the deployment already exists, if not create a new one
-	found := &appsv1.Deployment{}
+	found := &appsv1.StatefulSet{}
 	err = r.Get(ctx, types.NamespacedName{Name: mykeystore.Name, Namespace: mykeystore.Namespace}, found)
 	if err != nil && apierrors.IsNotFound(err) {
 		// Define a new deployment
-		dep, err := r.deploymentForMyKeyStore(mykeystore)
+		dep, err := getStatefulSet(mykeystore)
 		if err != nil {
 			log.Error(err, "Failed to define new Deployment resource for MyKeyStore")
 
@@ -314,72 +313,6 @@ func (r *MyKeyStoreReconciler) doFinalizerOperationsForMyKeyStore(cr *cachev1alp
 		fmt.Sprintf("Custom Resource %s is being deleted from the namespace %s",
 			cr.Name,
 			cr.Namespace))
-}
-
-// deploymentForMyKeyStore returns a MyKeyStore Deployment object
-func (r *MyKeyStoreReconciler) deploymentForMyKeyStore(
-	mykeystore *cachev1alpha1.MyKeyStore,
-) (*appsv1.Deployment, error) {
-	ls := labelsForMyKeyStore(mykeystore.Name)
-	replicas := mykeystore.Spec.Size
-
-	// Get the Operand image
-	image, err := imageForMyKeyStore()
-	if err != nil {
-		return nil, err
-	}
-
-	dep := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      mykeystore.Name,
-			Namespace: mykeystore.Namespace,
-		},
-		Spec: appsv1.DeploymentSpec{
-			Replicas: &replicas,
-			Selector: &metav1.LabelSelector{
-				MatchLabels: ls,
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: ls,
-				},
-				Spec: corev1.PodSpec{
-					SecurityContext: &corev1.PodSecurityContext{
-						RunAsNonRoot: &[]bool{false}[0],
-						// IMPORTANT: seccomProfile was introduced with Kubernetes 1.19
-						// If you are looking for to produce solutions to be supported
-						// on lower versions you must remove this option.
-						SeccompProfile: &corev1.SeccompProfile{
-							Type: corev1.SeccompProfileTypeRuntimeDefault,
-						},
-					},
-					Containers: []corev1.Container{{
-						Image:           image,
-						Name:            "mykeystore",
-						ImagePullPolicy: corev1.PullIfNotPresent,
-						// Ensure restrictive context for the container
-						// More info: https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted
-						SecurityContext: &corev1.SecurityContext{
-							RunAsNonRoot:             &[]bool{false}[0],
-							AllowPrivilegeEscalation: &[]bool{false}[0],
-							Capabilities: &corev1.Capabilities{
-								Drop: []corev1.Capability{
-									"ALL",
-								},
-							},
-						},
-					}},
-				},
-			},
-		},
-	}
-
-	// Set the ownerRef for the Deployment
-	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/owners-dependents/
-	if err := ctrl.SetControllerReference(mykeystore, dep, r.Scheme); err != nil {
-		return nil, err
-	}
-	return dep, nil
 }
 
 // labelsForMyKeyStore returns the labels for selecting the resources
