@@ -26,8 +26,8 @@ prod:
 	./run-kube.sh resources/k6-output-grafana-cloud.yaml --external
 
 watch:
-	watch -n 15 kubectl --context minikube get pods -n k6
-
+	watch -n 15 kubectl get pods -n k6
+	
 delete:
 	kubectl --context minikube delete  -f resources/k6-output-grafana-cloud.yaml -n k6
 	# cd dependencies/k6-operator && make delete
