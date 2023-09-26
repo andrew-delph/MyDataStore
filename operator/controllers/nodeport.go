@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"time"
 
-	v1 "k8s.io/api/networking/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/go-logr/logr"
@@ -18,15 +19,16 @@ import (
 	cachev1alpha1 "github.com/andrew-delph/my-key-store/operator/api/v1alpha1"
 )
 
-type MyKeyStoreIngress struct{}
+type MyKeyStoreIngressNodePort struct{}
 
-func ProcessIngress(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Request, log logr.Logger, mykeystore *cachev1alpha1.MyKeyStore) (*ctrl.Result, error) {
-	logrus.Info("ProcessIngress")
-	found := &v1.Ingress{}
-	err := r.Get(ctx, types.NamespacedName{Name: mykeystore.Name, Namespace: mykeystore.Namespace}, found)
+func ProcessNodePort(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Request, log logr.Logger, mykeystore *cachev1alpha1.MyKeyStore) (*ctrl.Result, error) {
+	logrus.Info("ProcessNodePort")
+	name := fmt.Sprintf("%s-nodeport", mykeystore.Name)
+	found := &corev1.Service{}
+	err := r.Get(ctx, types.NamespacedName{Name: name, Namespace: mykeystore.Namespace}, found)
 	if err != nil && apierrors.IsNotFound(err) {
 		// Define a new Ingress
-		dep := getIngress(mykeystore)
+		dep := getNodePort(mykeystore, name)
 
 		err = ctrl.SetControllerReference(mykeystore, dep, r.Scheme)
 		if err != nil {
@@ -37,7 +39,7 @@ func ProcessIngress(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Reque
 			meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
 				Type:   typeAvailableMyKeyStore,
 				Status: metav1.ConditionFalse, Reason: "Reconciling",
-				Message: fmt.Sprintf("Failed to create Ingress for the custom resource (%s): (%s)", mykeystore.Name, err),
+				Message: fmt.Sprintf("Failed to create Ingress for the custom resource (%s): (%s)", name, err),
 			})
 
 			if err := r.Status().Update(ctx, mykeystore); err != nil {
@@ -70,41 +72,26 @@ func ProcessIngress(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Reque
 	meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
 		Type:   typeAvailableMyKeyStore,
 		Status: metav1.ConditionTrue, Reason: "Reconciling",
-		Message: fmt.Sprintf("Ingress for custom resource (%s) created successfully", mykeystore.Name),
+		Message: fmt.Sprintf("Ingress for custom resource (%s) created successfully", name),
 	})
 	return nil, nil
 }
 
-func getIngress(mykeystore *cachev1alpha1.MyKeyStore) *v1.Ingress {
-	pathType := v1.PathTypePrefix
-	dep := &v1.Ingress{
+func getNodePort(mykeystore *cachev1alpha1.MyKeyStore, name string) *corev1.Service {
+	selector := make(map[string]string)
+	selector["app"] = mykeystore.Name
+	serviceType := corev1.ServiceTypeNodePort
+	dep := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      mykeystore.Name,
+			Name:      name,
 			Namespace: mykeystore.Namespace,
 		},
-		Spec: v1.IngressSpec{
-			Rules: []v1.IngressRule{
-				{
-					IngressRuleValue: v1.IngressRuleValue{
-						HTTP: &v1.HTTPIngressRuleValue{
-							Paths: []v1.HTTPIngressPath{
-								{
-									Path:     "/",
-									PathType: &pathType,
-									Backend: v1.IngressBackend{
-										Service: &v1.IngressServiceBackend{
-											Name: mykeystore.Name,
-											Port: v1.ServiceBackendPort{
-												Number: 8080,
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
+		Spec: corev1.ServiceSpec{
+			Type: serviceType,
+			Ports: []corev1.ServicePort{
+				{Name: "http", Port: 80, NodePort: 30000, TargetPort: intstr.FromInt(80)},
 			},
+			Selector: selector,
 		},
 	}
 	return dep

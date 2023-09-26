@@ -18,9 +18,8 @@ case $1 in
         tmux kill-session -t dc_dev
         ;;
     k8-init)
+        minikube delete && minikube start && minikube addons enable metrics-server &&  minikube addons enable ingress
         minikube delete && minikube start && ./deploy_k8.sh
-        minikube addons enable metrics-server
-        minikube addons enable ingress
         kubectl wait --namespace ingress-nginx  --for=condition=ready pod  --selector=app.kubernetes.io/component=controller  --timeout=120s
         kubectl apply -f ./resources/ingress.yaml
         kubectl apply -f ./resources/prom.yaml

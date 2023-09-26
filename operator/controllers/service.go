@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/go-logr/logr"
@@ -88,7 +89,7 @@ func getService(mykeystore *cachev1alpha1.MyKeyStore) *corev1.Service {
 			PublishNotReadyAddresses: true,
 			Ports: []corev1.ServicePort{
 				{Name: "grpc", Port: 7070},
-				{Name: "http", Port: 8080},
+				{Name: "http", Port: 8080, TargetPort: intstr.FromInt(80)},
 				{Name: "memberlist", Port: 8081},
 			},
 			Selector: selector,

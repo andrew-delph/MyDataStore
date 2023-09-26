@@ -19,12 +19,10 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
 
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -208,7 +206,8 @@ func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	if result != nil {
 		return *result, err
 	}
-	result, err = ProcessIngress(r, ctx, req, log, mykeystore)
+
+	result, err = ProcessNodePort(r, ctx, req, log, mykeystore)
 	if result != nil {
 		return *result, err
 	}
@@ -244,17 +243,8 @@ func (r *MyKeyStoreReconciler) doFinalizerOperationsForMyKeyStore(cr *cachev1alp
 // labelsForMyKeyStore returns the labels for selecting the resources
 // More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/
 func labelsForMyKeyStore(name string) map[string]string {
-	var imageTag string
-	image, err := imageForMyKeyStore()
-	if err == nil {
-		imageTag = strings.Split(image, ":")[1]
-	}
 	return map[string]string{
-		"app.kubernetes.io/name":       "MyKeyStore",
-		"app.kubernetes.io/instance":   name,
-		"app.kubernetes.io/version":    imageTag,
-		"app.kubernetes.io/part-of":    "operator",
-		"app.kubernetes.io/created-by": "controller-manager",
+		"app": name,
 	}
 }
 
@@ -282,6 +272,5 @@ func (r *MyKeyStoreReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&cachev1alpha1.MyKeyStore{}).
 		Owns(&appsv1.StatefulSet{}).
 		Owns(&corev1.Service{}).
-		Owns(&networkingv1.Ingress{}).
 		Complete(r)
 }
