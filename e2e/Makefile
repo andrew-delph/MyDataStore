@@ -18,6 +18,9 @@ run:
 	make setup
 	./run-kube.sh resources/k6-output-grafana-cloud.yaml
 
+logs:
+	stern -n k6 .*
+
 prod:
 	make setup
 	./run-kube.sh resources/k6-output-grafana-cloud.yaml --external

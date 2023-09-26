@@ -23,6 +23,8 @@ spec:
           command:
             - "/bin/prometheus"
             - "--config.file=/etc/prometheus/prometheus.yml"
+            - --web.enable-remote-write-receiver
+            - --enable-feature=native-histograms
       volumes:
         - name: config-volume
           configMap:

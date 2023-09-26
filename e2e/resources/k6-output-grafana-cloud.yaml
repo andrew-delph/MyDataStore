@@ -25,13 +25,13 @@ spec:
     #     memory: 200Mi
     env:
       - name: K6_OUT
-        value: xk6-prometheus-rw
+        value: experimental-prometheus-rw
       - name: K6_PROMETHEUS_RW_TREND_STATS
         value: "avg,p(90),p(99),min,max"
-      - name: OPTIONS_HOST
-        value: "OPTIONS_HOST_VALUE"
+      - name: ADDRESS
+        value: "store-external.default.svc.cluster.local:8080"
       - name: K6_PROMETHEUS_RW_SERVER_URL
-        value: "http://loki-prometheus-server.monitoring:80/api/v1/write"
+        value: "http://prometheus-service.default:9090/api/v1/write"
       # - name: K6_LOG_FORMAT
       #   value: json
     # envFrom:
