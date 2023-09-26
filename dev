@@ -38,10 +38,10 @@ case $1 in
         tmux kill-session -t k8_dev
         ;;
     k8-e2e)
-        k6 run -e ADDRESS="192.168.49.2:30000" test.js
+        k6 run -e ADDRESS="192.168.49.2:30000" e2e/test.js
         ;;
     dc-e2e)
-        k6 run test.js
+        k6 run e2e/test.js
         ;;
     test)
         bazel test --execution_log_json_file=events.json $(bazel query 'kind(go_test, //...)' --output=label) --test_filter=$2 --test_arg=-test.short --test_summary=detailed --test_output=summary
