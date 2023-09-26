@@ -1,0 +1,9 @@
+# Ignore locally customized builds of k6
+
+# Ignore the project source for operator and other dependencies
+dependencies/*
+!dependencies/README.md
+
+# Don't commit your private env settings
+.idea/
+.env

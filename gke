@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# Exit on any error
+set -e
+
+# Check for required argument
+if [ "$#" -lt 1 ]; then
+    echo "Usage: $0 <arg>"
+    exit 1
+fi
+
+# Choose the command based on the argument
+case $1 in
+    init)
+        tmuxinator start -p ./.tmuxinator/tmuxinator-dc.yaml
+        ;;
+    
+    *)
+        echo "Invalid argument."
+        exit 1
+        ;;
+esac

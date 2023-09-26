@@ -174,7 +174,9 @@ export default function () {
   let value = randomString(15);
 
   // Set a value to the map
-  let setRes = http.get(`http://${address}/set?key=${key}&value=${value}`);
+  let setRes = http.get(`http://${address}/set?key=${key}&value=${value}`, {
+    tags: { name: "set" },
+  });
 
   check(setRes, {
     "set status is 200": (r) =>
@@ -190,7 +192,9 @@ export default function () {
   sleep(5);
 
   // Get a value from the map
-  let getRes = http.get(`http://${address}/get?key=${key}`);
+  let getRes = http.get(`http://${address}/get?key=${key}`, {
+    tags: { name: "get" },
+  });
 
   check(getRes, {
     "get status is 200": (r) => r.status === 200,
