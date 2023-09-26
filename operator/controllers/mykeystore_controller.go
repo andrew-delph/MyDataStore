@@ -208,6 +208,10 @@ func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	if result != nil {
 		return *result, err
 	}
+	result, err = ProcessIngress(r, ctx, req, log, mykeystore)
+	if result != nil {
+		return *result, err
+	}
 
 	if err := r.Status().Update(ctx, mykeystore); err != nil {
 		log.Error(err, "Failed to update MyKeyStore status")
