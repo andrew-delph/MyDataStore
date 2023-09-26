@@ -128,6 +128,11 @@ func (cc *ConsistencyController) IsBusy() error {
 	return nil
 }
 
+func (cc *ConsistencyController) IsHealthy() error {
+	panic("NOT IMPLEMETNED")
+	return nil
+}
+
 type PartitionState struct {
 	partitionId int
 	active      atomic.Bool
