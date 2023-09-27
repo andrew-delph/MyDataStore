@@ -166,22 +166,6 @@ func listFiles(directory string) ([]string, error) {
 func TestMyTest(t *testing.T) {
 	var err error
 
-	files, err := listFiles(filepath.Join("..", "config", "crd", "bases"))
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	fmt.Println("Files in directory =", files)
-	for _, file := range files {
-		fmt.Println(file)
-	}
-	return
-	// logrus.Info("PATH1 ", os.Getenv("PATH"))
-	// // PrependToPath("/home/andrew/.local/share/kubebuilder-envtest/k8s/1.28.0-linux-amd64/etcd")
-
-	logrus.Info("PATHS ", filepath.Join("..", "config", "crd", "bases"))
-	os.Setenv("KUBEBUILDER_ASSETS", "/home/andrew/.local/share/kubebuilder-envtest/k8s/1.28.0-linux-amd64")
-
 	// logrus.Info("PATH2 ", os.Getenv("PATH"))
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths:     []string{filepath.Join("..", "config", "crd", "bases")},

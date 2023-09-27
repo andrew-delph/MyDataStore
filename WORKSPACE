@@ -78,3 +78,7 @@ load(
 )
 
 _go_image_repos()
+
+load("//operator/controllers:deps.bzl", "install_integration_test_dependencies")
+
+install_integration_test_dependencies()

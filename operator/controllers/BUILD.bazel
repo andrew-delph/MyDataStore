@@ -33,12 +33,21 @@ go_library(
     ],
 )
 
+genrule(
+    name = "com_coreos_etcd",
+    srcs = ["@com_coreos_etcd_linux_amd64//:file"],
+    outs = ["etcd"],
+    cmd = "cp $(SRCS) $@",
+    visibility = ["//visibility:public"],
+)
+
 go_test(
     name = "go_default_test",
     srcs = [
         "mykeystore_controller_test.go",
         "suite_test.go",
     ],
+    data = [":com_coreos_etcd"],
     embed = [":go_default_library"],
     deps = [
         "//operator/api/v1alpha1:go_default_library",
@@ -49,7 +58,6 @@ go_test(
         "@io_k8s_api//core/v1:go_default_library",
         "@io_k8s_apimachinery//pkg/api/errors:go_default_library",
         "@io_k8s_apimachinery//pkg/apis/meta/v1:go_default_library",
-        "@io_k8s_apimachinery//pkg/runtime:go_default_library",
         "@io_k8s_apimachinery//pkg/types:go_default_library",
         "@io_k8s_client_go//kubernetes/scheme:go_default_library",
         "@io_k8s_client_go//rest:go_default_library",

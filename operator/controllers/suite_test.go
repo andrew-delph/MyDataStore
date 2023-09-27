@@ -17,13 +17,11 @@ limitations under the License.
 package controllers
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
 
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -61,9 +59,6 @@ var _ = BeforeSuite(func() {
 	}
 
 	var err error
-
-	logrus.Info("PATHS ", filepath.Join("..", "config", "crd", "bases"))
-	os.Setenv("KUBEBUILDER_ASSETS", "/home/andrew/.local/share/kubebuilder-envtest/k8s/1.28.0-linux-amd64")
 
 	//+kubebuilder:scaffold:scheme
 
