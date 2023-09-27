@@ -253,7 +253,7 @@ func labelsForMyKeyStore(name string) map[string]string {
 func imageForMyKeyStore() (string, error) {
 	// metricsv "k8s.io/metrics/pkg/apis/metrics/v1beta1"
 	// _ = &metricsv.PodMetrics{}
-	return "strm/helloworld-http:latest", nil
+	return "ghcr.io/andrew-delph/my-key-store:latest", nil
 	// imageEnvVar := "MYKEYSTORE_IMAGE"
 	// image, found := os.LookupEnv(imageEnvVar)
 	// if !found {

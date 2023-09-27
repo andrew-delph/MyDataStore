@@ -89,7 +89,7 @@ func getNodePort(mykeystore *cachev1alpha1.MyKeyStore, name string) *corev1.Serv
 		Spec: corev1.ServiceSpec{
 			Type: serviceType,
 			Ports: []corev1.ServicePort{
-				{Name: "http", Port: 80, NodePort: 30000, TargetPort: intstr.FromInt(80)},
+				{Name: "http", Port: 8080, NodePort: 30000, TargetPort: intstr.FromInt(8080)},
 			},
 			Selector: selector,
 		},

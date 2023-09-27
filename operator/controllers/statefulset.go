@@ -9,8 +9,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/go-logr/logr"
@@ -123,6 +125,11 @@ func getStatefulSet(mykeystore *cachev1alpha1.MyKeyStore) *appsv1.StatefulSet {
 		logrus.Panic(err)
 	}
 
+	pvQuantity, err := resource.ParseQuantity("10Gi")
+	if err != nil {
+		logrus.Panic(err)
+	}
+
 	dep := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      mykeystore.Name,
@@ -162,7 +169,36 @@ func getStatefulSet(mykeystore *cachev1alpha1.MyKeyStore) *appsv1.StatefulSet {
 								},
 							},
 						},
+						ReadinessProbe: &corev1.Probe{
+							ProbeHandler: corev1.ProbeHandler{
+								HTTPGet: &corev1.HTTPGetAction{
+									Path: "/ready",
+									Port: intstr.FromInt(8080),
+								},
+							},
+							InitialDelaySeconds: 20,
+							PeriodSeconds:       5,
+						},
+						LivenessProbe: &corev1.Probe{
+							ProbeHandler: corev1.ProbeHandler{
+								HTTPGet: &corev1.HTTPGetAction{
+									Path: "/health",
+									Port: intstr.FromInt(8080),
+								},
+							},
+							InitialDelaySeconds: 100,
+							PeriodSeconds:       15,
+						},
+						VolumeMounts: []corev1.VolumeMount{
+							{Name: "store-data-volume", MountPath: "/data/"},
+						},
 					}},
+				},
+			},
+			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "store-data-volume"},
+					Spec:       corev1.PersistentVolumeClaimSpec{AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}, Resources: corev1.ResourceRequirements{Requests: corev1.ResourceList{"storage": pvQuantity}}},
 				},
 			},
 		},
