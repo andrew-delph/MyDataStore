@@ -10,7 +10,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: store-external
+                name: store
                 port:
                   number: 8080
 ---
