@@ -20,15 +20,21 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
+	"testing"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	cachev1alpha1 "github.com/andrew-delph/my-key-store/operator/api/v1alpha1"
@@ -131,3 +137,73 @@ var _ = Describe("MyKeyStore controller", func() {
 		})
 	})
 })
+
+func PrependToPath(path ...string) {
+	os.Setenv("PATH", fmt.Sprintf("%s:%s", filepath.Join(path...), os.Getenv("PATH")))
+}
+
+func listFiles(directory string) ([]string, error) {
+	var files []string
+	f, err := os.Open(directory)
+	if err != nil {
+		return files, err
+	}
+	defer f.Close()
+
+	fileInfo, err := f.Readdir(-1) // -1 means to retrieve all entries
+	if err != nil {
+		return files, err
+	}
+
+	for _, file := range fileInfo {
+		if !file.IsDir() {
+			files = append(files, file.Name())
+		}
+	}
+	return files, nil
+}
+
+func TestMyTest(t *testing.T) {
+	var err error
+
+	files, err := listFiles(filepath.Join("..", "config", "crd", "bases"))
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println("Files in directory =", files)
+	for _, file := range files {
+		fmt.Println(file)
+	}
+	return
+	// logrus.Info("PATH1 ", os.Getenv("PATH"))
+	// // PrependToPath("/home/andrew/.local/share/kubebuilder-envtest/k8s/1.28.0-linux-amd64/etcd")
+
+	logrus.Info("PATHS ", filepath.Join("..", "config", "crd", "bases"))
+	os.Setenv("KUBEBUILDER_ASSETS", "/home/andrew/.local/share/kubebuilder-envtest/k8s/1.28.0-linux-amd64")
+
+	// logrus.Info("PATH2 ", os.Getenv("PATH"))
+	testEnv = &envtest.Environment{
+		CRDDirectoryPaths:     []string{filepath.Join("..", "config", "crd", "bases")},
+		ErrorIfCRDPathMissing: false,
+	}
+
+	// cfg is defined in this file globally.
+	cfg, err = testEnv.Start()
+	if err != nil {
+		t.Error(err)
+	}
+	logrus.Debug(cfg)
+
+	err = cachev1alpha1.AddToScheme(scheme.Scheme)
+	if err != nil {
+		t.Error(err)
+	}
+	//+kubebuilder:scaffold:scheme
+
+	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
+	if err != nil {
+		t.Error(err)
+	}
+	logrus.Debug(k8sClient)
+}

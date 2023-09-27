@@ -1,0 +1,6 @@
+filegroup(
+    name = "operator-config",
+    srcs = glob(["**"]),
+    tags = ["automanaged"],
+    visibility = ["//visibility:public"],
+)
