@@ -36,11 +36,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-<<<<<<< HEAD
+
 	"github.com/andrew-delph/my-key-store/rpc"
 
-=======
->>>>>>> 25858f4 (remove logs)
+
+	"github.com/sirupsen/logrus"
+
 	cachev1alpha1 "github.com/andrew-delph/my-key-store/operator/api/v1alpha1"
 )
 
@@ -89,9 +90,15 @@ type MyKeyStoreReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
 func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 <<<<<<< HEAD
+<<<<<<< HEAD
 	logrus.Warn("req ", req)
 =======
 >>>>>>> 25858f4 (remove logs)
+=======
+	logrus.Info()
+	// logrus.Infof("purpose: %v", req.String())
+
+>>>>>>> e89d0ed (use rollout status to track image change)
 	log := log.FromContext(ctx)
 
 	// Fetch the MyKeyStore instance
@@ -228,6 +235,7 @@ func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		log.Error(err, "Failed to update MyKeyStore status")
 		return ctrl.Result{}, err
 	}
+<<<<<<< HEAD
 
 	pods := &corev1.PodList{}
 	err = r.List(ctx, pods, client.MatchingLabels{"app": "store"})
@@ -250,6 +258,10 @@ func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 	return ctrl.Result{RequeueAfter: time.Second}, nil
 	// return ctrl.Result{}, nil
+=======
+	// return ctrl.Result{RequeueAfter: time.Second}, nil
+	return ctrl.Result{}, nil
+>>>>>>> e89d0ed (use rollout status to track image change)
 }
 
 // finalizeMyKeyStore will perform the required operations before delete the CR.

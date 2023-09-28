@@ -104,6 +104,18 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 
 			return requeueIfError(err)
 		}
+
+		meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
+			Type:   typeRolloutMyKeyStore,
+			Status: metav1.ConditionTrue, Reason: "RollingUpdate",
+			Message: fmt.Sprintf("image change (%s)", image),
+		})
+
+		if err := r.Status().Update(ctx, mykeystore); err != nil {
+			log.Error(err, "Failed to update MyKeyStore status")
+			return requeueIfError(err)
+		}
+		return noRequeue()
 	}
 	size := mykeystore.Spec.Size
 	if *found.Spec.Replicas != size || *&found.Spec.Template.Spec.Containers[0].Image != image {
