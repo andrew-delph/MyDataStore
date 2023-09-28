@@ -34,6 +34,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/sirupsen/logrus"
+
 	cachev1alpha1 "github.com/andrew-delph/my-key-store/operator/api/v1alpha1"
 )
 
@@ -43,6 +45,7 @@ const mykeystoreFinalizer = "cache.andrewdelph.com/finalizer"
 const (
 	// typeAvailableMyKeyStore represents the status of the Deployment reconciliation
 	typeAvailableMyKeyStore = "Available"
+	typeRolloutMyKeyStore   = "Rollout"
 	// typeDegradedMyKeyStore represents the status used when the custom resource is deleted and the finalizer operations are must to occur.
 	typeDegradedMyKeyStore = "Degraded"
 )
@@ -78,6 +81,9 @@ type MyKeyStoreReconciler struct {
 // - About Controllers: https://kubernetes.io/docs/concepts/architecture/controller/
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
 func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	logrus.Info()
+	// logrus.Infof("purpose: %v", req.String())
+
 	log := log.FromContext(ctx)
 
 	// Fetch the MyKeyStore instance
@@ -195,11 +201,7 @@ func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, nil
 	}
 
-	result, err := ProcessStatefulSet(r, ctx, req, log, mykeystore)
-	if result != nil {
-		return *result, err
-	}
-	result, err = ProcessService(r, ctx, req, log, mykeystore)
+	result, err := ProcessService(r, ctx, req, log, mykeystore)
 	if result != nil {
 		return *result, err
 	}
@@ -209,10 +211,16 @@ func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return *result, err
 	}
 
+	result, err = ProcessStatefulSet(r, ctx, req, log, mykeystore)
+	if result != nil {
+		return *result, err
+	}
+
 	if err := r.Status().Update(ctx, mykeystore); err != nil {
 		log.Error(err, "Failed to update MyKeyStore status")
 		return ctrl.Result{}, err
 	}
+	// return ctrl.Result{RequeueAfter: time.Second}, nil
 	return ctrl.Result{}, nil
 }
 

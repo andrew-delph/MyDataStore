@@ -74,7 +74,8 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 	// via the Size spec of the Custom Resource which we are reconciling.
 	image := mykeystore.Spec.Image
 	if found.Spec.Template.Spec.Containers[0].Image != image {
-		logrus.Warn("WRONG IMAGE")
+		logrus.Warn("WRONG IMAGE image=", image)
+		found.Status.UpdateRevision = image
 		found.Spec.Template.Spec.Containers[0].Image = image
 		if err = r.Update(ctx, found); err != nil {
 			log.Error(err, "Failed to update Deployment",
@@ -92,8 +93,8 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 			// The following implementation will update the status
 			meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
 				Type:   typeAvailableMyKeyStore,
-				Status: metav1.ConditionFalse, Reason: "Resizing",
-				Message: fmt.Sprintf("Failed to update the size for the custom resource (%s): (%s)", mykeystore.Name, err),
+				Status: metav1.ConditionFalse, Reason: "Rollout",
+				Message: fmt.Sprintf("Failed to update the image for the custom resource (%s): (%s)", mykeystore.Name, err),
 			})
 
 			if err := r.Status().Update(ctx, mykeystore); err != nil {
@@ -103,6 +104,18 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 
 			return requeueIfError(err)
 		}
+
+		meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
+			Type:   typeRolloutMyKeyStore,
+			Status: metav1.ConditionTrue, Reason: "RollingUpdate",
+			Message: fmt.Sprintf("image change (%s)", image),
+		})
+
+		if err := r.Status().Update(ctx, mykeystore); err != nil {
+			log.Error(err, "Failed to update MyKeyStore status")
+			return requeueIfError(err)
+		}
+		return noRequeue()
 	}
 	size := mykeystore.Spec.Size
 	if *found.Spec.Replicas != size || *&found.Spec.Template.Spec.Containers[0].Image != image {
@@ -136,13 +149,40 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 			return requeueIfError(err)
 		}
 	}
+	// logrus.Infof("stats: %v %v %v %v", found.Status.UpdatedReplicas, found.Status.ReadyReplicas, found.Status.UpdateRevision, *found.Status.CollisionCount)
+	rolloutStatus := meta.FindStatusCondition(mykeystore.Status.Conditions, typeRolloutMyKeyStore)
+	if rolloutStatus != nil && rolloutStatus.Status == metav1.ConditionTrue {
+		// logrus.Warnf("time %v", time.Since(rolloutStatus.LastTransitionTime.Time))
+		if found.Status.UpdatedReplicas != found.Status.Replicas || found.Status.ReadyReplicas != found.Status.Replicas || time.Since(rolloutStatus.LastTransitionTime.Time) < time.Second*10 {
+			logrus.Warnf("rollout: %v %v %v", found.Status.UpdatedReplicas, found.Status.ReadyReplicas, found.Status.UpdateRevision)
 
-	// The following implementation will update the status
+			return requeueAfter(time.Second*5, nil)
+		} else {
+			logrus.Warnf("rollout complete. took: %v logic: %v", time.Since(rolloutStatus.LastTransitionTime.Time), time.Since(rolloutStatus.LastTransitionTime.Time) > time.Second*20)
+			meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
+				Type:   typeRolloutMyKeyStore,
+				Status: metav1.ConditionFalse, Reason: "RollingUpdate",
+				Message: fmt.Sprintf("Rollout complete: %v", image),
+			})
+
+			if err := r.Status().Update(ctx, mykeystore); err != nil {
+				log.Error(err, "Failed to update MyKeyStore status")
+				return requeueIfError(err)
+			}
+		}
+	}
+
 	meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
 		Type:   typeAvailableMyKeyStore,
 		Status: metav1.ConditionTrue, Reason: "Reconciling",
 		Message: fmt.Sprintf("Deployment for custom resource (%s) with %d replicas created successfully", mykeystore.Name, size),
 	})
+
+	if err := r.Status().Update(ctx, mykeystore); err != nil {
+		log.Error(err, "Failed to update MyKeyStore status")
+		return requeueIfError(err)
+	}
+
 	return nil, nil
 }
 
@@ -207,7 +247,7 @@ func getStatefulSet(mykeystore *cachev1alpha1.MyKeyStore) *appsv1.StatefulSet {
 									Port: intstr.FromInt(8080),
 								},
 							},
-							InitialDelaySeconds: 20,
+							InitialDelaySeconds: 5,
 							PeriodSeconds:       5,
 						},
 						LivenessProbe: &corev1.Probe{
