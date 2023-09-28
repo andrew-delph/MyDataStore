@@ -24,7 +24,6 @@ import (
 type MyKeyStoreNodePort struct{}
 
 func ProcessNodePort(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Request, log logr.Logger, mykeystore *cachev1alpha1.MyKeyStore) (*ctrl.Result, error) {
-	logrus.Info("ProcessNodePort")
 	name := fmt.Sprintf("%s-nodeport", mykeystore.Name)
 	found := &corev1.Service{}
 	dep := getNodePort(mykeystore, name)

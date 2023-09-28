@@ -24,7 +24,6 @@ import (
 type MyKeyStoreStatefulSet struct{}
 
 func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Request, log logr.Logger, mykeystore *cachev1alpha1.MyKeyStore) (*ctrl.Result, error) {
-	logrus.Info("ProcessStatefulSet")
 	found := &appsv1.StatefulSet{}
 	err := r.Get(ctx, types.NamespacedName{Name: mykeystore.Name, Namespace: mykeystore.Namespace}, found)
 	if err != nil && apierrors.IsNotFound(err) {
