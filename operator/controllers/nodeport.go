@@ -21,7 +21,7 @@ import (
 	cachev1alpha1 "github.com/andrew-delph/my-key-store/operator/api/v1alpha1"
 )
 
-type MyKeyStoreIngressNodePort struct{}
+type MyKeyStoreNodePort struct{}
 
 func ProcessNodePort(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Request, log logr.Logger, mykeystore *cachev1alpha1.MyKeyStore) (*ctrl.Result, error) {
 	logrus.Info("ProcessNodePort")
@@ -30,20 +30,20 @@ func ProcessNodePort(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Requ
 	dep := getNodePort(mykeystore, name)
 	err := r.Get(ctx, types.NamespacedName{Name: name, Namespace: mykeystore.Namespace}, found)
 	if err != nil && apierrors.IsNotFound(err) {
-		// Define a new Ingress
+		// Define a new NodePort
 
 		logrus.Warnf("NODEPORT %+v", dep)
 
 		err = ctrl.SetControllerReference(mykeystore, dep, r.Scheme)
 		if err != nil {
 
-			log.Error(err, "Failed to define new Ingress resource for MyKeyStore")
+			log.Error(err, "Failed to define new NodePort resource for MyKeyStore")
 
 			// The following implementation will update the status
 			meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
 				Type:   typeAvailableMyKeyStore,
 				Status: metav1.ConditionFalse, Reason: "Reconciling",
-				Message: fmt.Sprintf("Failed to create Ingress for the custom resource (%s): (%s)", name, err),
+				Message: fmt.Sprintf("Failed to create NodePort for the custom resource (%s): (%s)", name, err),
 			})
 
 			if err := r.Status().Update(ctx, mykeystore); err != nil {
@@ -54,20 +54,20 @@ func ProcessNodePort(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Requ
 			return requeueIfError(err)
 		}
 
-		log.Info("Creating a new Ingress",
-			"Ingress.Namespace", dep.Namespace, "Ingress.Name", dep.Name)
+		log.Info("Creating a new NodePort",
+			"NodePort.Namespace", dep.Namespace, "NodePort.Name", dep.Name)
 		if err = r.Create(ctx, dep); err != nil {
-			log.Error(err, "Failed to create new Ingress",
-				"Ingress.Namespace", dep.Namespace, "Ingress.Name", dep.Name)
+			log.Error(err, "Failed to create new NodePort",
+				"NodePort.Namespace", dep.Namespace, "NodePort.Name", dep.Name)
 			return requeueIfError(err)
 		}
 
-		// Ingress created successfully
+		// NodePort created successfully
 		// We will requeue the reconciliation so that we can ensure the state
 		// and move forward for the next operations
 		return requeueAfter(time.Second*10, nil)
 	} else if err != nil {
-		log.Error(err, "Failed to get Ingress")
+		log.Error(err, "Failed to get NodePort")
 		// Let's return the error for the reconciliation be re-trigged again
 		return requeueIfError(err)
 	}
@@ -79,13 +79,13 @@ func ProcessNodePort(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Requ
 		err = ctrl.SetControllerReference(mykeystore, dep, r.Scheme)
 		if err != nil {
 
-			log.Error(err, "Failed to define new Ingress resource for MyKeyStore")
+			log.Error(err, "Failed to define new NodePort resource for MyKeyStore")
 
 			// The following implementation will update the status
 			meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
 				Type:   typeAvailableMyKeyStore,
 				Status: metav1.ConditionFalse, Reason: "Reconciling",
-				Message: fmt.Sprintf("Failed to create Ingress for the custom resource (%s): (%s)", name, err),
+				Message: fmt.Sprintf("Failed to create NodePort for the custom resource (%s): (%s)", name, err),
 			})
 
 			if err := r.Status().Update(ctx, mykeystore); err != nil {
@@ -96,11 +96,11 @@ func ProcessNodePort(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Requ
 			return requeueIfError(err)
 		}
 
-		log.Info("Updating exiting Ingress",
-			"Ingress.Namespace", dep.Namespace, "Ingress.Name", dep.Name)
+		log.Info("Updating exiting NodePort",
+			"NodePort.Namespace", dep.Namespace, "NodePort.Name", dep.Name)
 		if err = r.Update(ctx, dep); err != nil {
-			log.Error(err, "Failed to create new Ingress",
-				"Ingress.Namespace", dep.Namespace, "Ingress.Name", dep.Name)
+			log.Error(err, "Failed to create new NodePort",
+				"NodePort.Namespace", dep.Namespace, "NodePort.Name", dep.Name)
 			return requeueIfError(err)
 		}
 		return requeueAfter(time.Second*10, nil)
@@ -110,7 +110,7 @@ func ProcessNodePort(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Requ
 	meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
 		Type:   typeAvailableMyKeyStore,
 		Status: metav1.ConditionTrue, Reason: "Reconciling",
-		Message: fmt.Sprintf("Ingress for custom resource (%s) created successfully", name),
+		Message: fmt.Sprintf("NodePort for custom resource (%s) created successfully", name),
 	})
 	return nil, nil
 }
