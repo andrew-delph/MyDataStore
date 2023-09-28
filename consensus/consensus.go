@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -29,6 +30,7 @@ type ConsensusCluster struct {
 	raftNode        *raft.Raft
 	epochTick       *time.Ticker
 	fsm             *FSM
+	memberLock      sync.Mutex
 }
 
 type LeaderChangeTask struct {
@@ -176,6 +178,9 @@ func (consensusCluster *ConsensusCluster) AddVoter(nodeName, nodeIP string) erro
 	if err != nil {
 		return err
 	}
+	consensusCluster.memberLock.Lock()
+	defer consensusCluster.memberLock.Unlock()
+
 	noderRaftAddr := fmt.Sprintf("%s:7000", nodeIP)
 	logrus.Debugf("AddVoter! STATE = %s nodeName = %s noderRaftAddr = %s", consensusCluster.raftNode.State(), nodeName, noderRaftAddr)
 
@@ -198,8 +203,8 @@ func (consensusCluster *ConsensusCluster) AddVoter(nodeName, nodeIP string) erro
 				logrus.Debugf("node %s at %s already member of cluster, ignoring join request", nodeName, nodeIP)
 				return nil
 			}
-
 			if err := consensusCluster.RemoveServer(nodeName); err != nil {
+				// if err := consensusCluster.raftNode.RemoveServer(serverId, 0, 0).Error(); err != nil {
 				logrus.Errorf("failed to remove node %s: %v", nodeName, err)
 				return err
 			}

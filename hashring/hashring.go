@@ -63,8 +63,8 @@ func (ring *Hashring) GetMemberPartions(member string) ([]int, error) {
 
 func (ring *Hashring) getMemberPartions(member string) ([]int, error) {
 	var belongsTo []int
-	for partID := 0; partID < ring.consistentConfig.PartitionCount; partID++ {
-		members, err := ring.consistent.GetClosestNForPartition(partID, ring.consistentConfig.ReplicationFactor)
+	for partID := 0; partID < ring.managerConfig.PartitionCount; partID++ {
+		members, err := ring.consistent.GetClosestNForPartition(partID, ring.managerConfig.ReplicaCount)
 		if err != nil {
 			return nil, err
 		}
