@@ -84,6 +84,10 @@ func (cc *ConsistencyController) HandleHashringChange(currPartitions utils.IntSe
 	return nil
 }
 
+func (cc *ConsistencyController) IsPartitionActive(partitionId int) bool {
+	return cc.partitionsStates[partitionId].active.Load()
+}
+
 func (cc *ConsistencyController) VerifyEpoch(Epoch int64) {
 	logrus.Debugf("new Epoch %d", Epoch)
 	cc.PublishEvent(VerifyPartitionEpochEvent{Epoch: Epoch})
@@ -104,11 +108,22 @@ func (cc *ConsistencyController) IsBusy() error {
 }
 
 func (cc *ConsistencyController) IsHealthy() error {
+	count := 0
+	nonactive := 0
+	epochsNum := 0
 	for _, partitionState := range cc.partitionsStates {
 		epochs := partitionState.GetActivateEpochs()
 		if epochs > 0 {
-			return errors.Errorf("partitionState epochs %d", epochs)
+			count++
+			epochsNum = epochsNum + epochs
+			if partitionState.active.Load() == false {
+				logrus.Warn("unhealthy partition %d is not active/ epochs = %d", partitionState.partitionId, epochs)
+				nonactive++
+			}
 		}
+	}
+	if count > 0 || epochsNum > 0 {
+		return errors.Errorf("unhealthy partitions %d nonactive= %d epochsNum= %d", count, nonactive, epochsNum)
 	}
 	return nil
 }
@@ -186,10 +201,11 @@ func (ps *PartitionState) VerifyPartitionEpoch(Epoch int64) {
 	switch res := rawRes.(type) {
 	case VerifyPartitionEpochResponse:
 		ps.DeactivateEpoch(Epoch)
-		logrus.Warnf("VerifyPartitionEpoch E= %d res = %+v", Epoch, res)
+		// logrus.Warnf("VerifyPartitionEpoch E= %d res = %+v", Epoch, res)
 	case error:
 		err := errors.Wrap(res, "VerifyPartitionEpoch")
-		logrus.Error(err)
+		logrus.Debug(err)
+		// logrus.Error(err)
 		go ps.VerifyPartitionEpoch(Epoch)
 	default:
 		logrus.Panicf(" response unkown res type: %v", reflect.TypeOf(res))
@@ -214,7 +230,11 @@ func (ps *PartitionState) SyncPartition(UpperEpoch int64) {
 		} else {
 			logrus.Debugf("SyncPartition:  err partrition %d res = %+v", ps.partitionId, res)
 		}
-		for i := res.LowerEpoch; i < res.UpperEpoch; i++ {
+		lower := res.LowerEpoch
+		if lower < 0 {
+			lower = 0
+		}
+		for i := lower; i < res.UpperEpoch; i++ {
 			go ps.VerifyPartitionEpoch(i)
 		}
 	case nil:
@@ -240,7 +260,7 @@ func (ps *PartitionState) DeactivateEpoch(Epoch int64) {
 	ps.activeLock.Lock()
 	defer ps.activeLock.Unlock()
 	ps.activeEpochs.Remove(int(Epoch))
-	logrus.Warnf("DeactivateEpoch %d size %d", Epoch, len(ps.activeEpochs.List()))
+	// logrus.Warnf("DeactivateEpoch %d size %d", Epoch, len(ps.activeEpochs.List()))
 }
 
 func (ps *PartitionState) GetActivateEpochs() int {

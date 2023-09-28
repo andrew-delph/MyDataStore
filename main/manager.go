@@ -139,8 +139,9 @@ func (m *Manager) startWorker(workerId int) {
 			if err != nil {
 				logrus.Debugf("IsHealthy err = %v", err)
 			}
-			// logrus.Warnf("DEBUG TICK #members = %d", len(m.gossipCluster.GetMembers()))
-			// logrus.Warn(m.config.Manager.Hostname)
+
+			err = m.consistencyController.IsHealthy()
+			logrus.Warnf("consistencyController health err= %v", err)
 
 		case data, ok := <-m.reqCh:
 			if !ok {
@@ -336,6 +337,7 @@ func (m *Manager) startWorker(workerId int) {
 
 				epochTreeObjectBytes, err := m.db.Get([]byte(index))
 				if err != nil {
+					err = errors.Wrapf(err, "active: %v", m.consistencyController.IsPartitionActive(int(task.PartitionId)))
 					task.ResCh <- err
 					continue
 				}
@@ -633,7 +635,7 @@ func (m *Manager) GetEpochTreeLastValid(partitionId int32) (*rpc.RpcEpochTreeObj
 		}
 		it.Next()
 	}
-	return nil, nil
+	return &rpc.RpcEpochTreeObject{LowerEpoch: -1, UpperEpoch: -1, Valid: false, Partition: partitionId}, nil
 }
 
 type MemberEpochTreeLastValid struct {
@@ -751,6 +753,10 @@ func (m *Manager) SyncPartitionRequest(member *RingMember, partitionId int32, lo
 }
 
 func (m *Manager) VerifyEpoch(PartitionId int, Epoch int64) error {
+	if Epoch < 0 {
+		return nil
+	}
+
 	// loop until successful verify
 	var err error
 	var myTree *merkletree.MerkleTree
@@ -839,7 +845,7 @@ func (m *Manager) VerifyEpoch(PartitionId int, Epoch int64) error {
 		return nil
 	} else {
 		err = m.PoliteStreamRequest(int(partitionEpochObject.Partition), Epoch, Epoch+1, diffSet.List())
-		err = errors.Errorf("validCount= %d against ReadQuorum %d err = %v", validCount, m.config.Manager.ReadQuorum, err)
+		err = errors.Errorf("validCount= %d<%d Epoch %d trees %d err = %v", validCount, m.config.Manager.ReadQuorum, Epoch, len(epochTreeObjects), err)
 		return err
 	}
 }
@@ -866,11 +872,11 @@ func (m *Manager) PoliteStreamRequest(PartitionId int, LowerEpoch, UpperEpoch in
 		// logrus.Warnf("sync name %s lastValid %d", lastValid.member.Name, lastValid.epochTreeLastValid.LowerEpoch)
 		err := m.SyncPartitionRequest(lastValid.member, int32(PartitionId), LowerEpoch, UpperEpoch, buckets, time.Second*60*3)
 		if err != nil {
-			logrus.Debugf("SyncPartitionRequest err = %v", err)
+			logrus.Errorf("SyncPartitionRequest err = %v", err)
 		} else if lastValid.epochTreeLastValid.LowerEpoch >= UpperEpoch {
 			return nil
 		}
 	}
 
-	return errors.New("PoliteStreamRequest errored on every member.")
+	return errors.New("PoliteStreamRequest no valid member.")
 }

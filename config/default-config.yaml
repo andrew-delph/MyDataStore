@@ -5,7 +5,7 @@ manager:
   default_timeout: 5
   req_channel_size: 1000
   workers_count: 100
-  partition_concurrency: 100
+  partition_concurrency: 10
   partition_count: 100
   partition_buckets: 1000
   partition_replicas: 2

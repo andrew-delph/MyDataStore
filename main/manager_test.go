@@ -229,10 +229,12 @@ func TestGetEpochTreeLastValidObjectTask(t *testing.T) {
 	res := <-resCh
 
 	switch item := res.(type) {
+	case *rpc.RpcEpochTreeObject:
+		assert.Equal(t, int64(-1), item.LowerEpoch, "the correct object was returned")
 	case error:
-		logrus.Infof("recieved correct error: %v", item)
+		t.Error(item)
 	default:
-		t.Errorf("should be error: %v", reflect.TypeOf(item))
+		t.Errorf("unknown type: %v", reflect.TypeOf(item))
 	}
 
 	var obj *rpc.RpcEpochTreeObject
@@ -330,8 +332,15 @@ func TestGetEpochTreeObjectWriteRead(t *testing.T) {
 		t.Error(err)
 	}
 
-	_, err = manager.db.Get([]byte(index))
+	epochTreeObjectBytes, err := manager.db.Get([]byte(index))
 	if err != nil {
 		t.Error(err)
 	}
+
+	epochTreeObject := &rpc.RpcEpochTreeObject{}
+	err = proto.Unmarshal(epochTreeObjectBytes, epochTreeObject)
+	if err != nil {
+		t.Error(err)
+	}
+	assert.EqualValues(t, 1, epochTreeObject.LowerEpoch, "epochTreeObject.LowerEpoch")
 }
