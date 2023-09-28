@@ -19,7 +19,7 @@ case $1 in
         ;;
     k8-init)
         minikube delete && minikube start && minikube addons enable metrics-server &&  minikube addons enable ingress
-        minikube delete && minikube start && ./deploy_k8.sh
+        ./deploy_k8.sh
         kubectl wait --namespace ingress-nginx  --for=condition=ready pod  --selector=app.kubernetes.io/component=controller  --timeout=120s
         kubectl apply -f ./resources/ingress.yaml
         kubectl apply -f ./resources/prom.yaml
