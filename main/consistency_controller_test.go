@@ -9,17 +9,8 @@ import (
 
 	"github.com/reactivex/rxgo/v2"
 	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
 	"golang.org/x/sync/semaphore"
 )
-
-func TestPartitionLocker(t *testing.T) {
-	partitionLocker := NewPartitionLocker(10)
-	assert.Equal(t, nil, partitionLocker.Lock(1), "should be nil")
-	assert.NotEqual(t, nil, partitionLocker.Lock(1), "should be an error")
-	assert.Equal(t, nil, partitionLocker.Unlock(1), "should be nil")
-	assert.Equal(t, nil, partitionLocker.Lock(1), "should be nil")
-}
 
 func TestRxGoObservers(t *testing.T) {
 	// t.Error("show")

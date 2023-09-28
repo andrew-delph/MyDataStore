@@ -40,7 +40,6 @@ type Manager struct {
 	ring                  *hashring.Hashring
 	rpcWrapper            *rpc.RpcWrapper
 	myPartitions          *utils.IntSet
-	partitionLocker       *PartitionLocker
 	consistencyController *ConsistencyController
 	debugTick             *time.Ticker
 	CurrentEpoch          int64
@@ -57,7 +56,6 @@ func NewManager(c config.Config) Manager {
 
 	rpcWrapper := rpc.CreateRpcWrapper(c.Rpc, reqCh)
 	parts := utils.NewIntSet()
-	partitionLocker := NewPartitionLocker(c.Manager.PartitionCount)
 
 	consistencyController := NewConsistencyController(c.Manager.PartitionConcurrency, c.Manager.PartitionCount, reqCh)
 	return Manager{
@@ -70,7 +68,6 @@ func NewManager(c config.Config) Manager {
 		ring:                  ring,
 		rpcWrapper:            rpcWrapper,
 		myPartitions:          &parts,
-		partitionLocker:       partitionLocker,
 		consistencyController: consistencyController,
 		debugTick:             time.NewTicker(time.Second * 5),
 	}

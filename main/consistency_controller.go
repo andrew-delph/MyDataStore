@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -15,31 +14,6 @@ import (
 
 	"github.com/andrew-delph/my-key-store/utils"
 )
-
-type PartitionLocker struct {
-	partitionLockMap sync.Map
-}
-
-func NewPartitionLocker(partitionCount int) *PartitionLocker {
-	pl := &PartitionLocker{}
-	for i := 0; i < partitionCount; i++ {
-		pl.partitionLockMap.Store(i, false)
-	}
-	return pl
-}
-
-func (pl *PartitionLocker) Lock(partition int) error {
-	swapped := pl.partitionLockMap.CompareAndSwap(partition, false, true)
-	if !swapped {
-		return errors.New("could not swap key")
-	}
-	return nil
-}
-
-func (pl *PartitionLocker) Unlock(partition int) error {
-	pl.partitionLockMap.Store(partition, false)
-	return nil
-}
 
 type VerifyPartitionEpochRequestTask struct {
 	PartitionId int
