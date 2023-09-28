@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -103,21 +104,29 @@ func (cc *ConsistencyController) IsBusy() error {
 }
 
 func (cc *ConsistencyController) IsHealthy() error {
-	panic("NOT IMPLEMETNED")
+	for _, partitionState := range cc.partitionsStates {
+		epochs := partitionState.GetActivateEpochs()
+		if epochs > 0 {
+			return errors.Errorf("partitionState epochs %d", epochs)
+		}
+	}
 	return nil
 }
 
 type PartitionState struct {
-	partitionId int
-	active      atomic.Bool
-	lastEpoch   int64
-	sema        *semaphore.Weighted
-	observable  rxgo.Observable
-	reqCh       chan interface{}
+	partitionId  int
+	active       atomic.Bool
+	lastEpoch    int64
+	sema         *semaphore.Weighted
+	observable   rxgo.Observable
+	reqCh        chan interface{}
+	activeEpochs *utils.IntSet
+	activeLock   sync.Mutex
 }
 
 func NewPartitionState(sema *semaphore.Weighted, partitionId int, observable rxgo.Observable, reqCh chan interface{}) *PartitionState {
-	ps := &PartitionState{partitionId: partitionId, observable: observable, sema: sema, reqCh: reqCh}
+	activeEpochs := utils.NewIntSet()
+	ps := &PartitionState{partitionId: partitionId, observable: observable, sema: sema, reqCh: reqCh, activeEpochs: &activeEpochs}
 	return ps
 }
 
@@ -160,8 +169,10 @@ func (ps *PartitionState) StartConsumer() error {
 
 func (ps *PartitionState) VerifyPartitionEpoch(Epoch int64) {
 	if ps.active.Load() == false {
+		ps.DeactivateEpoch(Epoch)
 		return
 	}
+	ps.ActivateEpoch(Epoch)
 	err := ps.sema.Acquire(context.Background(), 1)
 	if err != nil {
 		logrus.Fatal(err)
@@ -174,10 +185,11 @@ func (ps *PartitionState) VerifyPartitionEpoch(Epoch int64) {
 	rawRes := <-resCh
 	switch res := rawRes.(type) {
 	case VerifyPartitionEpochResponse:
-		logrus.Debugf("VerifyPartitionEpoch E= %d res = %+v", Epoch, res)
+		ps.DeactivateEpoch(Epoch)
+		logrus.Warnf("VerifyPartitionEpoch E= %d res = %+v", Epoch, res)
 	case error:
 		err := errors.Wrap(res, "VerifyPartitionEpoch")
-		logrus.Debug(err)
+		logrus.Error(err)
 		go ps.VerifyPartitionEpoch(Epoch)
 	default:
 		logrus.Panicf(" response unkown res type: %v", reflect.TypeOf(res))
@@ -214,4 +226,26 @@ func (ps *PartitionState) SyncPartition(UpperEpoch int64) {
 	default:
 		logrus.Panicf("SyncPartition: unkown res type: %v", reflect.TypeOf(res))
 	}
+}
+
+func (ps *PartitionState) ActivateEpoch(Epoch int64) {
+	ps.activeLock.Lock()
+	defer ps.activeLock.Unlock()
+
+	ps.activeEpochs.Add(int(Epoch))
+	// logrus.Warnf("ActivateEpoch %d size %d", Epoch, len(ps.activeEpochs.List()))
+}
+
+func (ps *PartitionState) DeactivateEpoch(Epoch int64) {
+	ps.activeLock.Lock()
+	defer ps.activeLock.Unlock()
+	ps.activeEpochs.Remove(int(Epoch))
+	logrus.Warnf("DeactivateEpoch %d size %d", Epoch, len(ps.activeEpochs.List()))
+}
+
+func (ps *PartitionState) GetActivateEpochs() int {
+	ps.activeLock.Lock()
+	defer ps.activeLock.Unlock()
+
+	return len(ps.activeEpochs.List())
 }

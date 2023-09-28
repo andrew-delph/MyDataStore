@@ -222,6 +222,18 @@ func TestGetEpochTreeLastValidObjectTask(t *testing.T) {
 	writePartition := 1
 	manager := NewManager(c)
 	manager.CurrentEpoch = 100
+	go manager.startWorker(1)
+
+	resCh := make(chan interface{})
+	manager.reqCh <- rpc.GetEpochTreeLastValidObjectTask{PartitionId: int32(writePartition), ResCh: resCh}
+	res := <-resCh
+
+	switch item := res.(type) {
+	case error:
+		logrus.Infof("recieved correct error: %v", item)
+	default:
+		t.Errorf("should be error: %v", reflect.TypeOf(item))
+	}
 
 	var obj *rpc.RpcEpochTreeObject
 	var data []byte
@@ -272,10 +284,9 @@ func TestGetEpochTreeLastValidObjectTask(t *testing.T) {
 		t.Error(err)
 	}
 
-	go manager.startWorker(1)
-	resCh := make(chan interface{})
+	resCh = make(chan interface{})
 	manager.reqCh <- rpc.GetEpochTreeLastValidObjectTask{PartitionId: int32(writePartition), ResCh: resCh}
-	res := <-resCh
+	res = <-resCh
 
 	switch item := res.(type) {
 	case *rpc.RpcEpochTreeObject:

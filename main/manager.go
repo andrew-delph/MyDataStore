@@ -581,6 +581,7 @@ func (m *Manager) SetValue(value *rpc.RpcValue) error {
 		return err
 	}
 	trx := m.db.NewTransaction(true)
+	defer trx.Discard()
 	trx.Set([]byte(keyIndex), valueData)
 	trx.Set([]byte(epochIndex), timestampBytes)
 	return trx.Commit()

@@ -10,6 +10,8 @@ import (
 	"github.com/reactivex/rxgo/v2"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/semaphore"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestRxGoObservers(t *testing.T) {
@@ -72,4 +74,32 @@ func TestConsistencyControllerObservers(t *testing.T) {
 
 	consistencyController.PublishEvent("test")
 	time.Sleep(time.Second * 5)
+}
+
+func TestConsistencyControllerActiveEpochs(t *testing.T) {
+	// TODO show this
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+	consistencyController := NewConsistencyController(2, 10, nil) // TODO impllement proper test
+
+	err := consistencyController.IsHealthy()
+	if err != nil {
+		t.Error(err)
+	}
+
+	partitionZero := consistencyController.partitionsStates[0]
+
+	partitionZero.ActivateEpoch(int64(1))
+	partitionZero.ActivateEpoch(int64(2))
+	partitionZero.ActivateEpoch(int64(3))
+	assert.Equal(t, 3, partitionZero.GetActivateEpochs(), "partitionZero.GetActivateEpochs()")
+	partitionZero.DeactivateEpoch(int64(3))
+
+	assert.Equal(t, 2, partitionZero.GetActivateEpochs(), "partitionZero.GetActivateEpochs()")
+
+	err = consistencyController.IsHealthy()
+	if err == nil {
+		t.Errorf("consistencyController.IsHealthy should have error. %v", err)
+	}
 }
