@@ -118,7 +118,7 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 		return noRequeue()
 	}
 	size := mykeystore.Spec.Size
-	if *found.Spec.Replicas != size || *&found.Spec.Template.Spec.Containers[0].Image != image {
+	if *found.Spec.Replicas != size {
 		logrus.Warn("WRONG NUMBER OF REPLICAS")
 		found.Spec.Replicas = &size
 		if err = r.Update(ctx, found); err != nil {
