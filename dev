@@ -28,6 +28,9 @@ case $1 in
         ./deploy_k8.sh
         kubectl apply -f ./resources/prom.yaml
         ;;
+    k8-operator)
+        ./deploy_operator.sh
+        ;;
     k8)
         tmuxinator start -p ./.tmuxinator/tmuxinator-k8.yaml
         ;;

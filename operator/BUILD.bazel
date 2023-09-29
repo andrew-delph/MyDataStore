@@ -1,4 +1,6 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+load("@io_bazel_rules_docker//container:container.bzl", "container_image", "container_push")
+load("@io_bazel_rules_docker//go:image.bzl", "go_image")
 
 go_library(
     name = "go_default_library",
@@ -25,5 +27,45 @@ go_binary(
         # "MYKEYSTORE_IMAGE": "docker.io/andrew-delph/main:store_image",
         "MYKEYSTORE_IMAGE": "strm/helloworld-http:latest",
     },
+    visibility = ["//visibility:public"],
+)
+
+go_image(
+    name = "go_image",
+    embed = [":go_default_library"],
+    goarch = "amd64",
+    goos = "linux",
+    importpath = "main",
+    visibility = ["//visibility:private"],
+)
+
+container_image(
+    name = "operator_image",
+    base = ":go_image",
+    # data_path = "/config",
+    # directory = "/config",
+    # env = {
+    #     "CONFIG_PATH": "/config/.",
+    # },
+    # files = ["//config:default-config"],
+    ports = ["80"],
+    repository = "docker.io/andrew-delph",
+    tags = ["latest"],
+)
+
+container_push(
+    name = "image_push",
+    format = "Docker",
+    image = ":store_image",
+    registry = "ghcr.io",
+    repository = "andrew-delph/my-key-store",
+    tag = "latest",
+)
+
+genrule(
+    name = "fetch_controller-gen",
+    srcs = ["@io_k8s_sigs_controller_tools//cmd/controller-gen"],
+    outs = ["controller-gen"],
+    cmd = "cp $(SRCS) $@",
     visibility = ["//visibility:public"],
 )

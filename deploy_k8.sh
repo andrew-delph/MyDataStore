@@ -34,7 +34,7 @@ SECONDS=0  # Reset the SECONDS variable
 
 if [ $ROLL_OUT_FLAG -eq 0 ]; then
     echo "The 'rollout' flag is not set. Setting up."
-    (cd operator && make install)
+    (cd operator && kustomize build config/crd | kubectl apply -f -)
     kubectl apply -f ./operator/config/samples/
 else
     echo "The 'rollout' flag is set."
