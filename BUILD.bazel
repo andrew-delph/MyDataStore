@@ -2,6 +2,7 @@ load("@bazel_gazelle//:def.bzl", "gazelle")
 
 # gazelle:default_visibility //visibility:public
 # gazelle:prefix github.com/andrew-delph/my-key-store
+# gazelle:proto disable_global
 gazelle(
     name = "gazelle",
     args = [
@@ -16,6 +17,7 @@ gazelle(
         "-from_file=go.work",
         "-to_macro=repositories.bzl%go_repositories",
         "-prune",
+        "-build_file_proto_mode=disable_global",
     ],
     command = "update-repos",
 )

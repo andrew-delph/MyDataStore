@@ -1,3 +1,5 @@
+workspace(name = "com_github_andrew-delph_my-key-store")
+
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 ## GOLANG RULES
@@ -24,12 +26,12 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_depe
 load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
 load("//:repositories.bzl", "go_repositories")
 
-# gazelle:repository_macro repositories.bzl%go_repositories
-go_repositories()
-
 go_rules_dependencies()
 
 go_register_toolchains(version = "1.20.5")
+
+# gazelle:repository_macro repositories.bzl%go_repositories
+go_repositories()
 
 gazelle_dependencies()
 
@@ -79,6 +81,52 @@ load(
 
 _go_image_repos()
 
-load("//operator/controllers:deps.bzl", "install_integration_test_dependencies")
+################################
+# Load rules_k8s and configure #
+################################
+http_archive(
+    name = "io_bazel_rules_k8s",
+    sha256 = "ce5b9bc0926681e2e7f2147b49096f143e6cbc783e71bc1d4f36ca76b00e6f4a",
+    strip_prefix = "rules_k8s-0.7",
+    urls = ["https://github.com/bazelbuild/rules_k8s/archive/refs/tags/v0.7.tar.gz"],
+)
 
-install_integration_test_dependencies()
+load("@io_bazel_rules_k8s//k8s:k8s.bzl", "k8s_defaults", "k8s_repositories")
+
+k8s_repositories()
+
+#############################################################
+# Setting up the defaults for rules k8s.  The varible values
+# are replaced by hack/build/print-workspace-status.sh
+# Using environment variables that are prefixed with the word
+# 'STAMP_' causes the rules_k8s files to rebuild when the
+# --stamp and evn values change.
+#############################################################
+k8s_defaults(
+    # This becomes the name of the @repository and the rule
+    # you will import in your BUILD files.
+    name = "k8s_deploy",
+    # This is the name of the cluster as it appears in:
+    #   kubectl config view --minify -o=jsonpath='{.contexts[0].context.cluster}'
+    # You are able to override the default cluster by setting the env variable K8S_CLUSTER
+    cluster = "{STABLE_CLUSTER}",
+    # You are able to override the default registry by setting the env variable DEV_REGISTRY
+    image_chroot = "{STABLE_IMAGE_REGISTRY}",
+    kind = "deployment",
+)
+
+###################################################
+# Load kubernetes repo-infra for tools like kazel #
+###################################################
+http_archive(
+    name = "io_k8s_repo_infra",
+    sha256 = "ae75a3a8de9698df30dd5a177c61f31ae9dd3a5da96ec951f0d6e60b2672d5fe",
+    strip_prefix = "repo-infra-0.2.2",
+    urls = [
+        "https://github.com/kubernetes/repo-infra/archive/v0.2.2.tar.gz",
+    ],
+)
+
+load("//operator/hack:deps.bzl", install_hack_bin = "install")
+
+install_hack_bin()

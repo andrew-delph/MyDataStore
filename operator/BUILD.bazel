@@ -63,10 +63,41 @@ container_push(
     tag = "latest",
 )
 
-genrule(
-    name = "fetch_controller-gen",
-    srcs = ["@io_k8s_sigs_controller_tools//cmd/controller-gen"],
-    outs = ["controller-gen"],
-    cmd = "cp $(SRCS) $@",
-    visibility = ["//visibility:public"],
-)
+# genrule(
+#     name = "fetch_controller-gen",
+#     srcs = ["@io_k8s_sigs_controller_tools//cmd/controller-gen"],
+#     outs = ["controller-gen"],
+#     cmd = "cp $(SRCS) $@",
+#     visibility = ["//visibility:public"],
+# )
+
+# GO = "@io_k8s_sigs_controller_tools//cmd/controller-gen"
+
+# sh_binary(
+#     name = "hello",
+#     srcs = ["hello.sh"],
+#     args = [
+#         "TEST!",
+#         "$(location :fetch_controller-gen)",
+#     ],
+#     visibility = ["//visibility:public"],
+#     deps = [
+#         ":fetch_controller-gen",
+#     ],
+# )
+
+# genrule(
+#     name = "run_controller-gen",
+#     srcs = [
+#         # "//operator/config:operator-config",
+#         ":operator",
+#     ],
+#     outs = ["controller-gen-output.yaml"],
+#     cmd = """
+#        $(location //operator/hack:fetch_controller-gen) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases > $@
+#     """,
+#     exec_tools = [
+#         "//operator/hack:fetch_controller-gen",
+#     ],
+#     visibility = ["//visibility:public"],
+# )
