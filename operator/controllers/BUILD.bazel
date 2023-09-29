@@ -12,7 +12,6 @@ go_library(
     ],
     data = [
         ":com_coreos_etcd",
-        "//operator/config:operator-config",
     ],
     importpath = "github.com/andrew-delph/my-key-store/operator/controllers",
     visibility = ["//visibility:public"],
@@ -64,6 +63,7 @@ go_test(
     data = [
         ":com_coreos_etcd",
         ":io_kubernetes_kube-apiserver",
+        "//operator/config:operator-config",
     ],
     embed = [":go_default_library"],
     deps = [
