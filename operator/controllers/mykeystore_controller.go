@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 
@@ -27,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -34,7 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/sirupsen/logrus"
+	"github.com/andrew-delph/my-key-store/rpc"
 
 	cachev1alpha1 "github.com/andrew-delph/my-key-store/operator/api/v1alpha1"
 )
@@ -81,9 +83,6 @@ type MyKeyStoreReconciler struct {
 // - About Controllers: https://kubernetes.io/docs/concepts/architecture/controller/
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
 func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logrus.Info()
-	// logrus.Infof("purpose: %v", req.String())
-
 	log := log.FromContext(ctx)
 
 	// Fetch the MyKeyStore instance
@@ -220,8 +219,28 @@ func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		log.Error(err, "Failed to update MyKeyStore status")
 		return ctrl.Result{}, err
 	}
-	// return ctrl.Result{RequeueAfter: time.Second}, nil
-	return ctrl.Result{}, nil
+
+	pods := &corev1.PodList{}
+	err = r.List(ctx, pods, client.MatchingLabels{"app": "store"})
+	logrus.Warnf("list= %v err = %v", len(pods.Items), err)
+	for _, pod := range pods.Items {
+		logrus.Warnf("pod name= %v", pod.Name)
+		conn, client, err := rpc.CreateRawRpcClient(pod.Name, 7070)
+		if err != nil {
+			logrus.Errorf("Client err = %v", err)
+			continue
+		}
+		defer conn.Close()
+		req := &rpc.RpcStandardObject{}
+		res, err := client.HealthCheck(ctx, req)
+		if err != nil {
+			logrus.Errorf("res err = %v", err)
+			continue
+		}
+		logrus.Warnf("res %v", res.Message)
+	}
+	return ctrl.Result{RequeueAfter: time.Second}, nil
+	// return ctrl.Result{}, nil
 }
 
 // finalizeMyKeyStore will perform the required operations before delete the CR.

@@ -412,7 +412,7 @@ func (m *Manager) SetRequest(key, value string) error {
 	unixTimestamp := time.Now().Unix()
 	setReq := &rpc.RpcValue{Key: key, Value: value, Epoch: m.CurrentEpoch, UnixTimestamp: unixTimestamp}
 
-	responseCh := make(chan *rpc.RpcStandardResponse, m.config.Manager.ReplicaCount)
+	responseCh := make(chan *rpc.RpcStandardObject, m.config.Manager.ReplicaCount)
 	errorCh := make(chan error, m.config.Manager.ReplicaCount)
 
 	for _, node := range nodes {

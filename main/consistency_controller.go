@@ -123,7 +123,7 @@ func (cc *ConsistencyController) IsHealthy() error {
 		}
 	}
 	if count > 0 || epochsNum > 0 {
-		return errors.Errorf("unhealthy partitions %d nonactive= %d epochsNum= %d", count, nonactive, epochsNum)
+		return errors.Errorf("partitions %d epochs= %d", count, epochsNum)
 	}
 	return nil
 }
