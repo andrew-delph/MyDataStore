@@ -9,5 +9,5 @@ windows:
         - ibazel -run_command_after_success='./deploy_operator.sh' build //operator:operator_image
         - while true; do stern statefulset/store; done
         - watch kubectl get pods
-        - while true; do SECONDS=0; kubectl rollout status statefulset/store -w; if [ $SECONDS -gt 1 ]; then echo "['$(date +"%Y-%m-%d %H:%M")'] Elapsed time = $SECONDS seconds" | tee -a rollout.txt; fi; done
+        - while true; do stern deployment/operator-controller-manager -n operator-system; done
         -

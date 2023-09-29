@@ -9,7 +9,7 @@ bazel run //operator:operator_image
 (cd operator/config/manager && kustomize edit set image controller=$IMG)
 (cd operator && kustomize build config/default | kubectl apply -f -)
 
-stern deployment/operator-controller-manager -n operator-system
+
 
 
 
