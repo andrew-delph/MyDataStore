@@ -85,7 +85,7 @@ type MyKeyStoreReconciler struct {
 // - About Controllers: https://kubernetes.io/docs/concepts/architecture/controller/
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
 func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logrus.Warn("req ", req)
+	// logrus.Warn("req ", req)
 	log := log.FromContext(ctx)
 
 	// Fetch the MyKeyStore instance
@@ -222,6 +222,8 @@ func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		log.Error(err, "Failed to update MyKeyStore status")
 		return ctrl.Result{}, err
 	}
+
+	return ctrl.Result{}, nil
 
 	pods := &corev1.PodList{}
 	err = r.List(ctx, pods, client.MatchingLabels{"app": "store"})

@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "operator"
+		}
+	],
+	"settings": {
+		"files.autoSave": "off",
+		"go.useLanguageServer": true
+	}
+}
