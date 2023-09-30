@@ -82,8 +82,7 @@ func getService(mykeystore *cachev1alpha1.MyKeyStore) *corev1.Service {
 			Namespace: mykeystore.Namespace,
 		},
 		Spec: corev1.ServiceSpec{
-			ClusterIP:                "None",
-			PublishNotReadyAddresses: true,
+			ClusterIP: "None",
 			Ports: []corev1.ServicePort{
 				{Name: "grpc", Port: 7070},
 				{Name: "http", Port: 8080},

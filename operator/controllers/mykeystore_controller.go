@@ -85,6 +85,7 @@ type MyKeyStoreReconciler struct {
 // - About Controllers: https://kubernetes.io/docs/concepts/architecture/controller/
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
 func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	logrus.Warn("req ", req)
 	log := log.FromContext(ctx)
 
 	// Fetch the MyKeyStore instance
@@ -226,8 +227,9 @@ func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	err = r.List(ctx, pods, client.MatchingLabels{"app": "store"})
 	logrus.Warnf("list= %v err = %v", len(pods.Items), err)
 	for _, pod := range pods.Items {
-		logrus.Warnf("pod name= %v", pod.Name)
-		conn, client, err := rpc.CreateRawRpcClient(fmt.Sprintf("%s.%s", pod.Name, pod.Namespace), 7070)
+		addr := fmt.Sprintf("%s.%s.%s", pod.Name, mykeystore.Name, pod.Namespace)
+		logrus.Warnf("pod addr= %v", addr)
+		conn, client, err := rpc.CreateRawRpcClient(addr, 7070)
 		if err != nil {
 			logrus.Errorf("Client err = %v", err)
 			continue

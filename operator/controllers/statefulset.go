@@ -207,7 +207,8 @@ func getStatefulSet(mykeystore *cachev1alpha1.MyKeyStore) *appsv1.StatefulSet {
 			Namespace: mykeystore.Namespace,
 		},
 		Spec: appsv1.StatefulSetSpec{
-			Replicas: &replicas,
+			Replicas:    &replicas,
+			ServiceName: mykeystore.Name,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: ls,
 			},
