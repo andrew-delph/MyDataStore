@@ -33,7 +33,8 @@ type MyKeyStoreSpec struct {
 	// More info: https://book.kubebuilder.io/reference/markers/crd-validation.html
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:ExclusiveMaximum=false
-	Size int32 `json:"size,omitempty"`
+	Size  int32  `json:"size,omitempty"`
+	Image string `json:"image,omitempty"`
 }
 
 // MyKeyStoreStatus defines the observed state of MyKeyStore

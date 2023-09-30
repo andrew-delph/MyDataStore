@@ -11,13 +11,13 @@ go_library(
         "test_env.go",
     ],
     data = [
-        ":com_coreos_etcd",
-        "//operator/config:operator-config",
+        "//operator/hack:com_coreos_etcd",
     ],
     importpath = "github.com/andrew-delph/my-key-store/operator/controllers",
     visibility = ["//visibility:public"],
     deps = [
         "//operator/api/v1alpha1:go_default_library",
+        "//rpc:go_default_library",
         "@com_github_go_logr_logr//:go_default_library",
         "@com_github_sirupsen_logrus//:go_default_library",
         "@io_k8s_api//apps/v1:go_default_library",
@@ -38,22 +38,6 @@ go_library(
     ],
 )
 
-genrule(
-    name = "com_coreos_etcd",
-    srcs = ["@com_coreos_etcd_linux_amd64//:file"],
-    outs = ["etcd"],
-    cmd = "cp $(SRCS) $@",
-    visibility = ["//visibility:public"],
-)
-
-genrule(
-    name = "io_kubernetes_kube-apiserver",
-    srcs = ["@kube-apiserver_linux_amd64//file"],
-    outs = ["kube-apiserver"],
-    cmd = "cp $(SRCS) $@",
-    visibility = ["//visibility:public"],
-)
-
 go_test(
     name = "go_default_test",
     srcs = [
@@ -61,8 +45,9 @@ go_test(
         "suite_test.go",
     ],
     data = [
-        ":com_coreos_etcd",
-        ":io_kubernetes_kube-apiserver",
+        "//operator/config:operator-config",
+        "//operator/hack:com_coreos_etcd",
+        "//operator/hack:io_kubernetes_kube-apiserver",
     ],
     embed = [":go_default_library"],
     deps = [

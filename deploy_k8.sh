@@ -7,11 +7,11 @@ STATEFULSET_NAME="store"
 NAMESPACE="default"
 
 eval $(minikube docker-env)
+TAG=$(date +%s)
+NEW_IMAGE=docker.io/andrew-delph/main:$TAG
 
 bazel run --execution_log_json_file=events.json //main:store_image
-
-
-# kubectl delete statefulset store --ignore-not-found=true --wait=true
+docker tag docker.io/andrew-delph/main:store_image $NEW_IMAGE
 
 
 ROLL_OUT_FLAG=0
@@ -34,16 +34,15 @@ SECONDS=0  # Reset the SECONDS variable
 
 if [ $ROLL_OUT_FLAG -eq 0 ]; then
     echo "The 'rollout' flag is not set. Setting up."
-    kubectl create -f ./resources/store.yaml
+    (cd operator && kustomize build config/crd | kubectl apply -f -)
+    kubectl apply -f ./operator/config/samples/
 else
     echo "The 'rollout' flag is set."
-    kubectl rollout restart statefulset/store
+    kubectl create -f ./operator/config/samples/ || true
+    kubectl patch mykeystore store --type=merge -p "{\"spec\":{\"image\":\"$NEW_IMAGE\"}}"
 fi
 
-# kubectl rollout status statefulset/store -w 
 
-# echo "Rollout complete!"
-# echo "[$(date +"%Y-%m-%d %H:%M")] Elapsed time: $SECONDS seconds" | tee -a rollout.txt
 
 
 

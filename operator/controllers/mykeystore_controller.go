@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 
@@ -27,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -34,7 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/sirupsen/logrus"
+	"github.com/andrew-delph/my-key-store/rpc"
 
 	cachev1alpha1 "github.com/andrew-delph/my-key-store/operator/api/v1alpha1"
 )
@@ -45,6 +47,7 @@ const mykeystoreFinalizer = "cache.andrewdelph.com/finalizer"
 const (
 	// typeAvailableMyKeyStore represents the status of the Deployment reconciliation
 	typeAvailableMyKeyStore = "Available"
+	typeRolloutMyKeyStore   = "Rollout"
 	// typeDegradedMyKeyStore represents the status used when the custom resource is deleted and the finalizer operations are must to occur.
 	typeDegradedMyKeyStore = "Degraded"
 )
@@ -65,7 +68,9 @@ type MyKeyStoreReconciler struct {
 //+kubebuilder:rbac:groups=cache.andrewdelph.com,resources=mykeystores/finalizers,verbs=update
 //+kubebuilder:rbac:groups=core,resources=events,verbs=create;patch
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch
+//+kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -80,7 +85,7 @@ type MyKeyStoreReconciler struct {
 // - About Controllers: https://kubernetes.io/docs/concepts/architecture/controller/
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
 func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logrus.Info("calling Reconcile req = ", req.String())
+	logrus.Warn("req ", req)
 	log := log.FromContext(ctx)
 
 	// Fetch the MyKeyStore instance
@@ -198,11 +203,7 @@ func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, nil
 	}
 
-	result, err := ProcessStatefulSet(r, ctx, req, log, mykeystore)
-	if result != nil {
-		return *result, err
-	}
-	result, err = ProcessService(r, ctx, req, log, mykeystore)
+	result, err := ProcessService(r, ctx, req, log, mykeystore)
 	if result != nil {
 		return *result, err
 	}
@@ -212,12 +213,37 @@ func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return *result, err
 	}
 
+	result, err = ProcessStatefulSet(r, ctx, req, log, mykeystore)
+	if result != nil {
+		return *result, err
+	}
+
 	if err := r.Status().Update(ctx, mykeystore); err != nil {
 		log.Error(err, "Failed to update MyKeyStore status")
 		return ctrl.Result{}, err
 	}
-	logrus.Info("DONE")
-	return ctrl.Result{}, nil
+
+	pods := &corev1.PodList{}
+	err = r.List(ctx, pods, client.MatchingLabels{"app": "store"})
+	logrus.Warnf("list= %v err = %v", len(pods.Items), err)
+	for _, pod := range pods.Items {
+		addr := fmt.Sprintf("%s.%s.%s", pod.Name, mykeystore.Name, pod.Namespace)
+		conn, client, err := rpc.CreateRawRpcClient(addr, 7070)
+		if err != nil {
+			logrus.Errorf("Client %s err = %v", addr, err)
+			continue
+		}
+		defer conn.Close()
+		req := &rpc.RpcStandardObject{}
+		res, err := client.HealthCheck(ctx, req)
+		if err != nil {
+			logrus.Errorf("Client %s res err = %v", pod.Name, err)
+			continue
+		}
+		logrus.Warnf("Client %s res= %v", pod.Name, res.Message)
+	}
+	return ctrl.Result{RequeueAfter: time.Second}, nil
+	// return ctrl.Result{}, nil
 }
 
 // finalizeMyKeyStore will perform the required operations before delete the CR.

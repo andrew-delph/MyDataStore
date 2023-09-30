@@ -73,7 +73,7 @@ func (rpcWrapper *RpcWrapper) StartRpcServer() {
 	}
 }
 
-func (rpcWrapper *RpcWrapper) SetRequest(ctx context.Context, value *datap.Value) (*datap.StandardResponse, error) {
+func (rpcWrapper *RpcWrapper) SetRequest(ctx context.Context, value *datap.Value) (*datap.StandardObject, error) {
 	logrus.Debugf("SERVER Handling SetRequest: key=%s value=%s epoch=%d", value.Key, value.Value, value.Epoch)
 	resCh := make(chan interface{})
 	err := utils.WriteChannelTimeout(rpcWrapper.reqCh, SetValueTask{Value: value, ResCh: resCh}, 2)
@@ -82,7 +82,7 @@ func (rpcWrapper *RpcWrapper) SetRequest(ctx context.Context, value *datap.Value
 	}
 	rawRes := <-resCh
 	logrus.Debug("SetRequest res ", rawRes)
-	return &datap.StandardResponse{Message: "Value set"}, nil
+	return &datap.StandardObject{Message: "Value set"}, nil
 }
 
 func (rpcWrapper *RpcWrapper) GetRequest(ctx context.Context, req *datap.GetRequestMessage) (*datap.Value, error) {
@@ -171,4 +171,11 @@ func (rpcWrapper *RpcWrapper) GetEpochTreeLastValid(ctx context.Context, req *da
 		logrus.Panicf("http unkown res type: %v", reflect.TypeOf(res))
 	}
 	return nil, nil
+}
+
+func (rpcWrapper *RpcWrapper) HealthCheck(ctx context.Context, req *datap.StandardObject) (*datap.StandardObject, error) {
+	res := datap.StandardObject{
+		Message: "this is the health message.",
+	}
+	return &res, nil
 }

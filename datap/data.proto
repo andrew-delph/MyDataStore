@@ -8,7 +8,7 @@ option go_package = "github.com/andrew-delph/my-key-store/datap";
 service InternalNodeService {
 
   // set a value on another node
-  rpc SetRequest (Value) returns (StandardResponse);
+  rpc SetRequest (Value) returns (StandardObject);
 
   // get a value from another node
   rpc GetRequest (GetRequestMessage) returns (Value) ;
@@ -20,10 +20,12 @@ service InternalNodeService {
   rpc GetEpochTree(EpochTreeObject) returns (EpochTreeObject);
 
   rpc GetEpochTreeLastValid(EpochTreeObject) returns (EpochTreeObject);
+
+  rpc HealthCheck(StandardObject) returns (StandardObject);
   
 }
 
-message StandardResponse {
+message StandardObject {
   bool error = 1;
   string message = 2;
 }
