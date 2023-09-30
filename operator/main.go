@@ -18,7 +18,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -70,7 +69,7 @@ func main() {
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: scheme,
 		Metrics: server.Options{
-			BindAddress: fmt.Sprintf("%v:%v", metricsAddr, 9443),
+			BindAddress: metricsAddr,
 		},
 		// MetricsBindAddress:     metricsAddr,
 		// Port:                   9443,

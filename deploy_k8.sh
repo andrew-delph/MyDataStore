@@ -38,6 +38,7 @@ if [ $ROLL_OUT_FLAG -eq 0 ]; then
     kubectl apply -f ./operator/config/samples/
 else
     echo "The 'rollout' flag is set."
+    kubectl create -f ./operator/config/samples/ || true
     kubectl patch mykeystore store --type=merge -p "{\"spec\":{\"image\":\"$NEW_IMAGE\"}}"
 fi
 

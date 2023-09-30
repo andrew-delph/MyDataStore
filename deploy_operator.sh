@@ -1,13 +1,14 @@
 #!/bin/bash
 
-# Exit on any error
-set -e
+
 
 eval $(minikube docker-env)
 IMG=docker.io/andrew-delph/operator:operator_image
 bazel run //operator:operator_image
-(cd operator/config/manager && kustomize edit set image controller=$IMG)
-(cd operator && kustomize build config/default | kubectl apply -f -)
+(cd operator && make undeploy || true)
+(cd operator && make deploy || true)
+(cd operator && kustomize build config/default | kubectl apply -f - || true)
+(cd operator && kustomize build config/rbac | kubectl apply -f - || true)
 
 
 
