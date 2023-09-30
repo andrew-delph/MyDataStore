@@ -34,6 +34,7 @@ import (
 
 	cachev1alpha1 "github.com/andrew-delph/my-key-store/operator/api/v1alpha1"
 	"github.com/andrew-delph/my-key-store/operator/controllers"
+	"github.com/sirupsen/logrus"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -50,6 +51,8 @@ func init() {
 }
 
 func main() {
+	logrus.Info("START OPERATOR")
+
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
