@@ -227,7 +227,7 @@ func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	logrus.Warnf("list= %v err = %v", len(pods.Items), err)
 	for _, pod := range pods.Items {
 		logrus.Warnf("pod name= %v", pod.Name)
-		conn, client, err := rpc.CreateRawRpcClient(pod.Name, 7070)
+		conn, client, err := rpc.CreateRawRpcClient(fmt.Sprintf("%s.%s", pod.Name, pod.Namespace), 7070)
 		if err != nil {
 			logrus.Errorf("Client err = %v", err)
 			continue
