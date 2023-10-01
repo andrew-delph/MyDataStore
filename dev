@@ -19,14 +19,14 @@ case $1 in
         ;;
     k8-init)
         minikube delete && minikube start && minikube addons enable metrics-server
-        ./deploy_k8.sh
-        kubectl apply -f ./resources/prom.yaml
-        kubectl create configmap prometheus-config --from-file=prometheus.yml || true
+        ./dev k8-r
         ;;
     k8-r)
         kubectl delete -f ./operator/config/samples/ || true
         ./deploy_k8.sh
+        ./deploy_operator.sh
         kubectl apply -f ./resources/prom.yaml
+        kubectl create configmap prometheus-config --from-file=prometheus.yml || true
         ;;
     k8-operator)
         ./deploy_operator.sh

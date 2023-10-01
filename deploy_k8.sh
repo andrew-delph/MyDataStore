@@ -34,13 +34,13 @@ SECONDS=0  # Reset the SECONDS variable
 
 if [ $ROLL_OUT_FLAG -eq 0 ]; then
     echo "The 'rollout' flag is not set. Setting up."
-    (cd operator && kustomize build config/crd | kubectl apply -f -)
-    kubectl apply -f ./operator/config/samples/
+    (cd operator && kustomize build config/crd | kubectl apply -f - || true)
+    kubectl apply -f ./operator/config/samples/ || true
 else
     echo "The 'rollout' flag is set."
     (cd operator && make install || true)
     kubectl create -f ./operator/config/samples/ || true
-    kubectl patch mykeystore store --type=merge -p "{\"spec\":{\"image\":\"$NEW_IMAGE\"}}"
+    kubectl patch mykeystore store --type=merge -p "{\"spec\":{\"image\":\"$NEW_IMAGE\"}}" || true
 fi
 
 
