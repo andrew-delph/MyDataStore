@@ -122,8 +122,8 @@ func (cc *ConsistencyController) IsHealthy() error {
 			}
 		}
 	}
-	if count > 0 || epochsNum > 0 {
-		return errors.Errorf("partitions %d epochs= %d", count, epochsNum)
+	if count > 0 || epochsNum > 0 || nonactive > 0 {
+		return errors.Errorf("partitions %d nonactive %d epochs= %d", count, nonactive, epochsNum)
 	}
 	return nil
 }
