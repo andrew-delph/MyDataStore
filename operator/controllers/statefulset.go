@@ -121,6 +121,29 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 		}
 		return noRequeue()
 	}
+
+	rolloutStatus := meta.FindStatusCondition(mykeystore.Status.Conditions, typeRolloutMyKeyStore)
+	if rolloutStatus != nil && rolloutStatus.Status == metav1.ConditionTrue {
+		// logrus.Warnf("time %v", time.Since(rolloutStatus.LastTransitionTime.Time))
+		if found.Status.UpdatedReplicas != found.Status.Replicas || found.Status.ReadyReplicas != found.Status.Replicas || time.Since(rolloutStatus.LastTransitionTime.Time) < time.Second*10 {
+			logrus.Warnf("rollout: %v %v %v", found.Status.UpdatedReplicas, found.Status.ReadyReplicas, found.Status.UpdateRevision)
+
+			return requeueAfter(time.Second*5, nil)
+		} else {
+			logrus.Warnf("rollout complete. took: %v logic: %v", time.Since(rolloutStatus.LastTransitionTime.Time), time.Since(rolloutStatus.LastTransitionTime.Time) > time.Second*20)
+			meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
+				Type:   typeRolloutMyKeyStore,
+				Status: metav1.ConditionFalse, Reason: "RollingUpdate",
+				Message: fmt.Sprintf("Rollout complete: %v", image),
+			})
+
+			if err := r.Status().Update(ctx, mykeystore); err != nil {
+				log.Error(err, "Failed to update MyKeyStore status")
+				return requeueIfError(err)
+			}
+		}
+	}
+
 	size := mykeystore.Spec.Size
 	if *found.Spec.Replicas != size {
 		logrus.Warn("WRONG NUMBER OF REPLICAS")
@@ -151,28 +174,6 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 			}
 
 			return requeueIfError(err)
-		}
-	}
-	// logrus.Infof("stats: %v %v %v %v", found.Status.UpdatedReplicas, found.Status.ReadyReplicas, found.Status.UpdateRevision, *found.Status.CollisionCount)
-	rolloutStatus := meta.FindStatusCondition(mykeystore.Status.Conditions, typeRolloutMyKeyStore)
-	if rolloutStatus != nil && rolloutStatus.Status == metav1.ConditionTrue {
-		// logrus.Warnf("time %v", time.Since(rolloutStatus.LastTransitionTime.Time))
-		if found.Status.UpdatedReplicas != found.Status.Replicas || found.Status.ReadyReplicas != found.Status.Replicas || time.Since(rolloutStatus.LastTransitionTime.Time) < time.Second*10 {
-			logrus.Warnf("rollout: %v %v %v", found.Status.UpdatedReplicas, found.Status.ReadyReplicas, found.Status.UpdateRevision)
-
-			return requeueAfter(time.Second*5, nil)
-		} else {
-			logrus.Warnf("rollout complete. took: %v logic: %v", time.Since(rolloutStatus.LastTransitionTime.Time), time.Since(rolloutStatus.LastTransitionTime.Time) > time.Second*20)
-			meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
-				Type:   typeRolloutMyKeyStore,
-				Status: metav1.ConditionFalse, Reason: "RollingUpdate",
-				Message: fmt.Sprintf("Rollout complete: %v", image),
-			})
-
-			if err := r.Status().Update(ctx, mykeystore); err != nil {
-				log.Error(err, "Failed to update MyKeyStore status")
-				return requeueIfError(err)
-			}
 		}
 	}
 
