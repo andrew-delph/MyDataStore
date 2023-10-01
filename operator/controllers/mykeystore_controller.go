@@ -230,14 +230,14 @@ func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		conn, client, err := rpc.CreateRawRpcClient(addr, 7070)
 		if err != nil {
 			logrus.Errorf("Client %s err = %v", addr, err)
-			continue
+			return ctrl.Result{Requeue: true}, nil
 		}
 		defer conn.Close()
 		req := &rpc.RpcStandardObject{}
 		res, err := client.HealthCheck(ctx, req)
 		if err != nil {
 			logrus.Errorf("Client %s res err = %v", pod.Name, err)
-			continue
+			return ctrl.Result{Requeue: true}, nil
 		}
 		logrus.Warnf("Client %s res= %v", pod.Name, res.Message)
 	}
