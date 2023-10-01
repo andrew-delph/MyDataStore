@@ -21,7 +21,7 @@ service InternalNodeService {
 
   rpc GetEpochTreeLastValid(EpochTreeObject) returns (EpochTreeObject);
 
-  rpc HealthCheck(StandardObject) returns (StandardObject);
+  rpc PartitionsHealthCheck(StandardObject) returns (StandardObject);
 
   rpc AddTempNode(TempNode) returns (StandardObject);
 

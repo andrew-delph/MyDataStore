@@ -173,7 +173,7 @@ func (rpcWrapper *RpcWrapper) GetEpochTreeLastValid(ctx context.Context, req *da
 	return nil, nil
 }
 
-func (rpcWrapper *RpcWrapper) HealthCheck(ctx context.Context, req *datap.StandardObject) (*datap.StandardObject, error) {
+func (rpcWrapper *RpcWrapper) PartitionsHealthCheck(ctx context.Context, req *datap.StandardObject) (*datap.StandardObject, error) {
 	res := datap.StandardObject{
 		Message: "this is the health message.",
 		Error:   false,

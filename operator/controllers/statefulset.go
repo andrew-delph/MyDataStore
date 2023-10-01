@@ -234,7 +234,7 @@ func waitForPodsHealthy(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 		}
 		defer conn.Close()
 		req := &rpc.RpcStandardObject{}
-		res, err := client.HealthCheck(ctx, req)
+		res, err := client.PartitionsHealthCheck(ctx, req)
 		if err != nil {
 			logrus.Errorf("Client %s res err = %v", pod.Name, err)
 			return err
