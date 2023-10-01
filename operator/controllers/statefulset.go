@@ -2,8 +2,11 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
+
+	"github.com/andrew-delph/my-key-store/rpc"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -14,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/go-logr/logr"
 	"github.com/sirupsen/logrus"
@@ -172,6 +176,12 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 		}
 	}
 
+	// health check pods
+	err = waitForPodsHealthy(r, ctx, req, log, mykeystore)
+	if err != nil {
+		return requeueIfError(err)
+	}
+
 	meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
 		Type:   typeAvailableMyKeyStore,
 		Status: metav1.ConditionTrue, Reason: "Reconciling",
@@ -184,6 +194,37 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 	}
 
 	return nil, nil
+}
+
+func waitForPodsHealthy(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Request, log logr.Logger, mykeystore *cachev1alpha1.MyKeyStore) error {
+	pods := &corev1.PodList{}
+	err := r.List(ctx, pods, client.MatchingLabels{"app": mykeystore.Name})
+	if err != nil {
+		return err
+	}
+	logrus.Warnf("list= %v err = %v", len(pods.Items), err)
+	for _, pod := range pods.Items {
+		addr := fmt.Sprintf("%s.%s.%s", pod.Name, mykeystore.Name, pod.Namespace)
+		conn, client, err := rpc.CreateRawRpcClient(addr, 7070)
+		if err != nil {
+			logrus.Errorf("Client %s err = %v", addr, err)
+			return err
+		}
+		defer conn.Close()
+		req := &rpc.RpcStandardObject{}
+		res, err := client.HealthCheck(ctx, req)
+		if err != nil {
+			logrus.Errorf("Client %s res err = %v", pod.Name, err)
+			return err
+		} else if res.Error {
+			err = errors.New(res.Message)
+			logrus.Errorf("Client %s res err msg = %v", pod.Name, err)
+			return err
+		}
+		// logrus.Warnf("Client %s res= %v", pod.Name, res.Message)
+	}
+	logrus.Warnf("all pods health. # = %v", len(pods.Items))
+	return nil
 }
 
 func getStatefulSet(mykeystore *cachev1alpha1.MyKeyStore) *appsv1.StatefulSet {

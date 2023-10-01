@@ -27,15 +27,12 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	"github.com/andrew-delph/my-key-store/rpc"
 
 	cachev1alpha1 "github.com/andrew-delph/my-key-store/operator/api/v1alpha1"
 )
@@ -220,26 +217,6 @@ func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	if err := r.Status().Update(ctx, mykeystore); err != nil {
 		log.Error(err, "Failed to update MyKeyStore status")
 		return ctrl.Result{}, err
-	}
-
-	pods := &corev1.PodList{}
-	err = r.List(ctx, pods, client.MatchingLabels{"app": "store"})
-	logrus.Warnf("list= %v err = %v", len(pods.Items), err)
-	for _, pod := range pods.Items {
-		addr := fmt.Sprintf("%s.%s.%s", pod.Name, mykeystore.Name, pod.Namespace)
-		conn, client, err := rpc.CreateRawRpcClient(addr, 7070)
-		if err != nil {
-			logrus.Errorf("Client %s err = %v", addr, err)
-			return ctrl.Result{Requeue: true}, nil
-		}
-		defer conn.Close()
-		req := &rpc.RpcStandardObject{}
-		res, err := client.HealthCheck(ctx, req)
-		if err != nil {
-			logrus.Errorf("Client %s res err = %v", pod.Name, err)
-			return ctrl.Result{Requeue: true}, nil
-		}
-		logrus.Warnf("Client %s res= %v", pod.Name, res.Message)
 	}
 
 	return ctrl.Result{}, nil
