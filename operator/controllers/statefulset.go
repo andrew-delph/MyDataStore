@@ -126,7 +126,7 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 	if rolloutStatus != nil && rolloutStatus.Status == metav1.ConditionTrue {
 		// logrus.Warnf("time %v", time.Since(rolloutStatus.LastTransitionTime.Time))
 		if found.Status.UpdatedReplicas != found.Status.Replicas || found.Status.ReadyReplicas != found.Status.Replicas || time.Since(rolloutStatus.LastTransitionTime.Time) < time.Second*10 {
-			logrus.Warnf("rollout: %v %v %v", found.Status.UpdatedReplicas, found.Status.ReadyReplicas, found.Status.UpdateRevision)
+			logrus.Warnf("rollout: %v %v need: %v", found.Status.UpdatedReplicas, found.Status.ReadyReplicas, found.Status.Replicas)
 
 			return requeueAfter(time.Second*5, nil)
 		} else {
