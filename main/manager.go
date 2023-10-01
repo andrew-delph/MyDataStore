@@ -163,13 +163,13 @@ func (m *Manager) startWorker(workerId int) {
 
 			case rpc.AddTempNodeTask:
 				name := task.Name
-				m.ring.AddTempNode(CreateRingMember(name))
-				task.ResCh <- true
+				err := m.ring.AddTempNode(CreateRingMember(name))
+				task.ResCh <- err
 
 			case rpc.RemoveTempNodeTask:
 				name := task.Name
-				m.ring.RemoveTempNode(name)
-				task.ResCh <- true
+				err := m.ring.RemoveTempNode(name)
+				task.ResCh <- err
 
 			case http.HealthTask:
 				err := m.consensusCluster.IsHealthy()

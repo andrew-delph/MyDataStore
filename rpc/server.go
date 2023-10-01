@@ -214,7 +214,7 @@ func (rpcWrapper *RpcWrapper) AddTempNode(ctx context.Context, req *datap.TempNo
 	rpcWrapper.reqCh <- AddTempNodeTask{ResCh: resCh, Name: req.Name}
 	rawRes := utils.RecieveChannelTimeout(resCh, 20)
 	switch res := rawRes.(type) {
-	case bool:
+	case nil:
 		return &datap.StandardObject{
 			Message: "temp node added",
 			Error:   false,
@@ -236,7 +236,7 @@ func (rpcWrapper *RpcWrapper) RemoveTempNode(ctx context.Context, req *datap.Tem
 	rpcWrapper.reqCh <- RemoveTempNodeTask{ResCh: resCh, Name: req.Name}
 	rawRes := utils.RecieveChannelTimeout(resCh, 20)
 	switch res := rawRes.(type) {
-	case bool:
+	case nil:
 		return &datap.StandardObject{
 			Message: "temp node removed",
 			Error:   false,
