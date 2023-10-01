@@ -185,8 +185,17 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 		logrus.Warnf("Needs to increase replicas size. sizeDiff %d newPodName %s", sizeDiff, newPodName)
 		err := notifyNewTempNode(r, ctx, req, log, mykeystore, newPodName)
 		if err != nil {
-			return requeueIfError(err)
+			logrus.Error(err)
+			return requeueImmediately()
 		}
+
+		err = waitForPodsHealthy(r, ctx, req, log, mykeystore)
+		if err != nil {
+			logrus.Error(err)
+			return requeueImmediately()
+		}
+
+		logrus.Warn("ALL PARTITIONS HEALTHY. READY TO SCALE.")
 
 	} else if sizeDiff < 0 {
 		removePodName := generatePodNode(mykeystore, int(currSize)-1)
@@ -195,10 +204,6 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 	}
 
 	// health check pods
-	err = waitForPodsHealthy(r, ctx, req, log, mykeystore)
-	if err != nil {
-		return requeueIfError(err)
-	}
 
 	meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
 		Type:   typeAvailableMyKeyStore,
@@ -274,7 +279,7 @@ func notifyNewTempNode(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Re
 			logrus.Errorf("AddTempNode Client %s res err msg = %v", pod.Name, err)
 			return err
 		}
-		logrus.Warnf("AddTempNode Client %s res= %v", pod.Name, res.Message)
+		// logrus.Warnf("AddTempNode Client %s res= %v", pod.Name, res.Message)
 	}
 	logrus.Warnf("all pods AddTempNode. # = %v", len(pods.Items))
 	return nil

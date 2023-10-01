@@ -161,6 +161,16 @@ func (m *Manager) startWorker(workerId int) {
 				err := m.consistencyController.IsHealthy()
 				task.ResCh <- err
 
+			case rpc.AddTempNodeTask:
+				name := task.Name
+				m.ring.AddTempNode(CreateRingMember(name))
+				task.ResCh <- true
+
+			case rpc.RemoveTempNodeTask:
+				name := task.Name
+				m.ring.RemoveTempNode(name)
+				task.ResCh <- true
+
 			case http.HealthTask:
 				err := m.consensusCluster.IsHealthy()
 				if err != nil {

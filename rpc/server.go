@@ -66,6 +66,16 @@ type PartitionsHealthCheckTask struct {
 	ResCh chan interface{}
 }
 
+type AddTempNodeTask struct {
+	ResCh chan interface{}
+	Name  string
+}
+
+type RemoveTempNodeTask struct {
+	ResCh chan interface{}
+	Name  string
+}
+
 func (rpcWrapper *RpcWrapper) StartRpcServer() {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", rpcWrapper.rpcConfig.Port))
 	if err != nil {
@@ -200,16 +210,34 @@ func (rpcWrapper *RpcWrapper) PartitionsHealthCheck(ctx context.Context, req *da
 
 func (rpcWrapper *RpcWrapper) AddTempNode(ctx context.Context, req *datap.TempNode) (*datap.StandardObject, error) {
 	logrus.Warnf("AddTempNode %s", req.Name)
-	res := datap.StandardObject{
-		Message: "temp node added",
+	resCh := make(chan interface{})
+	rpcWrapper.reqCh <- AddTempNodeTask{ResCh: resCh, Name: req.Name}
+	rawRes := utils.RecieveChannelTimeout(resCh, 5)
+	switch res := rawRes.(type) {
+	case bool:
+		return &datap.StandardObject{
+			Message: "temp node added",
+			Error:   false,
+		}, nil
+	default:
+		logrus.Panicf("http unkown res type: %v", reflect.TypeOf(res))
 	}
-	return &res, nil
+	return nil, nil
 }
 
 func (rpcWrapper *RpcWrapper) RemoveTempNode(ctx context.Context, req *datap.TempNode) (*datap.StandardObject, error) {
 	logrus.Warnf("RemoveTempNode %s", req.Name)
-	res := datap.StandardObject{
-		Message: "temp node removed",
+	resCh := make(chan interface{})
+	rpcWrapper.reqCh <- RemoveTempNodeTask{ResCh: resCh, Name: req.Name}
+	rawRes := utils.RecieveChannelTimeout(resCh, 5)
+	switch res := rawRes.(type) {
+	case bool:
+		return &datap.StandardObject{
+			Message: "temp node removed",
+			Error:   false,
+		}, nil
+	default:
+		logrus.Panicf("http unkown res type: %v", reflect.TypeOf(res))
 	}
-	return &res, nil
+	return nil, nil
 }
