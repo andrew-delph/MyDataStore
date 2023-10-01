@@ -62,6 +62,10 @@ type StreamBucketsTask struct {
 	ResCh       chan interface{}
 }
 
+type PartitionsHealthCheckTask struct {
+	ResCh chan interface{}
+}
+
 func (rpcWrapper *RpcWrapper) StartRpcServer() {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", rpcWrapper.rpcConfig.Port))
 	if err != nil {
@@ -174,11 +178,24 @@ func (rpcWrapper *RpcWrapper) GetEpochTreeLastValid(ctx context.Context, req *da
 }
 
 func (rpcWrapper *RpcWrapper) PartitionsHealthCheck(ctx context.Context, req *datap.StandardObject) (*datap.StandardObject, error) {
-	res := datap.StandardObject{
-		Message: "this is the health message.",
-		Error:   false,
+	resCh := make(chan interface{})
+	rpcWrapper.reqCh <- PartitionsHealthCheckTask{ResCh: resCh}
+	rawRes := utils.RecieveChannelTimeout(resCh, 5)
+	switch res := rawRes.(type) {
+	case nil:
+		return &datap.StandardObject{
+			Message: "partitions are healthy",
+			Error:   false,
+		}, nil
+	case error:
+		return &datap.StandardObject{
+			Message: res.Error(),
+			Error:   true,
+		}, res
+	default:
+		logrus.Panicf("http unkown res type: %v", reflect.TypeOf(res))
 	}
-	return &res, nil
+	return nil, nil
 }
 
 func (rpcWrapper *RpcWrapper) AddTempNode(ctx context.Context, req *datap.TempNode) (*datap.StandardObject, error) {

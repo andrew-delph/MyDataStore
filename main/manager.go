@@ -157,6 +157,10 @@ func (m *Manager) startWorker(workerId int) {
 			}
 			switch task := data.(type) {
 
+			case rpc.PartitionsHealthCheckTask:
+				err := m.consistencyController.IsHealthy()
+				task.ResCh <- err
+
 			case http.HealthTask:
 				err := m.consensusCluster.IsHealthy()
 				if err != nil {
