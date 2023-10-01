@@ -8,21 +8,21 @@ import (
 )
 
 func requeueIfError(err error) (*ctrl.Result, error) {
-	logrus.Debugf("requeueIfError err %v", err)
+	logrus.Warnf("requeueIfError err %v", err)
 	return &ctrl.Result{}, err
 }
 
 func noRequeue() (*ctrl.Result, error) {
-	logrus.Debugf("noRequeue")
+	logrus.Warnf("noRequeue")
 	return &ctrl.Result{}, nil
 }
 
 func requeueAfter(interval time.Duration, err error) (*ctrl.Result, error) {
-	logrus.Debugf("requeueAfter interval %v err %v", interval, err)
+	logrus.Warnf("requeueAfter interval %v err %v", interval, err)
 	return &ctrl.Result{RequeueAfter: interval}, err
 }
 
 func requeueImmediately() (*ctrl.Result, error) {
-	logrus.Debugf("requeueImmediately")
+	logrus.Warnf("requeueImmediately")
 	return &ctrl.Result{Requeue: true}, nil
 }

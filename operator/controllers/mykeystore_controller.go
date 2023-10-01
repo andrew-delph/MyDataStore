@@ -19,7 +19,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 
@@ -223,8 +222,6 @@ func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
-	return ctrl.Result{}, nil
-
 	pods := &corev1.PodList{}
 	err = r.List(ctx, pods, client.MatchingLabels{"app": "store"})
 	logrus.Warnf("list= %v err = %v", len(pods.Items), err)
@@ -244,8 +241,8 @@ func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 		logrus.Warnf("Client %s res= %v", pod.Name, res.Message)
 	}
-	return ctrl.Result{RequeueAfter: time.Second}, nil
-	// return ctrl.Result{}, nil
+
+	return ctrl.Result{}, nil
 }
 
 // finalizeMyKeyStore will perform the required operations before delete the CR.

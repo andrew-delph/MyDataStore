@@ -37,6 +37,7 @@ import (
 var _ = Describe("MyKeyStore controller", func() {
 	Context("MyKeyStore controller test", func() {
 		const MyKeyStoreName = "test-mykeystore"
+		waitTime := time.Second * 60
 
 		ctx := context.Background()
 
@@ -94,7 +95,7 @@ var _ = Describe("MyKeyStore controller", func() {
 			Eventually(func() error {
 				found := &cachev1alpha1.MyKeyStore{}
 				return k8sClient.Get(ctx, typeNamespaceName, found)
-			}, time.Minute, time.Second).Should(Succeed())
+			}, waitTime, time.Second).Should(Succeed())
 
 			By("Reconciling the custom resource created")
 			mykeystoreReconciler := &MyKeyStoreReconciler{
@@ -102,16 +103,15 @@ var _ = Describe("MyKeyStore controller", func() {
 				Scheme: k8sClient.Scheme(),
 			}
 
-			_, err = mykeystoreReconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: typeNamespaceName,
-			})
-			Expect(err).To(Not(HaveOccurred()))
-
 			By("Checking if StatefulSet was successfully created in the reconciliation")
 			Eventually(func() error {
+				_, err = mykeystoreReconciler.Reconcile(ctx, reconcile.Request{
+					NamespacedName: typeNamespaceName,
+				})
+				Expect(err).To(Not(HaveOccurred()))
 				found := &appsv1.StatefulSet{}
 				return k8sClient.Get(ctx, typeNamespaceName, found)
-			}, time.Minute, time.Second).Should(Succeed())
+			}, waitTime, time.Second).Should(Succeed())
 
 			By("Checking the latest Status Condition added to the MyKeyStore instance")
 			Eventually(func() error {
@@ -127,7 +127,33 @@ var _ = Describe("MyKeyStore controller", func() {
 					}
 				}
 				return nil
-			}, time.Minute, time.Second).Should(Succeed())
+			}, waitTime, time.Second).Should(Succeed())
 		})
 	})
 })
+
+// func TestPath(t *testing.T) {
+// 	dira, err := os.Getwd()
+// 	if err != nil {
+// 		logrus.Fatal(err)
+// 	}
+// 	logrus.Info("dira, ", dira)
+// 	dir, err := os.Open("../config/crd/bases")
+// 	if err != nil {
+// 		log.Fatalf("Failed opening directory: %s", err)
+// 	}
+// 	defer dir.Close()
+
+// 	list, _ := dir.Readdirnames(0) // 0 to read all files and folders
+// 	for _, name := range list {
+// 		fmt.Println(name)
+// 	}
+
+// 	testEnv2 := TestEnv()
+
+// 	_, err = testEnv2.Start()
+
+// 	if err != nil {
+// 		t.Error(err)
+// 	}
+// }

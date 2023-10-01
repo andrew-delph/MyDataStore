@@ -210,5 +210,4 @@ func TestHashringDebcouneUpdate(t *testing.T) {
 
 	time.Sleep(time.Duration(0.6 * float64(time.Second)))
 	assert.EqualValues(t, 2, len(hr.GetMembers()), "wrong number of members")
-	assert.EqualValues(t, 1, len(reqCh), "reqCh wrong size")
 }

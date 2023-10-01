@@ -38,7 +38,7 @@ func TestConfigDefault(t *testing.T) {
 	assert.NotEqualValues(t, 0, config.Consensus.BootstrapTimeout, "BootstrapTimeout wrong value")
 
 	// gossip config
-	assert.EqualValues(t, []string{"store:8081", "store-0:8081"}, config.Gossip.InitMembers, "InitMembers wrong value")
+	assert.EqualValues(t, []string{"store:8081", "store-0:8081", "store-0.store.default:8081"}, config.Gossip.InitMembers, "InitMembers wrong value")
 	assert.EqualValues(t, false, config.Gossip.EnableLogs, "EnableLogs wrong value")
 
 	// storage

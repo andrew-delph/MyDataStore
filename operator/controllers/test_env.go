@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 )
 
@@ -28,12 +27,8 @@ func PrependToPath(path ...string) {
 }
 
 func TestEnv() *envtest.Environment {
-	dir, err := os.Getwd()
-	if err != nil {
-		logrus.Fatal(err)
-	}
+	dir := "../hack"
 	os.Setenv("KUBEBUILDER_ASSETS", dir)
-	PrependToPath(dir)
 
 	testEnv := &envtest.Environment{
 		CRDDirectoryPaths:     []string{filepath.Join("..", "config", "crd", "bases")},
