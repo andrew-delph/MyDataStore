@@ -144,37 +144,54 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 		}
 	}
 
-	size := mykeystore.Spec.Size
-	if *found.Spec.Replicas != size {
-		logrus.Warn("WRONG NUMBER OF REPLICAS")
-		found.Spec.Replicas = &size
-		if err = r.Update(ctx, found); err != nil {
-			log.Error(err, "Failed to update Deployment",
-				"Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
+	// size := mykeystore.Spec.Size
+	// if *found.Spec.Replicas != size {
+	// 	logrus.Warn("WRONG NUMBER OF REPLICAS")
+	// 	found.Spec.Replicas = &size
+	// 	if err = r.Update(ctx, found); err != nil {
+	// 		log.Error(err, "Failed to update Deployment",
+	// 			"Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
 
-			// Re-fetch the mykeystore Custom Resource before update the status
-			// so that we have the latest state of the resource on the cluster and we will avoid
-			// raise the issue "the object has been modified, please apply
-			// your changes to the latest version and try again" which would re-trigger the reconciliation
-			if err := r.Get(ctx, req.NamespacedName, mykeystore); err != nil {
-				log.Error(err, "Failed to re-fetch mykeystore")
-				return requeueIfError(err)
-			}
+	// 		// Re-fetch the mykeystore Custom Resource before update the status
+	// 		// so that we have the latest state of the resource on the cluster and we will avoid
+	// 		// raise the issue "the object has been modified, please apply
+	// 		// your changes to the latest version and try again" which would re-trigger the reconciliation
+	// 		if err := r.Get(ctx, req.NamespacedName, mykeystore); err != nil {
+	// 			log.Error(err, "Failed to re-fetch mykeystore")
+	// 			return requeueIfError(err)
+	// 		}
 
-			// The following implementation will update the status
-			meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
-				Type:   typeAvailableMyKeyStore,
-				Status: metav1.ConditionFalse, Reason: "Resizing",
-				Message: fmt.Sprintf("Failed to update the size for the custom resource (%s): (%s)", mykeystore.Name, err),
-			})
+	// 		// The following implementation will update the status
+	// 		meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
+	// 			Type:   typeAvailableMyKeyStore,
+	// 			Status: metav1.ConditionFalse, Reason: "Resizing",
+	// 			Message: fmt.Sprintf("Failed to update the size for the custom resource (%s): (%s)", mykeystore.Name, err),
+	// 		})
 
-			if err := r.Status().Update(ctx, mykeystore); err != nil {
-				log.Error(err, "Failed to update MyKeyStore status")
-				return requeueIfError(err)
-			}
+	// 		if err := r.Status().Update(ctx, mykeystore); err != nil {
+	// 			log.Error(err, "Failed to update MyKeyStore status")
+	// 			return requeueIfError(err)
+	// 		}
 
+	// 		return requeueIfError(err)
+	// 	}
+	// }
+
+	currSize := *found.Spec.Replicas
+	reqSize := mykeystore.Spec.Size
+	sizeDiff := reqSize - currSize
+	if sizeDiff > 0 {
+		newPodName := generatePodNode(mykeystore, int(currSize)+1)
+		logrus.Warnf("Needs to increase replicas size. sizeDiff %d newPodName %s", sizeDiff, newPodName)
+		err := notifyNewTempNode(r, ctx, req, log, mykeystore, newPodName)
+		if err != nil {
 			return requeueIfError(err)
 		}
+
+	} else if sizeDiff < 0 {
+		removePodName := generatePodNode(mykeystore, int(currSize)-1)
+		logrus.Warnf("Needs to decrease replicas size. sizeDiff %d removePodName %s", sizeDiff, removePodName)
+		return requeueImmediately()
 	}
 
 	// health check pods
@@ -186,7 +203,7 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 	meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
 		Type:   typeAvailableMyKeyStore,
 		Status: metav1.ConditionTrue, Reason: "Reconciling",
-		Message: fmt.Sprintf("Deployment for custom resource (%s) with %d replicas created successfully", mykeystore.Name, size),
+		Message: fmt.Sprintf("Deployment for custom resource (%s) with %d replicas created successfully", mykeystore.Name, reqSize),
 	})
 
 	if err := r.Status().Update(ctx, mykeystore); err != nil {
@@ -195,6 +212,10 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 	}
 
 	return nil, nil
+}
+
+func generatePodNode(mykeystore *cachev1alpha1.MyKeyStore, index int) string {
+	return fmt.Sprintf("%s-%d", mykeystore.Name, index)
 }
 
 func waitForPodsHealthy(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Request, log logr.Logger, mykeystore *cachev1alpha1.MyKeyStore) error {
@@ -225,6 +246,37 @@ func waitForPodsHealthy(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 		// logrus.Warnf("Client %s res= %v", pod.Name, res.Message)
 	}
 	logrus.Warnf("all pods health. # = %v", len(pods.Items))
+	return nil
+}
+
+func notifyNewTempNode(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Request, log logr.Logger, mykeystore *cachev1alpha1.MyKeyStore, tempNode string) error {
+	pods := &corev1.PodList{}
+	err := r.List(ctx, pods, client.MatchingLabels{"app": mykeystore.Name})
+	if err != nil {
+		return err
+	}
+	logrus.Warnf("AddTempNode list= %v err = %v", len(pods.Items), err)
+	for _, pod := range pods.Items {
+		addr := fmt.Sprintf("%s.%s.%s", pod.Name, mykeystore.Name, pod.Namespace)
+		conn, client, err := rpc.CreateRawRpcClient(addr, 7070)
+		if err != nil {
+			logrus.Errorf("Client %s err = %v", addr, err)
+			return err
+		}
+		defer conn.Close()
+		req := &rpc.RpcTempNode{Name: tempNode}
+		res, err := client.AddTempNode(ctx, req)
+		if err != nil {
+			logrus.Errorf("AddTempNode Client %s res err = %v", pod.Name, err)
+			return err
+		} else if res.Error {
+			err = errors.New(res.Message)
+			logrus.Errorf("AddTempNode Client %s res err msg = %v", pod.Name, err)
+			return err
+		}
+		logrus.Warnf("AddTempNode Client %s res= %v", pod.Name, res.Message)
+	}
+	logrus.Warnf("all pods AddTempNode. # = %v", len(pods.Items))
 	return nil
 }
 
