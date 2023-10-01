@@ -1,14 +1,11 @@
 package main
 
-import "github.com/andrew-delph/my-key-store/rpc"
-
 type RingMember struct {
 	Name      string
-	rpcClient rpc.RpcClient
 }
 
-func CreateRingMember(name string, rpcClient rpc.RpcClient) RingMember {
-	return RingMember{Name: name, rpcClient: rpcClient}
+func CreateRingMember(name string) RingMember {
+	return RingMember{Name: name}
 }
 
 func (m RingMember) String() string {

@@ -41,8 +41,10 @@ type Manager struct {
 	rpcWrapper            *rpc.RpcWrapper
 	myPartitions          *utils.IntSet
 	consistencyController *ConsistencyController
-	debugTick             *time.Ticker
-	CurrentEpoch          int64
+	clientManager         *ClientManager
+
+	debugTick    *time.Ticker
+	CurrentEpoch int64
 }
 
 func NewManager(c config.Config) Manager {
@@ -57,6 +59,8 @@ func NewManager(c config.Config) Manager {
 	rpcWrapper := rpc.CreateRpcWrapper(c.Rpc, reqCh)
 	parts := utils.NewIntSet()
 
+	clientManager := NewClientManager()
+
 	consistencyController := NewConsistencyController(c.Manager.PartitionConcurrency, c.Manager.PartitionCount, reqCh)
 	return Manager{
 		config:                c,
@@ -69,6 +73,7 @@ func NewManager(c config.Config) Manager {
 		rpcWrapper:            rpcWrapper,
 		myPartitions:          &parts,
 		consistencyController: consistencyController,
+		clientManager:         clientManager,
 		debugTick:             time.NewTicker(time.Second * 5),
 	}
 }
@@ -215,9 +220,10 @@ func (m *Manager) startWorker(workerId int) {
 					logrus.Fatal(err)
 					continue
 				}
+				m.clientManager.AddClient(task.Name, rpcClient)
 
 				m.ring.RemoveNode(task.Name)
-				m.ring.AddNode(CreateRingMember(task.Name, rpcClient))
+				m.ring.AddNode(CreateRingMember(task.Name))
 
 			case gossip.LeaveTask:
 				logrus.Warnf("worker LeaveTask: %+v", task)
@@ -423,10 +429,15 @@ func (m *Manager) SetRequest(key, value string) error {
 			return errors.New("failed to decode node")
 		}
 
+		client, err := m.clientManager.GetClient(member.Name)
+		if err != nil {
+			return err
+		}
+
 		go func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
-			res, err := member.rpcClient.SetRequest(ctx, setReq)
+			res, err := client.SetRequest(ctx, setReq)
 			if err != nil {
 				errorCh <- errors.Wrapf(err, "member %s", member.Name)
 			} else {
@@ -472,10 +483,15 @@ func (m *Manager) GetRequest(key string) (*rpc.RpcValue, error) {
 			return nil, errors.New("failed to decode node")
 		}
 
+		client, err := m.clientManager.GetClient(member.Name)
+		if err != nil {
+			return nil, err
+		}
+
 		go func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
-			res, err := member.rpcClient.GetRequest(ctx, getReq)
+			res, err := client.GetRequest(ctx, getReq)
 			st, ok := status.FromError(err)
 			if ok && st.Code() == codes.NotFound {
 				responseCh <- nil
@@ -539,10 +555,15 @@ func (m *Manager) EpochTreeObjectRequest(partitionId int, epoch int64, timeout t
 			return nil, errors.New("failed to decode node")
 		}
 
+		client, err := m.clientManager.GetClient(member.Name)
+		if err != nil {
+			return nil, err
+		}
+
 		go func() {
 			ctx, cancel := context.WithTimeout(context.Background(), timeout)
 			defer cancel()
-			res, err := member.rpcClient.GetEpochTree(ctx, treeReq)
+			res, err := client.GetEpochTree(ctx, treeReq)
 			if err != nil {
 				errorCh <- err
 			} else {
@@ -661,10 +682,15 @@ func (m *Manager) EpochTreeLastValidRequest(partitionId int32, timeout time.Dura
 			return nil, errors.New("failed to decode node")
 		}
 
+		client, err := m.clientManager.GetClient(member.Name)
+		if err != nil {
+			return nil, err
+		}
+
 		go func() {
 			ctx, cancel := context.WithTimeout(context.Background(), timeout)
 			defer cancel()
-			res, err := member.rpcClient.GetEpochTreeLastValid(ctx, treeReq)
+			res, err := client.GetEpochTreeLastValid(ctx, treeReq)
 			if err != nil {
 				errorCh <- err
 			} else {
@@ -690,7 +716,11 @@ func (m *Manager) SyncPartitionRequest(member *RingMember, partitionId int32, lo
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	req := &rpc.RpcStreamBucketsRequest{Partition: partitionId, LowerEpoch: lowerEpoch, UpperEpoch: upperEpoch, Buckets: buckets}
-	streamClient, err := member.rpcClient.StreamBuckets(ctx, req)
+	client, err := m.clientManager.GetClient(member.Name)
+	if err != nil {
+		return err
+	}
+	streamClient, err := client.StreamBuckets(ctx, req)
 	if err != nil {
 		return errors.Wrap(err, "StreamBuckets request")
 	}
@@ -729,7 +759,8 @@ func (m *Manager) SyncPartitionRequest(member *RingMember, partitionId int32, lo
 			continue
 		} else {
 			getReq := &rpc.RpcGetRequestMessage{Key: value.Key}
-			syncedValue, err := member.rpcClient.GetRequest(context.Background(), getReq)
+
+			syncedValue, err := client.GetRequest(context.Background(), getReq)
 			if err != nil {
 				logrus.Errorf("FAILED TO SYNC KEY = %s err = %v", value.Key, err)
 				continue

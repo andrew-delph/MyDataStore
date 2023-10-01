@@ -22,14 +22,14 @@ func NewClientManager() *ClientManager {
 func (cm *ClientManager) AddClient(name string, rpcClient rpc.RpcClient) {
 	cm.rwLock.Lock()
 	defer cm.rwLock.Unlock()
-	logrus.Infof("AddClient %s", name)
+	logrus.Debugf("AddClient %s", name)
 	cm.clientMap[name] = rpcClient
 }
 
 func (cm *ClientManager) GetClient(name string) (rpc.RpcClient, error) {
 	cm.rwLock.RLock()
 	defer cm.rwLock.RUnlock()
-	logrus.Infof("GetClient %s", name)
+	logrus.Debugf("GetClient %s", name)
 	client, ok := cm.clientMap[name]
 	if !ok {
 		return nil, errors.New("client not found")
