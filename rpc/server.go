@@ -209,7 +209,7 @@ func (rpcWrapper *RpcWrapper) PartitionsHealthCheck(ctx context.Context, req *da
 }
 
 func (rpcWrapper *RpcWrapper) AddTempNode(ctx context.Context, req *datap.TempNode) (*datap.StandardObject, error) {
-	logrus.Warnf("AddTempNode %s", req.Name)
+	logrus.Debugf("AddTempNode %s", req.Name)
 	resCh := make(chan interface{})
 	rpcWrapper.reqCh <- AddTempNodeTask{ResCh: resCh, Name: req.Name}
 	rawRes := utils.RecieveChannelTimeout(resCh, 5)
@@ -226,7 +226,7 @@ func (rpcWrapper *RpcWrapper) AddTempNode(ctx context.Context, req *datap.TempNo
 }
 
 func (rpcWrapper *RpcWrapper) RemoveTempNode(ctx context.Context, req *datap.TempNode) (*datap.StandardObject, error) {
-	logrus.Warnf("RemoveTempNode %s", req.Name)
+	logrus.Debugf("RemoveTempNode %s", req.Name)
 	resCh := make(chan interface{})
 	rpcWrapper.reqCh <- RemoveTempNodeTask{ResCh: resCh, Name: req.Name}
 	rawRes := utils.RecieveChannelTimeout(resCh, 5)

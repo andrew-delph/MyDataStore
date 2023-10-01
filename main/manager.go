@@ -147,7 +147,7 @@ func (m *Manager) startWorker(workerId int) {
 
 			err = m.consistencyController.IsHealthy()
 			if err != nil {
-				logrus.Debugf("consistencyController health err= %v", err)
+				logrus.Warnf("consistencyController health err= %v", err)
 			}
 
 		case data, ok := <-m.reqCh:
