@@ -121,6 +121,14 @@ func (ring *Hashring) GetCurrMembers() []consistent.Member {
 	return ring.currConsistent.GetMembers()
 }
 
+func (ring *Hashring) GetMembers() []consistent.Member {
+	ring.rwLock.RLock()
+	defer ring.rwLock.RUnlock()
+	currMembers := ring.currConsistent.GetMembers()
+	tempMembers := ring.tempConsistent.GetMembers()
+	return mergeMemberList(currMembers, tempMembers)
+}
+
 func (ring *Hashring) GetClosestN(key string, count int, includeSelf bool) ([]consistent.Member, error) {
 	ring.rwLock.RLock()
 	defer ring.rwLock.RUnlock()
@@ -237,6 +245,7 @@ func (ring *Hashring) RemoveNode(name string) {
 }
 
 func (ring *Hashring) AddTempNode(member consistent.Member) {
+	ring.resetTempRing()
 	ring.rwLock.Lock()
 	defer ring.rwLock.Unlock()
 	ring.tempConsistent.Add(member)
@@ -244,8 +253,16 @@ func (ring *Hashring) AddTempNode(member consistent.Member) {
 }
 
 func (ring *Hashring) RemoveTempNode(name string) {
+	ring.resetTempRing()
 	ring.rwLock.Lock()
 	defer ring.rwLock.Unlock()
 	ring.tempConsistent.Remove(name)
 	ring.notifyPartitionUpdate()
+}
+
+func (ring *Hashring) resetTempRing() {
+	ring.rwLock.Lock()
+	defer ring.rwLock.Unlock()
+	currMembers := ring.currConsistent.GetMembers()
+	ring.tempConsistent = consistent.New(currMembers, ring.consistentConfig)
 }

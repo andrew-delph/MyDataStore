@@ -211,3 +211,35 @@ func TestHashringDebcouneUpdate(t *testing.T) {
 	time.Sleep(time.Duration(0.6 * float64(time.Second)))
 	assert.EqualValues(t, 2, len(hr.GetCurrMembers()), "wrong number of members")
 }
+
+func TestHashringTempNodes(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
+	reqCh := make(chan interface{}, 10)
+	c := config.GetConfig().Manager
+	c.PartitionCount = 100
+	c.PartitionReplicas = 2
+	c.RingDebounce = 0.5
+	c.Load = 1.25
+	hr := CreateHashring(c, reqCh)
+
+	hr.AddNode(TestMember{name: "test1"})
+	hr.AddNode(TestMember{name: "test2"})
+	hr.AddNode(TestMember{name: "test3"})
+	hr.updateRing()
+	assert.EqualValues(t, 3, len(hr.GetMembers()), "wrong number of members")
+
+	hr.AddNode(TestMember{name: "test3"})
+	assert.EqualValues(t, 3, len(hr.GetMembers()), "wrong number of members")
+
+	hr.AddTempNode(TestMember{name: "test3"})
+	assert.EqualValues(t, 3, len(hr.GetMembers()), "wrong number of members")
+
+	hr.AddTempNode(TestMember{name: "test4"})
+	assert.EqualValues(t, 4, len(hr.GetMembers()), "wrong number of members")
+
+	hr.AddTempNode(TestMember{name: "test5"})
+	assert.EqualValues(t, 4, len(hr.GetMembers()), "wrong number of members")
+}
