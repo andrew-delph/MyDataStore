@@ -11,16 +11,19 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/andrew-delph/my-key-store/config"
+	"github.com/andrew-delph/my-key-store/utils"
 )
 
 type Hashring struct {
 	managerConfig    config.ManagerConfig
 	consistentConfig consistent.Config
-	consistent       *consistent.Consistent
-	rwLock           *sync.RWMutex
-	debouncer        func(f func())
-	taskList         []interface{}
-	reqCh            chan interface{}
+	currConsistent   *consistent.Consistent
+	tempConsistent   *consistent.Consistent
+
+	rwLock    *sync.RWMutex
+	debouncer func(f func())
+	taskList  []interface{}
+	reqCh     chan interface{}
 }
 
 func CreateHashring(managerConfig config.ManagerConfig, reqCh chan interface{}) *Hashring {
@@ -30,11 +33,32 @@ func CreateHashring(managerConfig config.ManagerConfig, reqCh chan interface{}) 
 		Load:              managerConfig.Load,
 		Hasher:            hasher{},
 	}
-	Consistent := consistent.New(nil, consistentConfig)
+	currConsistent := consistent.New(nil, consistentConfig)
+	tempConsistent := consistent.New(nil, consistentConfig)
 
 	debouncer := debounce.New(time.Duration(managerConfig.RingDebounce * float64(time.Second)))
 	var rwLock sync.RWMutex
-	return &Hashring{managerConfig: managerConfig, consistent: Consistent, consistentConfig: consistentConfig, rwLock: &rwLock, debouncer: debouncer, reqCh: reqCh}
+	return &Hashring{managerConfig: managerConfig, currConsistent: currConsistent, tempConsistent: tempConsistent, consistentConfig: consistentConfig, rwLock: &rwLock, debouncer: debouncer, reqCh: reqCh}
+}
+
+func mergeMemberList(listA, listB []consistent.Member) []consistent.Member {
+	mSet := make(map[string]consistent.Member)
+
+	for _, mem := range listA {
+		mSet[mem.String()] = mem
+	}
+
+	for _, mem := range listB {
+		mSet[mem.String()] = mem
+	}
+
+	var res []consistent.Member
+
+	for _, mem := range mSet {
+		res = append(res, mem)
+	}
+
+	return res
 }
 
 type hasher struct{}
@@ -44,7 +68,7 @@ func (h hasher) Sum64(data []byte) uint64 {
 }
 
 func (ring *Hashring) FindPartitionID(key []byte) int {
-	return ring.consistent.FindPartitionID(key)
+	return ring.currConsistent.FindPartitionID(key)
 }
 
 func (ring *Hashring) GetMyPartions() ([]int, error) {
@@ -62,25 +86,39 @@ func (ring *Hashring) GetMemberPartions(member string) ([]int, error) {
 }
 
 func (ring *Hashring) getMemberPartions(member string) ([]int, error) {
-	var belongsTo []int
+	belongsTo := utils.NewIntSet()
+	// add from currConsistent
 	for partID := 0; partID < ring.managerConfig.PartitionCount; partID++ {
-		members, err := ring.consistent.GetClosestNForPartition(partID, ring.managerConfig.ReplicaCount)
+		members, err := ring.currConsistent.GetClosestNForPartition(partID, ring.managerConfig.ReplicaCount)
 		if err != nil {
 			return nil, err
 		}
 		for _, partitionMember := range members {
 			if partitionMember.String() == member {
-				belongsTo = append(belongsTo, partID)
+				belongsTo.Add(partID)
 			}
 		}
 	}
-	return belongsTo, nil
+
+	// add from tempConsistent
+	for partID := 0; partID < ring.managerConfig.PartitionCount; partID++ {
+		members, err := ring.tempConsistent.GetClosestNForPartition(partID, ring.managerConfig.ReplicaCount)
+		if err != nil {
+			return nil, err
+		}
+		for _, partitionMember := range members {
+			if partitionMember.String() == member {
+				belongsTo.Add(partID)
+			}
+		}
+	}
+	return belongsTo.List(), nil
 }
 
-func (ring *Hashring) GetMembers() []consistent.Member {
+func (ring *Hashring) GetCurrMembers() []consistent.Member {
 	ring.rwLock.RLock()
 	defer ring.rwLock.RUnlock()
-	return ring.consistent.GetMembers()
+	return ring.currConsistent.GetMembers()
 }
 
 func (ring *Hashring) GetClosestN(key string, count int, includeSelf bool) ([]consistent.Member, error) {
@@ -88,8 +126,16 @@ func (ring *Hashring) GetClosestN(key string, count int, includeSelf bool) ([]co
 	defer ring.rwLock.RUnlock()
 	keyBytes := []byte(key)
 
-	members, err := ring.consistent.GetClosestN(keyBytes, count)
-	if includeSelf || err != nil {
+	currMembers, err := ring.currConsistent.GetClosestN(keyBytes, count)
+	if err != nil {
+		return nil, err
+	}
+	tempMembers, err := ring.tempConsistent.GetClosestN(keyBytes, count)
+	if err != nil {
+		return nil, err
+	}
+	members := mergeMemberList(currMembers, tempMembers)
+	if includeSelf {
 		return members, err
 	}
 
@@ -106,9 +152,19 @@ func (ring *Hashring) GetClosestN(key string, count int, includeSelf bool) ([]co
 func (ring *Hashring) GetClosestNForPartition(partitionId, count int, includeSelf bool) ([]consistent.Member, error) {
 	ring.rwLock.RLock()
 	defer ring.rwLock.RUnlock()
-	members, err := ring.consistent.GetClosestNForPartition(partitionId, count)
-	if includeSelf || err != nil {
-		return members, err
+	currMembers, err := ring.currConsistent.GetClosestNForPartition(partitionId, count)
+	if err != nil {
+		return nil, err
+	}
+	tempMembers, err := ring.tempConsistent.GetClosestNForPartition(partitionId, count)
+	if err != nil {
+		return nil, err
+	}
+
+	members := mergeMemberList(currMembers, tempMembers)
+
+	if includeSelf {
+		return members, nil
 	}
 
 	var membersFilter []consistent.Member
@@ -118,7 +174,7 @@ func (ring *Hashring) GetClosestNForPartition(partitionId, count int, includeSel
 			membersFilter = append(membersFilter, member)
 		}
 	}
-	return ring.consistent.GetClosestNForPartition(partitionId, count)
+	return membersFilter, nil
 }
 
 func (ring *Hashring) debounceUpdateRing() {
@@ -131,9 +187,11 @@ func (ring *Hashring) updateRing() {
 	for _, rawTask := range ring.taskList {
 		switch task := rawTask.(type) {
 		case AddTask:
-			ring.consistent.Add(task.member)
+			ring.currConsistent.Add(task.member)
+			ring.tempConsistent.Add(task.member)
 		case RemoveTask:
-			ring.consistent.Remove(task.name)
+			ring.currConsistent.Remove(task.name)
+			ring.tempConsistent.Remove(task.name)
 		default:
 			logrus.Panicf("Hashring unknown task: %v", reflect.TypeOf(task))
 		}

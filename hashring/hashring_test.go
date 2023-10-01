@@ -34,7 +34,7 @@ func TestHashringRejoin(t *testing.T) {
 
 	hr1.updateRing()
 
-	node := hr1.GetMembers()[0]
+	node := hr1.GetCurrMembers()[0]
 
 	member, ok := node.(TestMember)
 	if !ok {
@@ -86,8 +86,8 @@ func TestHashringLoad(t *testing.T) {
 	// }
 	// t.Error("!")
 
-	loads1 := hr1.consistent.LoadDistribution()
-	loads2 := hr2.consistent.LoadDistribution()
+	loads1 := hr1.currConsistent.LoadDistribution()
+	loads2 := hr2.currConsistent.LoadDistribution()
 
 	// logrus.Warn("loads1")
 	// logrus.Warn(loads1)
@@ -206,8 +206,8 @@ func TestHashringDebcouneUpdate(t *testing.T) {
 	hr.RemoveNode("test2")
 	hr.AddNode(TestMember{name: "test3"})
 
-	assert.EqualValues(t, 0, len(hr.GetMembers()), "wrong number of members")
+	assert.EqualValues(t, 0, len(hr.GetCurrMembers()), "wrong number of members")
 
 	time.Sleep(time.Duration(0.6 * float64(time.Second)))
-	assert.EqualValues(t, 2, len(hr.GetMembers()), "wrong number of members")
+	assert.EqualValues(t, 2, len(hr.GetCurrMembers()), "wrong number of members")
 }
