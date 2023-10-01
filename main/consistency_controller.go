@@ -118,11 +118,11 @@ func (cc *ConsistencyController) IsHealthy() error {
 	epochsNum := 0
 	for _, partitionState := range cc.partitionsStates {
 		epochs := partitionState.GetActivateEpochs()
-		if epochs > 0 {
+		if len(epochs) > 0 {
 			count++
-			epochsNum = epochsNum + epochs
+			epochsNum = epochsNum + len(epochs)
 			if partitionState.active.Load() == false {
-				logrus.Warn("unhealthy partition %d is not active/ epochs = %d", partitionState.partitionId, epochs)
+				logrus.Warnf("unhealthy partition %d is not active/ epochs = %d", partitionState.partitionId, epochs)
 				nonactive++
 			}
 		}
@@ -206,11 +206,11 @@ func (ps *PartitionState) VerifyPartitionEpoch(Epoch int64) {
 	switch res := rawRes.(type) {
 	case VerifyPartitionEpochResponse:
 		ps.DeactivateEpoch(Epoch)
-		// logrus.Warnf("VerifyPartitionEpoch E= %d res = %+v", Epoch, res)
+		logrus.Warnf("VerifyPartitionEpoch E= %d res = %+v", Epoch, res)
 	case error:
 		err := errors.Wrap(res, "VerifyPartitionEpoch")
 		logrus.Debug(err)
-		// logrus.Error(err)
+		logrus.Error(err)
 		go ps.VerifyPartitionEpoch(Epoch)
 	default:
 		logrus.Panicf(" response unkown res type: %v", reflect.TypeOf(res))
@@ -270,9 +270,9 @@ func (ps *PartitionState) DeactivateEpoch(Epoch int64) {
 	// logrus.Warnf("DeactivateEpoch %d size %d", Epoch, len(ps.activeEpochs.List()))
 }
 
-func (ps *PartitionState) GetActivateEpochs() int {
+func (ps *PartitionState) GetActivateEpochs() []int {
 	ps.activeLock.Lock()
 	defer ps.activeLock.Unlock()
 
-	return len(ps.activeEpochs.List())
+	return ps.activeEpochs.List()
 }

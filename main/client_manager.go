@@ -1,9 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"sync"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
 	"github.com/andrew-delph/my-key-store/rpc"
@@ -32,7 +32,7 @@ func (cm *ClientManager) GetClient(name string) (rpc.RpcClient, error) {
 	logrus.Debugf("GetClient %s", name)
 	client, ok := cm.clientMap[name]
 	if !ok {
-		return nil, errors.New("client not found")
+		return nil, fmt.Errorf("client not found: %s",name)
 	}
 	return client, nil
 }

@@ -260,26 +260,34 @@ func notifyNewTempNode(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Re
 	if err != nil {
 		return err
 	}
+	errorCount := 0
 	// logrus.Warnf("AddTempNode list= %v err = %v", len(pods.Items), err)
 	for _, pod := range pods.Items {
 		addr := fmt.Sprintf("%s.%s.%s", pod.Name, mykeystore.Name, pod.Namespace)
 		conn, client, err := rpc.CreateRawRpcClient(addr, 7070)
 		if err != nil {
 			logrus.Errorf("Client %s err = %v", addr, err)
-			return err
+			errorCount++
+			continue
 		}
 		defer conn.Close()
 		req := &rpc.RpcTempNode{Name: tempNode}
 		res, err := client.AddTempNode(ctx, req)
 		if err != nil {
 			logrus.Errorf("AddTempNode Client %s res err = %v", pod.Name, err)
-			return err
+			errorCount++
+			continue
 		} else if res.Error {
 			err = errors.New(res.Message)
 			logrus.Errorf("AddTempNode Client %s res err msg = %v", pod.Name, err)
-			return err
+			errorCount++
+			continue
 		}
 		// logrus.Warnf("AddTempNode Client %s res= %v", pod.Name, res.Message)
+	}
+
+	if errorCount > 0 {
+		return fmt.Errorf("AddTempNode had %d errors", errorCount)
 	}
 	logrus.Warnf("all pods AddTempNode. # = %v", len(pods.Items))
 	return nil

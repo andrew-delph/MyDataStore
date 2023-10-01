@@ -162,6 +162,7 @@ func (m *Manager) startWorker(workerId int) {
 				task.ResCh <- err
 
 			case rpc.AddTempNodeTask:
+				m.consensusCluster.LockEpoch()
 				name := task.Name
 				err := m.ring.AddTempNode(CreateRingMember(name))
 				task.ResCh <- err
@@ -572,7 +573,8 @@ func (m *Manager) EpochTreeObjectRequest(partitionId int, epoch int64, timeout t
 
 		client, err := m.clientManager.GetClient(member.Name)
 		if err != nil {
-			return nil, err
+			logrus.Errorf("EpochTreeObjectRequest err = %v", err)
+			continue
 		}
 
 		go func() {

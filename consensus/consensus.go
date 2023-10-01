@@ -31,6 +31,7 @@ type ConsensusCluster struct {
 	epochTick       *time.Ticker
 	fsm             *FSM
 	memberLock      sync.Mutex
+	epochLock       bool
 }
 
 type LeaderChangeTask struct {
@@ -65,6 +66,14 @@ func CreateConsensusCluster(consensusConfig config.ConsensusConfig, reqCh chan i
 	}
 
 	return &ConsensusCluster{consensusConfig: consensusConfig, reqCh: reqCh, raftConf: raftConf, raftNode: new(raft.Raft), epochTick: new(time.Ticker)}
+}
+
+func (consensusCluster *ConsensusCluster) LockEpoch() {
+	consensusCluster.epochLock = true
+}
+
+func (consensusCluster *ConsensusCluster) UnlockEpoch() {
+	consensusCluster.epochLock = false
 }
 
 func (consensusCluster *ConsensusCluster) StartConsensusCluster() error {
@@ -142,6 +151,10 @@ func (consensusCluster *ConsensusCluster) startWorker() {
 			logrus.Debugf("leader change. %t %s", isLeader, consensusCluster.raftNode.State())
 			consensusCluster.reqCh <- LeaderChangeTask{IsLeader: isLeader}
 		case <-consensusCluster.epochTick.C:
+			if consensusCluster.epochLock {
+				logrus.Warn("epoch is currently locked")
+				continue
+			}
 			err := consensusCluster.UpdateEpoch()
 			if err != nil {
 				logrus.Error("UpdateEpoch err = %v", err)
