@@ -241,10 +241,10 @@ func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		res, err := client.HealthCheck(ctx, req)
 		if err != nil {
 
-			logrus.Errorf("res err = %v", err)
+			logrus.Errorf("Client %s res err = %v", pod.Name, err)
 			continue
 		}
-		logrus.Warnf("res %v", res.Message)
+		logrus.Warnf("Client %s res= %v", pod.Name, res.Message)
 	}
 	return ctrl.Result{RequeueAfter: time.Second}, nil
 	// return ctrl.Result{}, nil
