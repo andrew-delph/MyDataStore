@@ -181,8 +181,8 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 	reqSize := mykeystore.Spec.Size
 	sizeDiff := reqSize - currSize
 	if sizeDiff > 0 {
-		newPodName := generatePodNode(mykeystore, int(currSize)+1)
-		logrus.Warnf("Needs to increase replicas size. sizeDiff %d newPodName %s", sizeDiff, newPodName)
+		newPodName := generatePodNode(mykeystore, int(currSize))
+		logrus.Warnf("Create temp node %s", newPodName)
 		err := notifyNewTempNode(r, ctx, req, log, mykeystore, newPodName)
 		if err != nil {
 			logrus.Error(err)
@@ -229,7 +229,7 @@ func waitForPodsHealthy(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 	if err != nil {
 		return err
 	}
-	logrus.Warnf("list= %v err = %v", len(pods.Items), err)
+	// logrus.Warnf("list= %v err = %v", len(pods.Items), err)
 	for _, pod := range pods.Items {
 		addr := fmt.Sprintf("%s.%s.%s", pod.Name, mykeystore.Name, pod.Namespace)
 		conn, client, err := rpc.CreateRawRpcClient(addr, 7070)
@@ -260,7 +260,7 @@ func notifyNewTempNode(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Re
 	if err != nil {
 		return err
 	}
-	logrus.Warnf("AddTempNode list= %v err = %v", len(pods.Items), err)
+	// logrus.Warnf("AddTempNode list= %v err = %v", len(pods.Items), err)
 	for _, pod := range pods.Items {
 		addr := fmt.Sprintf("%s.%s.%s", pod.Name, mykeystore.Name, pod.Namespace)
 		conn, client, err := rpc.CreateRawRpcClient(addr, 7070)
@@ -357,8 +357,9 @@ func getStatefulSet(mykeystore *cachev1alpha1.MyKeyStore) *appsv1.StatefulSet {
 									Port: intstr.FromInt(8080),
 								},
 							},
-							InitialDelaySeconds: 100,
-							PeriodSeconds:       15,
+							InitialDelaySeconds: 30,
+							PeriodSeconds:       5,
+							FailureThreshold:    2,
 						},
 						VolumeMounts: []corev1.VolumeMount{
 							{Name: "store-data-volume", MountPath: "/data/"},

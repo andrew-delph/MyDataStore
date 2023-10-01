@@ -186,10 +186,10 @@ func (ring *Hashring) GetClosestNForPartition(partitionId, count int, includeSel
 }
 
 func (ring *Hashring) debounceUpdateRing() {
-	ring.debouncer(ring.updateRing)
+	ring.debouncer(ring.UpdateRing)
 }
 
-func (ring *Hashring) updateRing() {
+func (ring *Hashring) UpdateRing() {
 	ring.rwLock.Lock()
 	defer ring.rwLock.Unlock()
 	for _, rawTask := range ring.taskList {
@@ -204,18 +204,19 @@ func (ring *Hashring) updateRing() {
 			logrus.Panicf("Hashring unknown task: %v", reflect.TypeOf(task))
 		}
 	}
-
 	ring.notifyPartitionUpdate()
 }
 
-func (ring *Hashring) notifyPartitionUpdate() {
+func (ring *Hashring) notifyPartitionUpdate() error {
 	myPartitions, err := ring.getMyPartions()
-
+	resCh := make(chan interface{})
 	if err != nil {
-		logrus.Errorf("Hashring updateRing err = %v", err)
+		return err
 	} else {
-		ring.reqCh <- PartitionsUpdate{MyPartitions: myPartitions}
+		ring.reqCh <- PartitionsUpdateTask{MyPartitions: myPartitions, ResCh: resCh}
 	}
+	<-resCh
+	return nil
 }
 
 type AddTask struct {
@@ -226,8 +227,9 @@ type RemoveTask struct {
 	name string
 }
 
-type PartitionsUpdate struct {
+type PartitionsUpdateTask struct {
 	MyPartitions []int
+	ResCh        chan interface{}
 }
 
 func (ring *Hashring) AddNode(member consistent.Member) {
@@ -244,20 +246,20 @@ func (ring *Hashring) RemoveNode(name string) {
 	ring.debounceUpdateRing()
 }
 
-func (ring *Hashring) AddTempNode(member consistent.Member) {
+func (ring *Hashring) AddTempNode(member consistent.Member) error {
 	ring.resetTempRing()
 	ring.rwLock.Lock()
 	defer ring.rwLock.Unlock()
 	ring.tempConsistent.Add(member)
-	ring.notifyPartitionUpdate()
+	return ring.notifyPartitionUpdate()
 }
 
-func (ring *Hashring) RemoveTempNode(name string) {
+func (ring *Hashring) RemoveTempNode(name string) error {
 	ring.resetTempRing()
 	ring.rwLock.Lock()
 	defer ring.rwLock.Unlock()
 	ring.tempConsistent.Remove(name)
-	ring.notifyPartitionUpdate()
+	return ring.notifyPartitionUpdate()
 }
 
 func (ring *Hashring) resetTempRing() {

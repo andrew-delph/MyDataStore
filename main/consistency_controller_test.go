@@ -85,22 +85,25 @@ func TestConsistencyControllerActiveEpochs(t *testing.T) {
 	}
 	initMetrics("test")
 	consistencyController := NewConsistencyController(2, 10, nil) // TODO impllement proper test
+	err := consistencyController.IsHealthy()
+	if err != nil {
+		t.Error(err)
+	}
 
 	currPartitions := utils.NewIntSet()
 	currPartitions.Add(1)
 	currPartitions.Add(2)
 	currPartitions.Add(3)
-
-	consistencyController.PublishEvent(UpdatePartitionsEvent{CurrPartitions: currPartitions})
+	consistencyController.HandleHashringChange(currPartitions)
 	time.Sleep(time.Second)
 
 	assert.Equal(t, true, consistencyController.IsPartitionActive(1), "consistencyController.IsPartitionActive")
 	assert.Equal(t, true, consistencyController.IsPartitionActive(2), "consistencyController.IsPartitionActive")
 	assert.Equal(t, true, consistencyController.IsPartitionActive(3), "consistencyController.IsPartitionActive")
 
-	err := consistencyController.IsHealthy()
-	if err != nil {
-		t.Error(err)
+	err = consistencyController.IsHealthy()
+	if err == nil {
+		t.Error("should be an error")
 	}
 
 	partitionZero := consistencyController.partitionsStates[0]

@@ -32,7 +32,7 @@ func TestHashringRejoin(t *testing.T) {
 	hr1.AddNode(TestMember{name: "test1", test: "1"})
 	hr1.AddNode(TestMember{name: "test1", test: "2"})
 
-	hr1.updateRing()
+	hr1.UpdateRing()
 
 	node := hr1.GetCurrMembers()[0]
 
@@ -218,6 +218,13 @@ func TestHashringTempNodes(t *testing.T) {
 	}
 
 	reqCh := make(chan interface{}, 10)
+	go func() {
+		for {
+			rawEvent := <-reqCh
+			event := rawEvent.(PartitionsUpdateTask)
+			event.ResCh <- true
+		}
+	}()
 	c := config.GetConfig().Manager
 	c.PartitionCount = 100
 	c.PartitionReplicas = 2
@@ -229,25 +236,20 @@ func TestHashringTempNodes(t *testing.T) {
 	hr.AddNode(TestMember{name: "test1"})
 	hr.AddNode(TestMember{name: "test2"})
 	hr.AddNode(TestMember{name: "test3"})
-	hr.updateRing()
+	hr.UpdateRing()
 
 	assert.EqualValues(t, 3, len(hr.GetMembers()), "wrong number of members")
-	assert.EqualValues(t, 1, len(reqCh), "wrong length of reqCh")
 
 	hr.AddNode(TestMember{name: "test3"})
-	hr.updateRing()
+	hr.UpdateRing()
 	assert.EqualValues(t, 3, len(hr.GetMembers()), "wrong number of members")
-	assert.EqualValues(t, 2, len(reqCh), "wrong length of reqCh")
 
 	hr.AddTempNode(TestMember{name: "test3"})
 	assert.EqualValues(t, 3, len(hr.GetMembers()), "wrong number of members")
-	assert.EqualValues(t, 3, len(reqCh), "wrong length of reqCh")
 
 	hr.AddTempNode(TestMember{name: "test4"})
 	assert.EqualValues(t, 4, len(hr.GetMembers()), "wrong number of members")
-	assert.EqualValues(t, 4, len(reqCh), "wrong length of reqCh")
 
 	hr.AddTempNode(TestMember{name: "test5"})
 	assert.EqualValues(t, 4, len(hr.GetMembers()), "wrong number of members")
-	assert.EqualValues(t, 5, len(reqCh), "wrong length of reqCh")
 }

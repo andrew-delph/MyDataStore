@@ -344,3 +344,38 @@ func TestGetEpochTreeObjectWriteRead(t *testing.T) {
 	}
 	assert.EqualValues(t, 1, epochTreeObject.LowerEpoch, "epochTreeObject.LowerEpoch")
 }
+
+func TestManagerAddTempNode(t *testing.T) {
+	initMetrics("testds")
+	tmpDir := t.TempDir()
+	logrus.Info("Temporary Directory:", tmpDir)
+	c := config.GetConfig()
+	c.Storage.DataPath = tmpDir
+	c.Manager.PartitionCount = 200
+	c.Manager.PartitionBuckets = 100
+	c.Manager.ReplicaCount = 2
+	c.Manager.PartitionReplicas = 2
+	manager := NewManager(c)
+	go manager.startWorker(1)
+	manager.CurrentEpoch = 100
+
+	manager.ring.AddNode(CreateRingMember("test1"))
+	manager.ring.AddNode(CreateRingMember("test2"))
+	manager.ring.AddNode(CreateRingMember("test3"))
+	manager.ring.AddNode(CreateRingMember("test4"))
+	manager.ring.UpdateRing()
+	assert.EqualValues(t, 4, len(manager.ring.GetMembers()), "ring members")
+	assert.EqualValues(t, 4, len(manager.ring.GetCurrMembers()), "ring members")
+	err := manager.ring.AddTempNode(CreateRingMember("test5"))
+	if err != nil {
+		t.Error(err)
+	}
+	assert.EqualValues(t, 5, len(manager.ring.GetMembers()), "ring members")
+	assert.EqualValues(t, 4, len(manager.ring.GetCurrMembers()), "ring members")
+
+	err = manager.ring.AddTempNode(CreateRingMember("test6"))
+	if err != nil {
+		t.Error(err)
+	}
+	assert.EqualValues(t, 5, len(manager.ring.GetMembers()), "ring members")
+}

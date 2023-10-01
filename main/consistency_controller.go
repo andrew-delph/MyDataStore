@@ -40,6 +40,7 @@ type SyncPartitionResponse struct {
 
 type UpdatePartitionsEvent struct {
 	CurrPartitions utils.IntSet
+	wg             *sync.WaitGroup
 }
 
 type VerifyPartitionEpochEvent struct {
@@ -47,6 +48,7 @@ type VerifyPartitionEpochEvent struct {
 }
 
 type ConsistencyController struct {
+	partitionCount   int
 	observationCh    chan rxgo.Item
 	partitionsStates []*PartitionState
 	observable       rxgo.Observable
@@ -67,7 +69,7 @@ func NewConsistencyController(concurrencyLevel int64, partitionCount int, reqCh 
 		partitionsStates = append(partitionsStates, partitionState)
 	}
 	observable.Connect(context.Background())
-	return &ConsistencyController{observationCh: ch, partitionsStates: partitionsStates, observable: observable, sema: sema, concurrencyLevel: concurrencyLevel}
+	return &ConsistencyController{observationCh: ch, partitionsStates: partitionsStates, observable: observable, sema: sema, concurrencyLevel: concurrencyLevel, partitionCount: partitionCount}
 }
 
 func (cc *ConsistencyController) HandleHashringChange(currPartitions utils.IntSet) error {
@@ -80,7 +82,10 @@ func (cc *ConsistencyController) HandleHashringChange(currPartitions utils.IntSe
 		logrus.Warnf("partitions lost  %d gained %d", lost, gained)
 	}
 	cc.currPartitions = currPartitions
-	cc.PublishEvent(UpdatePartitionsEvent{CurrPartitions: currPartitions})
+	var wg sync.WaitGroup
+	wg.Add(cc.partitionCount)
+	cc.PublishEvent(UpdatePartitionsEvent{CurrPartitions: currPartitions, wg: &wg})
+	wg.Wait()
 	return nil
 }
 
@@ -158,6 +163,7 @@ func (ps *PartitionState) StartConsumer() error {
 			}
 
 		case UpdatePartitionsEvent: // TODO create test case for this
+			defer event.wg.Done()
 			partitionLabel := fmt.Sprintf("%d", ps.partitionId)
 			logrus.Debug("partitionLabel = ", partitionLabel)
 			if ps.active.Load() {
@@ -165,7 +171,6 @@ func (ps *PartitionState) StartConsumer() error {
 			} else {
 				partitionActive.WithLabelValues(partitionLabel).Set(0)
 			}
-
 			if event.CurrPartitions.Has(ps.partitionId) && ps.active.CompareAndSwap(false, true) { // TODO create test case for this
 				go ps.SyncPartition(ps.lastEpoch)
 			} else if !event.CurrPartitions.Has(ps.partitionId) && ps.active.CompareAndSwap(true, false) {
@@ -213,6 +218,8 @@ func (ps *PartitionState) VerifyPartitionEpoch(Epoch int64) {
 }
 
 func (ps *PartitionState) SyncPartition(UpperEpoch int64) {
+	ps.ActivateEpoch(-1)
+	defer ps.DeactivateEpoch(-1)
 	err := ps.sema.Acquire(context.Background(), 1)
 	if err != nil {
 		logrus.Fatal(err)

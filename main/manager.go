@@ -411,11 +411,12 @@ func (m *Manager) startWorker(workerId int) {
 					task.ResCh <- SyncPartitionResponse{Valid: true, LowerEpoch: lastValidEpoch, UpperEpoch: task.UpperEpoch + 1}
 				}
 
-			case hashring.PartitionsUpdate:
+			case hashring.PartitionsUpdateTask:
 				logrus.Debugf("worker PartitionsUpdate #%+v", len(task.MyPartitions))
 
 				currPartitions := utils.NewIntSet().From(task.MyPartitions)
 				m.consistencyController.HandleHashringChange(currPartitions)
+				task.ResCh <- true
 
 			default:
 				logrus.Panicf("worker unkown task type: %v", reflect.TypeOf(task))
