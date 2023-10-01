@@ -36,11 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-
 	"github.com/andrew-delph/my-key-store/rpc"
-
-
-	"github.com/sirupsen/logrus"
 
 	cachev1alpha1 "github.com/andrew-delph/my-key-store/operator/api/v1alpha1"
 )
@@ -89,19 +85,9 @@ type MyKeyStoreReconciler struct {
 // - About Controllers: https://kubernetes.io/docs/concepts/architecture/controller/
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
 func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-	logrus.Warn("req ", req)
-=======
->>>>>>> 25858f4 (remove logs)
-=======
 	logrus.Info()
 	// logrus.Infof("purpose: %v", req.String())
 
->>>>>>> e89d0ed (use rollout status to track image change)
-=======
->>>>>>> 6f9000d (init controller talk to pods)
 	log := log.FromContext(ctx)
 
 	// Fetch the MyKeyStore instance
@@ -238,45 +224,23 @@ func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		log.Error(err, "Failed to update MyKeyStore status")
 		return ctrl.Result{}, err
 	}
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 6f9000d (init controller talk to pods)
 
 	pods := &corev1.PodList{}
 	err = r.List(ctx, pods, client.MatchingLabels{"app": "store"})
 	logrus.Warnf("list= %v err = %v", len(pods.Items), err)
 	for _, pod := range pods.Items {
-<<<<<<< HEAD
 		addr := fmt.Sprintf("%s.%s.%s", pod.Name, mykeystore.Name, pod.Namespace)
 		conn, client, err := rpc.CreateRawRpcClient(addr, 7070)
 		if err != nil {
 			logrus.Errorf("Client %s err = %v", addr, err)
-=======
-		logrus.Warnf("pod name= %v", pod.Name)
-		conn, client, err := rpc.CreateRawRpcClient(pod.Name, 7070)
-		if err != nil {
-			logrus.Errorf("Client err = %v", err)
->>>>>>> 6f9000d (init controller talk to pods)
+
 			continue
 		}
 		defer conn.Close()
 		req := &rpc.RpcStandardObject{}
 		res, err := client.HealthCheck(ctx, req)
 		if err != nil {
-<<<<<<< HEAD
-			logrus.Errorf("Client %s res err = %v", pod.Name, err)
-			continue
-		}
-		logrus.Warnf("Client %s res= %v", pod.Name, res.Message)
-	}
-	return ctrl.Result{RequeueAfter: time.Second}, nil
-	// return ctrl.Result{}, nil
-=======
-	// return ctrl.Result{RequeueAfter: time.Second}, nil
-	return ctrl.Result{}, nil
->>>>>>> e89d0ed (use rollout status to track image change)
-=======
+
 			logrus.Errorf("res err = %v", err)
 			continue
 		}
@@ -284,7 +248,6 @@ func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 	return ctrl.Result{RequeueAfter: time.Second}, nil
 	// return ctrl.Result{}, nil
->>>>>>> 6f9000d (init controller talk to pods)
 }
 
 // finalizeMyKeyStore will perform the required operations before delete the CR.
