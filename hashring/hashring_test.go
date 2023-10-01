@@ -221,6 +221,7 @@ func TestHashringTempNodes(t *testing.T) {
 	c := config.GetConfig().Manager
 	c.PartitionCount = 100
 	c.PartitionReplicas = 2
+	c.ReplicaCount = 1
 	c.RingDebounce = 0.5
 	c.Load = 1.25
 	hr := CreateHashring(c, reqCh)
@@ -229,17 +230,24 @@ func TestHashringTempNodes(t *testing.T) {
 	hr.AddNode(TestMember{name: "test2"})
 	hr.AddNode(TestMember{name: "test3"})
 	hr.updateRing()
+
 	assert.EqualValues(t, 3, len(hr.GetMembers()), "wrong number of members")
+	assert.EqualValues(t, 1, len(reqCh), "wrong length of reqCh")
 
 	hr.AddNode(TestMember{name: "test3"})
+	hr.updateRing()
 	assert.EqualValues(t, 3, len(hr.GetMembers()), "wrong number of members")
+	assert.EqualValues(t, 2, len(reqCh), "wrong length of reqCh")
 
 	hr.AddTempNode(TestMember{name: "test3"})
 	assert.EqualValues(t, 3, len(hr.GetMembers()), "wrong number of members")
+	assert.EqualValues(t, 3, len(reqCh), "wrong length of reqCh")
 
 	hr.AddTempNode(TestMember{name: "test4"})
 	assert.EqualValues(t, 4, len(hr.GetMembers()), "wrong number of members")
+	assert.EqualValues(t, 4, len(reqCh), "wrong length of reqCh")
 
 	hr.AddTempNode(TestMember{name: "test5"})
 	assert.EqualValues(t, 4, len(hr.GetMembers()), "wrong number of members")
+	assert.EqualValues(t, 5, len(reqCh), "wrong length of reqCh")
 }
