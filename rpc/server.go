@@ -179,3 +179,19 @@ func (rpcWrapper *RpcWrapper) HealthCheck(ctx context.Context, req *datap.Standa
 	}
 	return &res, nil
 }
+
+func (rpcWrapper *RpcWrapper) AddTempNode(ctx context.Context, req *datap.TempNode) (*datap.StandardObject, error) {
+	logrus.Warnf("AddTempNode %s", req.Name)
+	res := datap.StandardObject{
+		Message: "temp node added",
+	}
+	return &res, nil
+}
+
+func (rpcWrapper *RpcWrapper) RemoveTempNode(ctx context.Context, req *datap.TempNode) (*datap.StandardObject, error) {
+	logrus.Warnf("RemoveTempNode %s", req.Name)
+	res := datap.StandardObject{
+		Message: "temp node removed",
+	}
+	return &res, nil
+}

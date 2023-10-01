@@ -22,12 +22,20 @@ service InternalNodeService {
   rpc GetEpochTreeLastValid(EpochTreeObject) returns (EpochTreeObject);
 
   rpc HealthCheck(StandardObject) returns (StandardObject);
+
+  rpc AddTempNode(TempNode) returns (StandardObject);
+
+  rpc RemoveTempNode(TempNode) returns (StandardObject);
   
 }
 
 message StandardObject {
   bool error = 1;
   string message = 2;
+}
+
+message TempNode {
+  string name = 1;
 }
 
 
