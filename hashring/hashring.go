@@ -231,3 +231,15 @@ func (ring *Hashring) RemoveNode(name string) {
 	ring.taskList = append(ring.taskList, RemoveTask{name: name})
 	ring.debounceUpdateRing()
 }
+
+func (ring *Hashring) AddTempNode(member consistent.Member) {
+	ring.rwLock.Lock()
+	defer ring.rwLock.Unlock()
+	ring.tempConsistent.Add(member)
+}
+
+func (ring *Hashring) RemoveTempNode(name string) {
+	ring.rwLock.Lock()
+	defer ring.rwLock.Unlock()
+	ring.tempConsistent.Remove(name)
+}
