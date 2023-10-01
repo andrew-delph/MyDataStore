@@ -36,8 +36,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
+<<<<<<< HEAD
 	"github.com/andrew-delph/my-key-store/rpc"
 
+=======
+>>>>>>> 25858f4 (remove logs)
 	cachev1alpha1 "github.com/andrew-delph/my-key-store/operator/api/v1alpha1"
 )
 
@@ -85,7 +88,10 @@ type MyKeyStoreReconciler struct {
 // - About Controllers: https://kubernetes.io/docs/concepts/architecture/controller/
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
 func (r *MyKeyStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+<<<<<<< HEAD
 	logrus.Warn("req ", req)
+=======
+>>>>>>> 25858f4 (remove logs)
 	log := log.FromContext(ctx)
 
 	// Fetch the MyKeyStore instance
