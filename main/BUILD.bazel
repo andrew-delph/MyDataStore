@@ -5,6 +5,7 @@ load("@io_bazel_rules_docker//go:image.bzl", "go_image")
 go_library(
     name = "go_default_library",
     srcs = [
+        "client_manager.go",
         "consistency_controller.go",
         "indexs.go",
         "main.go",
@@ -50,6 +51,7 @@ go_binary(
 go_test(
     name = "go_default_test",
     srcs = [
+        "client_manager_test.go",
         "consistency_controller_test.go",
         "indexs_test.go",
         "manager_test.go",
