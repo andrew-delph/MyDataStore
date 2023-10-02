@@ -11,7 +11,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/reactivex/rxgo/v2"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/sync/semaphore"
 
 	"github.com/andrew-delph/my-key-store/utils"
 )
@@ -48,28 +47,39 @@ type VerifyPartitionEpochEvent struct {
 }
 
 type ConsistencyController struct {
+	heap             *ConsistencyHeap
 	partitionCount   int
 	observationCh    chan rxgo.Item
 	partitionsStates []*PartitionState
 	observable       rxgo.Observable
-	sema             *semaphore.Weighted
-	concurrencyLevel int64
 	currPartitions   utils.IntSet
+	reqCh            chan interface{}
 }
 
-func NewConsistencyController(concurrencyLevel int64, partitionCount int, reqCh chan interface{}) *ConsistencyController {
-	sema := semaphore.NewWeighted(concurrencyLevel)
+func NewConsistencyController(concurrencyLevel int, partitionCount int, reqCh chan interface{}) *ConsistencyController {
+	heap := NewConsistencyHeap()
 	// TODO create semaphore.NewWeighted(int64(limit)) for number of partition observer events at once
 	ch := make(chan rxgo.Item)
 	observable := rxgo.FromChannel(ch, rxgo.WithPublishStrategy())
 	var partitionsStates []*PartitionState
 	for i := 0; i < partitionCount; i++ {
-		partitionState := NewPartitionState(sema, i, observable, reqCh)
+		partitionState := NewPartitionState(i, observable, heap)
 		partitionState.StartConsumer()
 		partitionsStates = append(partitionsStates, partitionState)
 	}
 	observable.Connect(context.Background())
-	return &ConsistencyController{observationCh: ch, partitionsStates: partitionsStates, observable: observable, sema: sema, concurrencyLevel: concurrencyLevel, partitionCount: partitionCount}
+	cc := &ConsistencyController{
+		heap:             heap,
+		observationCh:    ch,
+		partitionsStates: partitionsStates,
+		observable:       observable,
+		partitionCount:   partitionCount,
+		reqCh:            reqCh,
+	}
+	for i := 0; i < concurrencyLevel; i++ {
+		go cc.startWorker()
+	}
+	return cc
 }
 
 func (cc *ConsistencyController) HandleHashringChange(currPartitions utils.IntSet) error {
@@ -84,43 +94,108 @@ func (cc *ConsistencyController) HandleHashringChange(currPartitions utils.IntSe
 	cc.currPartitions = currPartitions
 	var wg sync.WaitGroup
 	wg.Add(cc.partitionCount)
-	cc.PublishEvent(UpdatePartitionsEvent{CurrPartitions: currPartitions, wg: &wg})
+	cc.PublishPartitions(currPartitions, &wg)
 	wg.Wait()
 	return nil
+}
+
+func (cc *ConsistencyController) startWorker() error {
+	for {
+		item := cc.heap.PopItem()
+		logrus.Warn("item=", item)
+		if item.SyncTask {
+			cc.SyncPartition(item)
+		} else {
+			cc.VerifyPartitionEpoch(item)
+		}
+	}
 }
 
 func (cc *ConsistencyController) IsPartitionActive(partitionId int) bool {
 	return cc.partitionsStates[partitionId].active.Load()
 }
 
-func (cc *ConsistencyController) VerifyEpoch(Epoch int64) {
+func (cc *ConsistencyController) PublishEpoch(Epoch int64) {
 	logrus.Debugf("new Epoch %d", Epoch)
 	cc.PublishEvent(VerifyPartitionEpochEvent{Epoch: Epoch})
+}
+
+func (cc *ConsistencyController) PublishPartitions(currPartitions utils.IntSet, wg *sync.WaitGroup) {
+	logrus.Debugf("new Partitions %d", currPartitions)
+	cc.PublishEvent(UpdatePartitionsEvent{CurrPartitions: currPartitions, wg: wg})
 }
 
 func (cc *ConsistencyController) PublishEvent(event interface{}) {
 	cc.observationCh <- rxgo.Of(event)
 }
 
-func (cc *ConsistencyController) IsBusy() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	defer cancel()
-	err := cc.sema.Acquire(ctx, cc.concurrencyLevel)
-	if err == nil {
-		cc.sema.Release(cc.concurrencyLevel)
+func (cc *ConsistencyController) VerifyPartitionEpoch(item ConsistencyItem) {
+	if cc.IsPartitionActive(item.PartitionId) == false {
+		return
 	}
-	return nil
+	resCh := make(chan interface{})
+	logrus.Debugf("Verify partition %d epoch %d", item.PartitionId, item.Epoch)
+	cc.reqCh <- VerifyPartitionEpochRequestTask{PartitionId: item.PartitionId, Epoch: item.Epoch, ResCh: resCh}
+	rawRes := <-resCh
+	switch res := rawRes.(type) {
+	case VerifyPartitionEpochResponse:
+		logrus.Warnf("VerifyPartitionEpoch E= %d res = %+v", item.Epoch, res)
+	case error:
+		err := errors.Wrap(res, "VerifyPartitionEpoch")
+		logrus.Debug(err)
+		logrus.Error(err)
+		cc.heap.PushVerifyTask(item.PartitionId, item.Epoch)
+	default:
+		logrus.Panicf(" response unkown res type: %v", reflect.TypeOf(res))
+	}
+}
+
+func (cc *ConsistencyController) SyncPartition(item ConsistencyItem) {
+	if cc.IsPartitionActive(item.PartitionId) == false {
+		return
+	}
+	logrus.Debugf("new partition sync %d", item.PartitionId)
+	resCh := make(chan interface{})
+	cc.reqCh <- SyncPartitionTask{PartitionId: int32(item.PartitionId), ResCh: resCh, UpperEpoch: item.Epoch}
+	rawRes := <-resCh
+	switch res := rawRes.(type) {
+	case SyncPartitionResponse:
+		if res.Valid {
+			logrus.Debugf("SyncPartition:  sync partrition %d res = %+v", item.PartitionId, res)
+		} else {
+			logrus.Debugf("SyncPartition:  err partrition %d res = %+v", item.PartitionId, res)
+		}
+		lower := res.LowerEpoch
+		if lower < 0 {
+			lower = 0
+		}
+		for i := lower; i < res.UpperEpoch; i++ {
+			cc.heap.PushVerifyTask(item.PartitionId, i)
+		}
+	case nil:
+		logrus.Debugf("SyncPartition: DOESNT NEED TO SYNC")
+	case error:
+		logrus.Debug(errors.Wrap(res, "SyncPartition"))
+		go func() {
+			logrus.Warn("cc sleep retry SyncPartition")
+			time.Sleep(time.Second * 10)
+			cc.heap.PushSyncTask(item.PartitionId, item.Epoch)
+		}()
+	default:
+		logrus.Panicf("SyncPartition: unkown res type: %v", reflect.TypeOf(res))
+	}
 }
 
 func (cc *ConsistencyController) IsHealthy() error {
+	// TODO revise this!
 	count := 0
 	nonactive := 0
 	epochsNum := 0
 	for _, partitionState := range cc.partitionsStates {
-		epochs := partitionState.GetActivateEpochs()
-		if len(epochs) > 0 {
+		epochs := cc.heap.Len()
+		if epochs > 0 {
 			count++
-			epochsNum = epochsNum + len(epochs)
+			epochsNum = epochsNum + epochs
 			if partitionState.active.Load() == false {
 				logrus.Warnf("unhealthy partition %d is not active/ epochs = %d", partitionState.partitionId, epochs)
 				nonactive++
@@ -135,18 +210,16 @@ func (cc *ConsistencyController) IsHealthy() error {
 
 type PartitionState struct {
 	partitionId  int
+	heap         *ConsistencyHeap
 	active       atomic.Bool
 	lastEpoch    int64
-	sema         *semaphore.Weighted
 	observable   rxgo.Observable
-	reqCh        chan interface{}
 	activeEpochs *utils.IntSet
-	activeLock   sync.Mutex
 }
 
-func NewPartitionState(sema *semaphore.Weighted, partitionId int, observable rxgo.Observable, reqCh chan interface{}) *PartitionState {
+func NewPartitionState(partitionId int, observable rxgo.Observable, heap *ConsistencyHeap) *PartitionState {
 	activeEpochs := utils.NewIntSet()
-	ps := &PartitionState{partitionId: partitionId, observable: observable, sema: sema, reqCh: reqCh, activeEpochs: &activeEpochs}
+	ps := &PartitionState{partitionId: partitionId, observable: observable, activeEpochs: &activeEpochs, heap: heap}
 	return ps
 }
 
@@ -159,7 +232,7 @@ func (ps *PartitionState) StartConsumer() error {
 				return
 			}
 			if ps.active.Load() {
-				go ps.VerifyPartitionEpoch(ps.lastEpoch)
+				ps.heap.PushVerifyTask(ps.partitionId, ps.lastEpoch)
 			}
 
 		case UpdatePartitionsEvent: // TODO create test case for this
@@ -172,7 +245,7 @@ func (ps *PartitionState) StartConsumer() error {
 				partitionActive.WithLabelValues(partitionLabel).Set(0)
 			}
 			if event.CurrPartitions.Has(ps.partitionId) && ps.active.CompareAndSwap(false, true) { // TODO create test case for this
-				go ps.SyncPartition(ps.lastEpoch)
+				ps.heap.PushSyncTask(ps.partitionId, ps.lastEpoch)
 			} else if !event.CurrPartitions.Has(ps.partitionId) && ps.active.CompareAndSwap(true, false) {
 				logrus.Debugf("updated lost partition active %d", ps.partitionId)
 			}
@@ -181,98 +254,8 @@ func (ps *PartitionState) StartConsumer() error {
 				logrus.Fatal("active partition did not switch") // remove this once unit tested
 			}
 		default:
-			logrus.Warn("unknown PartitionState event : %v", reflect.TypeOf(event))
+			logrus.Warnf("unknown PartitionState event : %v", reflect.TypeOf(event))
 		}
 	})
 	return nil
-}
-
-func (ps *PartitionState) VerifyPartitionEpoch(Epoch int64) {
-	if ps.active.Load() == false {
-		ps.DeactivateEpoch(Epoch)
-		return
-	}
-	ps.ActivateEpoch(Epoch)
-	err := ps.sema.Acquire(context.Background(), 1)
-	if err != nil {
-		logrus.Fatal(err)
-	} else {
-		defer ps.sema.Release(1)
-	}
-	resCh := make(chan interface{})
-	logrus.Debugf("Verify partition %d epoch %d", ps.partitionId, Epoch)
-	ps.reqCh <- VerifyPartitionEpochRequestTask{PartitionId: ps.partitionId, Epoch: Epoch, ResCh: resCh}
-	rawRes := <-resCh
-	switch res := rawRes.(type) {
-	case VerifyPartitionEpochResponse:
-		ps.DeactivateEpoch(Epoch)
-		logrus.Warnf("VerifyPartitionEpoch E= %d res = %+v", Epoch, res)
-	case error:
-		err := errors.Wrap(res, "VerifyPartitionEpoch")
-		logrus.Debug(err)
-		logrus.Error(err)
-		go ps.VerifyPartitionEpoch(Epoch)
-	default:
-		logrus.Panicf(" response unkown res type: %v", reflect.TypeOf(res))
-	}
-}
-
-func (ps *PartitionState) SyncPartition(UpperEpoch int64) {
-	ps.ActivateEpoch(-1)
-	defer ps.DeactivateEpoch(-1)
-	err := ps.sema.Acquire(context.Background(), 1)
-	if err != nil {
-		logrus.Fatal(err)
-	} else {
-		defer ps.sema.Release(1)
-	}
-	logrus.Debugf("new partition sync %d", ps.partitionId)
-	resCh := make(chan interface{})
-	ps.reqCh <- SyncPartitionTask{PartitionId: int32(ps.partitionId), ResCh: resCh, UpperEpoch: UpperEpoch}
-	rawRes := <-resCh
-	switch res := rawRes.(type) {
-	case SyncPartitionResponse:
-		if res.Valid {
-			logrus.Debugf("SyncPartition:  sync partrition %d res = %+v", ps.partitionId, res)
-		} else {
-			logrus.Debugf("SyncPartition:  err partrition %d res = %+v", ps.partitionId, res)
-		}
-		lower := res.LowerEpoch
-		if lower < 0 {
-			lower = 0
-		}
-		for i := lower; i < res.UpperEpoch; i++ {
-			go ps.VerifyPartitionEpoch(i)
-		}
-	case nil:
-		logrus.Debugf("SyncPartition: DOESNT NEED TO SYNC")
-	case error:
-		logrus.Debug(errors.Wrap(res, "SyncPartition"))
-		time.Sleep(time.Second * 10)
-		go ps.SyncPartition(UpperEpoch)
-	default:
-		logrus.Panicf("SyncPartition: unkown res type: %v", reflect.TypeOf(res))
-	}
-}
-
-func (ps *PartitionState) ActivateEpoch(Epoch int64) {
-	ps.activeLock.Lock()
-	defer ps.activeLock.Unlock()
-
-	ps.activeEpochs.Add(int(Epoch))
-	// logrus.Warnf("ActivateEpoch %d size %d", Epoch, len(ps.activeEpochs.List()))
-}
-
-func (ps *PartitionState) DeactivateEpoch(Epoch int64) {
-	ps.activeLock.Lock()
-	defer ps.activeLock.Unlock()
-	ps.activeEpochs.Remove(int(Epoch))
-	// logrus.Warnf("DeactivateEpoch %d size %d", Epoch, len(ps.activeEpochs.List()))
-}
-
-func (ps *PartitionState) GetActivateEpochs() []int {
-	ps.activeLock.Lock()
-	defer ps.activeLock.Unlock()
-
-	return ps.activeEpochs.List()
 }

@@ -247,7 +247,7 @@ func (m *Manager) startWorker(workerId int) {
 
 			case consensus.EpochTask:
 				m.CurrentEpoch = task.Epoch
-				m.consistencyController.VerifyEpoch(task.Epoch)
+				m.consistencyController.PublishEpoch(task.Epoch)
 				task.ResCh <- true
 
 			case consensus.LeaderChangeTask:

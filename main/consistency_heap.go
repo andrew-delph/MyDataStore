@@ -6,8 +6,9 @@ import (
 )
 
 type ConsistencyItem struct {
-	Epoch    int64
-	SyncTask bool
+	PartitionId int
+	Epoch       int64
+	SyncTask    bool
 }
 
 type ConsistencyHeap struct {
@@ -62,12 +63,12 @@ func (h *ConsistencyHeap) Pop() interface{} {
 	return x
 }
 
-func (h *ConsistencyHeap) PushSyncTask(Epoch int64) {
-	heap.Push(h, ConsistencyItem{Epoch: Epoch, SyncTask: true})
+func (h *ConsistencyHeap) PushSyncTask(PartitionId int, Epoch int64) {
+	heap.Push(h, ConsistencyItem{PartitionId: PartitionId, Epoch: Epoch, SyncTask: true})
 }
 
-func (h *ConsistencyHeap) PushVerifyTask(Epoch int64) {
-	heap.Push(h, ConsistencyItem{Epoch: Epoch, SyncTask: false})
+func (h *ConsistencyHeap) PushVerifyTask(PartitionId int, Epoch int64) {
+	heap.Push(h, ConsistencyItem{PartitionId: PartitionId, Epoch: Epoch, SyncTask: false})
 }
 
 func (h *ConsistencyHeap) PopItem() ConsistencyItem {

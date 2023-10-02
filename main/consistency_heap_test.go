@@ -8,11 +8,11 @@ import (
 
 func TestConsistencyHeap(t *testing.T) {
 	h := NewConsistencyHeap()
-	h.PushSyncTask(int64(2))
-	h.PushSyncTask(int64(3))
-	h.PushSyncTask(int64(1))
-	h.PushVerifyTask(int64(1))
-	h.PushVerifyTask(int64(5))
+	h.PushSyncTask(1, int64(2))
+	h.PushSyncTask(1, int64(3))
+	h.PushSyncTask(1, int64(1))
+	h.PushVerifyTask(1, int64(1))
+	h.PushVerifyTask(1, int64(5))
 
 	assert.Equal(t, true, true, "true")
 
@@ -21,7 +21,7 @@ func TestConsistencyHeap(t *testing.T) {
 	}
 
 	go func() {
-		h.PushSyncTask(int64(1))
+		h.PushSyncTask(1, int64(1))
 	}()
 	waiting := h.PopItem()
 	assert.Equal(t, int64(1), waiting.Epoch, "true")

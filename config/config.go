@@ -19,7 +19,7 @@ type ManagerConfig struct {
 	Load                 float64 `mapstructure:"LOAD"`
 	PartitionBuckets     int     `mapstructure:"PARTITION_BUCKETS"`
 	PartitionReplicas    int     `mapstructure:"PARTITION_REPLICAS"`
-	PartitionConcurrency int64   `mapstructure:"PARTITION_CONCURRENCY"`
+	PartitionConcurrency int     `mapstructure:"PARTITION_CONCURRENCY"`
 	DataPath             string  `mapstructure:"DATA_PATH"` // TODO REMOVE THIS?
 	Hostname             string
 	RingDebounce         float64 `mapstructure:"RING_DEBOUNCE"`
