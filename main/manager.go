@@ -447,7 +447,8 @@ func (m *Manager) SetRequest(key, value string) error {
 
 		client, err := m.clientManager.GetClient(member.Name)
 		if err != nil {
-			return err
+			logrus.Debugf("SetRequest err = %v", err)
+			continue
 		}
 
 		go func() {
@@ -501,7 +502,8 @@ func (m *Manager) GetRequest(key string) (*rpc.RpcValue, error) {
 
 		client, err := m.clientManager.GetClient(member.Name)
 		if err != nil {
-			return nil, err
+			logrus.Debugf("GetRequest err = %v", err)
+			continue
 		}
 
 		go func() {
@@ -573,7 +575,7 @@ func (m *Manager) EpochTreeObjectRequest(partitionId int, epoch int64, timeout t
 
 		client, err := m.clientManager.GetClient(member.Name)
 		if err != nil {
-			logrus.Errorf("EpochTreeObjectRequest err = %v", err)
+			logrus.Debugf("EpochTreeObjectRequest err = %v", err)
 			continue
 		}
 
@@ -701,7 +703,8 @@ func (m *Manager) EpochTreeLastValidRequest(partitionId int32, timeout time.Dura
 
 		client, err := m.clientManager.GetClient(member.Name)
 		if err != nil {
-			return nil, err
+			logrus.Debugf("EpochTreeLastValidRequest err = %v", err)
+			continue
 		}
 
 		go func() {

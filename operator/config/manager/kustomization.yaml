@@ -5,4 +5,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: docker.io/andrew-delph/operator
-  newTag: "1696204930"
+  newTag: "1696264765"
