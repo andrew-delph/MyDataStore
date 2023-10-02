@@ -151,10 +151,7 @@ func (consensusCluster *ConsensusCluster) startWorker() {
 			logrus.Debugf("leader change. %t %s", isLeader, consensusCluster.raftNode.State())
 			consensusCluster.reqCh <- LeaderChangeTask{IsLeader: isLeader}
 		case <-consensusCluster.epochTick.C:
-			if consensusCluster.epochLock {
-				logrus.Warn("epoch is currently locked")
-				continue
-			}
+
 			err := consensusCluster.UpdateEpoch()
 			if err != nil {
 				logrus.Error("UpdateEpoch err = %v", err)
@@ -251,6 +248,10 @@ func (consensusCluster *ConsensusCluster) State() raft.RaftState {
 func (consensusCluster *ConsensusCluster) UpdateEpoch() error {
 	err := consensusCluster.raftNode.VerifyLeader().Error()
 	if err != nil {
+		return nil
+	}
+	if consensusCluster.epochLock {
+		logrus.Warn("epoch is currently locked")
 		return nil
 	}
 	newEpoch := consensusCluster.fsm.Epoch + 1
