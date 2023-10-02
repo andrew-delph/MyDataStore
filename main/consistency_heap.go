@@ -77,6 +77,7 @@ func (h *ConsistencyHeap) PushVerifyTask(PartitionId int, Epoch int64) {
 
 func (h *ConsistencyHeap) RequeueItem(item ConsistencyItem) {
 	item.Attemps++
+	// logrus.Warnf("requeue item: %+v", item)
 	heap.Push(h, item)
 }
 

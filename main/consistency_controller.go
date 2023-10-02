@@ -142,7 +142,7 @@ func (cc *ConsistencyController) VerifyPartitionEpoch(item ConsistencyItem) {
 	rawRes := <-resCh
 	switch res := rawRes.(type) {
 	case VerifyPartitionEpochResponse:
-		logrus.Warnf("VerifyPartitionEpoch E= %d res = %+v", item.Epoch, res)
+		// logrus.Warnf("VerifyPartitionEpoch E= %d res = %+v", item.Epoch, res)
 	case error:
 		err := errors.Wrap(res, "VerifyPartitionEpoch")
 		logrus.Debug(err)
