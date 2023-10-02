@@ -94,5 +94,6 @@ func (h *ConsistencyHeap) PopItem() ConsistencyItem {
 func (h *ConsistencyHeap) PushItem(item ConsistencyItem) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
+	h.cond.Signal()
 	heap.Push(h, item)
 }

@@ -13,7 +13,7 @@ manager:
   load: 2.1
   ring_debounce: 7.5
 consensus:
-  epoch_time: 10
+  epoch_time: 120
   data_path: "/data/raft"
   enable_logs: false
   auto_bootstrap: true
