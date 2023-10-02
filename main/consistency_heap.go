@@ -3,6 +3,8 @@ package main
 import (
 	"container/heap"
 	"sync"
+
+	"github.com/sirupsen/logrus"
 )
 
 type ConsistencyItem struct {
@@ -33,12 +35,12 @@ func (h *ConsistencyHeap) Less(i, j int) bool {
 	a := h.queue[i]
 	b := h.queue[j]
 	if a.Attemps != b.Attemps {
-		return a.Attemps > b.Attemps
+		return a.Attemps < b.Attemps
 	}
 	if a.SyncTask && b.SyncTask {
 		return a.Epoch > b.Epoch
 	} else if a.SyncTask || b.SyncTask {
-		return !a.SyncTask
+		return a.SyncTask
 	} else {
 		return a.Epoch > b.Epoch
 	}
@@ -49,18 +51,10 @@ func (h *ConsistencyHeap) Swap(i, j int) {
 }
 
 func (h *ConsistencyHeap) Push(x interface{}) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	defer h.cond.Signal()
 	h.queue = append(h.queue, x.(ConsistencyItem))
 }
 
 func (h *ConsistencyHeap) Pop() interface{} {
-	h.mu.Lock()
-	for len(h.queue) == 0 {
-		h.cond.Wait()
-	}
-	defer h.mu.Unlock()
 	n := len(h.queue)
 	x := h.queue[n-1]
 	h.queue = h.queue[0 : n-1]
@@ -75,13 +69,24 @@ func (h *ConsistencyHeap) PushVerifyTask(PartitionId int, Epoch int64) {
 	heap.Push(h, ConsistencyItem{PartitionId: PartitionId, Epoch: Epoch, SyncTask: false})
 }
 
+func (h *ConsistencyHeap) ManualPush(PartitionId int, Epoch int64, SyncTask bool, Attemps int) {
+	heap.Push(h, ConsistencyItem{PartitionId: PartitionId, Epoch: Epoch, SyncTask: SyncTask, Attemps: Attemps})
+}
+
 func (h *ConsistencyHeap) RequeueItem(item ConsistencyItem) {
 	item.Attemps++
-	// logrus.Warnf("requeue item: %+v", item)
+	if item.Attemps > 3 {
+		logrus.Warnf("requeue item: %+v", item)
+	}
 	heap.Push(h, item)
 }
 
 func (h *ConsistencyHeap) PopItem() ConsistencyItem {
-	item := h.Pop()
+	h.mu.Lock()
+	for len(h.queue) == 0 {
+		h.cond.Wait()
+	}
+	defer h.mu.Unlock()
+	item := heap.Pop(h)
 	return item.(ConsistencyItem)
 }
