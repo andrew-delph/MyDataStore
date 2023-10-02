@@ -9,6 +9,7 @@ type ConsistencyItem struct {
 	PartitionId int
 	Epoch       int64
 	SyncTask    bool
+	Attemps     int
 }
 
 type ConsistencyHeap struct {
@@ -31,6 +32,9 @@ func (h *ConsistencyHeap) Less(i, j int) bool {
 	// Min-heap comparison
 	a := h.queue[i]
 	b := h.queue[j]
+	if a.Attemps != b.Attemps {
+		return a.Attemps > b.Attemps
+	}
 	if a.SyncTask && b.SyncTask {
 		return a.Epoch > b.Epoch
 	} else if a.SyncTask || b.SyncTask {
@@ -69,6 +73,11 @@ func (h *ConsistencyHeap) PushSyncTask(PartitionId int, Epoch int64) {
 
 func (h *ConsistencyHeap) PushVerifyTask(PartitionId int, Epoch int64) {
 	heap.Push(h, ConsistencyItem{PartitionId: PartitionId, Epoch: Epoch, SyncTask: false})
+}
+
+func (h *ConsistencyHeap) RequeueItem(item ConsistencyItem) {
+	item.Attemps++
+	heap.Push(h, item)
 }
 
 func (h *ConsistencyHeap) PopItem() ConsistencyItem {

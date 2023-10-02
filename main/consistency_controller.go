@@ -6,7 +6,6 @@ import (
 	"reflect"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/reactivex/rxgo/v2"
@@ -54,6 +53,7 @@ type ConsistencyController struct {
 	observable       rxgo.Observable
 	currPartitions   utils.IntSet
 	reqCh            chan interface{}
+	working          int32
 }
 
 func NewConsistencyController(concurrencyLevel int, partitionCount int, reqCh chan interface{}) *ConsistencyController {
@@ -102,12 +102,15 @@ func (cc *ConsistencyController) HandleHashringChange(currPartitions utils.IntSe
 func (cc *ConsistencyController) startWorker() error {
 	for {
 		item := cc.heap.PopItem()
-		logrus.Warn("item=", item)
+		// logrus.Warn("ConsistencyController item=", item)
+		// defer logrus.Warn("DONE ConsistencyController item=", item)
+		atomic.AddInt32(&cc.working, 1)
 		if item.SyncTask {
 			cc.SyncPartition(item)
 		} else {
 			cc.VerifyPartitionEpoch(item)
 		}
+		atomic.AddInt32(&cc.working, -1)
 	}
 }
 
@@ -143,8 +146,9 @@ func (cc *ConsistencyController) VerifyPartitionEpoch(item ConsistencyItem) {
 	case error:
 		err := errors.Wrap(res, "VerifyPartitionEpoch")
 		logrus.Debug(err)
-		logrus.Error(err)
-		cc.heap.PushVerifyTask(item.PartitionId, item.Epoch)
+		// logrus.Error(err)
+		cc.heap.RequeueItem(item)
+
 	default:
 		logrus.Panicf(" response unkown res type: %v", reflect.TypeOf(res))
 	}
@@ -176,34 +180,17 @@ func (cc *ConsistencyController) SyncPartition(item ConsistencyItem) {
 		logrus.Debugf("SyncPartition: DOESNT NEED TO SYNC")
 	case error:
 		logrus.Debug(errors.Wrap(res, "SyncPartition"))
-		go func() {
-			logrus.Warn("cc sleep retry SyncPartition")
-			time.Sleep(time.Second * 10)
-			cc.heap.PushSyncTask(item.PartitionId, item.Epoch)
-		}()
+		cc.heap.RequeueItem(item)
 	default:
 		logrus.Panicf("SyncPartition: unkown res type: %v", reflect.TypeOf(res))
 	}
 }
 
 func (cc *ConsistencyController) IsHealthy() error {
-	// TODO revise this!
-	count := 0
-	nonactive := 0
-	epochsNum := 0
-	for _, partitionState := range cc.partitionsStates {
-		epochs := cc.heap.Len()
-		if epochs > 0 {
-			count++
-			epochsNum = epochsNum + epochs
-			if partitionState.active.Load() == false {
-				logrus.Warnf("unhealthy partition %d is not active/ epochs = %d", partitionState.partitionId, epochs)
-				nonactive++
-			}
-		}
-	}
-	if count > 0 || epochsNum > 0 || nonactive > 0 {
-		return errors.Errorf("partitions %d nonactive %d epochs= %d", count, nonactive, epochsNum)
+	heapLen := cc.heap.Len()
+	working := atomic.LoadInt32(&cc.working)
+	if working > 0 || heapLen > 0 {
+		return fmt.Errorf("heapLen %d working %d", heapLen, working)
 	}
 	return nil
 }
