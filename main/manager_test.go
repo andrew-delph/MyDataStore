@@ -174,7 +174,7 @@ outerLoop:
 			}
 			switch item := itemObj.(type) {
 			case *rpc.RpcValue:
-				logrus.Info("item ", item)
+				// logrus.Info("item ", item)
 				itemCount++
 			case error:
 				t.Fatal(err)
@@ -198,7 +198,7 @@ outerLoop2:
 			}
 			switch item := itemObj.(type) {
 			case *rpc.RpcValue:
-				logrus.Info("item ", item)
+				// logrus.Info("item ", item)
 				itemCount++
 			case error:
 				t.Fatal(err)

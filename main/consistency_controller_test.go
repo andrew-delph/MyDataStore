@@ -33,12 +33,12 @@ func TestRxGoObservers(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(workers * items)
 	for i := 0; i < workers; i++ {
-		workerId := i
+		// workerId := i
 		observable.DoOnNext(func(item interface{}) {
 			sem.Acquire(context.Background(), 1)
 			defer sem.Release(1)
 			defer wg.Done()
-			logrus.Warnf("w%d: %v", workerId, item)
+			// logrus.Warnf("w%d: %v", workerId, item)
 			time.Sleep(time.Second)
 		})
 	}
@@ -111,10 +111,10 @@ func TestConsistencyControllerActiveEpochs(t *testing.T) {
 	partitionZero.ActivateEpoch(int64(1))
 	partitionZero.ActivateEpoch(int64(2))
 	partitionZero.ActivateEpoch(int64(3))
-	assert.Equal(t, 3, partitionZero.GetActivateEpochs(), "partitionZero.GetActivateEpochs()")
+	assert.Equal(t, 3, len(partitionZero.GetActivateEpochs()), "partitionZero.GetActivateEpochs()")
 	partitionZero.DeactivateEpoch(int64(3))
 
-	assert.Equal(t, 2, partitionZero.GetActivateEpochs(), "partitionZero.GetActivateEpochs()")
+	assert.Equal(t, 2, len(partitionZero.GetActivateEpochs()), "partitionZero.GetActivateEpochs()")
 
 	err = consistencyController.IsHealthy()
 	if err == nil {
