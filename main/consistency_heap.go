@@ -62,15 +62,15 @@ func (h *ConsistencyHeap) Pop() interface{} {
 }
 
 func (h *ConsistencyHeap) PushSyncTask(PartitionId int, Epoch int64) {
-	heap.Push(h, ConsistencyItem{PartitionId: PartitionId, Epoch: Epoch, SyncTask: true})
+	h.PushItem(ConsistencyItem{PartitionId: PartitionId, Epoch: Epoch, SyncTask: true})
 }
 
 func (h *ConsistencyHeap) PushVerifyTask(PartitionId int, Epoch int64) {
-	heap.Push(h, ConsistencyItem{PartitionId: PartitionId, Epoch: Epoch, SyncTask: false})
+	h.PushItem(ConsistencyItem{PartitionId: PartitionId, Epoch: Epoch, SyncTask: false})
 }
 
 func (h *ConsistencyHeap) ManualPush(PartitionId int, Epoch int64, SyncTask bool, Attemps int) {
-	heap.Push(h, ConsistencyItem{PartitionId: PartitionId, Epoch: Epoch, SyncTask: SyncTask, Attemps: Attemps})
+	h.PushItem(ConsistencyItem{PartitionId: PartitionId, Epoch: Epoch, SyncTask: SyncTask, Attemps: Attemps})
 }
 
 func (h *ConsistencyHeap) RequeueItem(item ConsistencyItem) {
@@ -89,4 +89,10 @@ func (h *ConsistencyHeap) PopItem() ConsistencyItem {
 	defer h.mu.Unlock()
 	item := heap.Pop(h)
 	return item.(ConsistencyItem)
+}
+
+func (h *ConsistencyHeap) PushItem(item ConsistencyItem) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	heap.Push(h, item)
 }
