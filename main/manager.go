@@ -165,6 +165,7 @@ func (m *Manager) startWorker(workerId int) {
 				m.consensusCluster.LockEpoch()
 				name := task.Name
 				err := m.ring.AddTempNode(CreateRingMember(name))
+				m.clientManager.AddTempClient(task.Name)
 				task.ResCh <- err
 
 			case rpc.RemoveTempNodeTask:
