@@ -46,4 +46,10 @@ func TestClientManager(t *testing.T) {
 	}
 
 	assert.NotEqual(t, client, getClient2, "clients equal")
+
+	clientManager.AddTempClient("temp1")
+
+	_, err = clientManager.GetClient("temp1")
+
+	assert.Equal(t, TEMP_CLIENT_ERROR, err, "clients equal")
 }
