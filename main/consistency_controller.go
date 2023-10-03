@@ -115,6 +115,9 @@ func (cc *ConsistencyController) startWorker() error {
 }
 
 func (cc *ConsistencyController) IsPartitionActive(partitionId int) bool {
+	if partitionId >= len(cc.partitionsStates) {
+		return false
+	}
 	return cc.partitionsStates[partitionId].active.Load()
 }
 
@@ -174,6 +177,7 @@ func (cc *ConsistencyController) SyncPartition(item ConsistencyItem) {
 			lower = 0
 		}
 		for i := lower; i < res.UpperEpoch; i++ {
+			logrus.Warnf("sync queue verify p %d e %d", item.PartitionId, i)
 			cc.heap.PushVerifyTask(item.PartitionId, i)
 		}
 	case nil:
