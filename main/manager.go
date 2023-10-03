@@ -607,6 +607,13 @@ func (m *Manager) EpochTreeObjectRequest(partitionId int, epoch int64, timeout t
 	return otherTrees, nil
 }
 
+func (m *Manager) getKeyBucket(key string) uint64 {
+	keyBytes := []byte(key)
+	hash := sha256.Sum256(keyBytes)
+	bucket := binary.BigEndian.Uint64(hash[:8]) % uint64(m.config.Manager.PartitionBuckets)
+	return bucket
+}
+
 func (m *Manager) SetValue(value *rpc.RpcValue) error {
 	keyBytes := []byte(value.Key)
 	timestampBytes, err := utils.EncodeInt64ToBytes(value.UnixTimestamp)
@@ -618,8 +625,7 @@ func (m *Manager) SetValue(value *rpc.RpcValue) error {
 		return err
 	}
 	partitionId := m.ring.FindPartitionID(keyBytes)
-	hash := sha256.Sum256(keyBytes)
-	bucket := binary.BigEndian.Uint64(hash[:8]) % uint64(m.config.Manager.PartitionBuckets)
+	bucket := m.getKeyBucket(value.Key)
 	epochIndex, err := BuildEpochIndex(partitionId, bucket, value.Epoch, value.Key)
 	if err != nil {
 		return err
@@ -761,9 +767,7 @@ func (m *Manager) SyncPartitionRequest(member *RingMember, partitionId int32, lo
 		// TODO change to get from epoch index.
 		// if index value is less. write it.
 		// then check the value. if the current value timestamp is greater then request from nodes
-		keyBytes := []byte(value.Key)
-		hash := sha256.Sum256(keyBytes)
-		bucket := binary.BigEndian.Uint64(hash[:8]) % uint64(m.config.Manager.PartitionBuckets)
+		bucket := m.getKeyBucket(value.Key)
 		epochIndex, err := BuildEpochIndex(int(partitionId), bucket, value.Epoch, value.Key)
 		if err != nil {
 			return err
