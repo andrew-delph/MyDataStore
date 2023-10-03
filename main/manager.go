@@ -781,6 +781,12 @@ func (m *Manager) SyncPartitionRequest(member *RingMember, partitionId int32, lo
 				continue
 			}
 		}
+		// write the epochIndex value...
+		timestampBytes, err := utils.EncodeInt64ToBytes(value.UnixTimestamp)
+		if err != nil {
+			logrus.Fatal("FAILED TO ENCOUDE UnixTimestamp IN SYNC")
+		}
+		m.db.Put([]byte(epochIndex), timestampBytes)
 
 		myValue, err := m.GetValue(value.Key)
 		if myValue != nil && myValue.UnixTimestamp >= value.UnixTimestamp {
