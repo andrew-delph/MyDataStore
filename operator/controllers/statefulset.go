@@ -195,7 +195,38 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 			return requeueImmediately()
 		}
 
-		logrus.Warn("ALL PARTITIONS HEALTHY. READY TO SCALE.")
+		newSize := *found.Spec.Replicas + 1
+		logrus.Warnf("ALL PARTITIONS HEALTHY. READY TO SCALE. newSize %d", newSize)
+
+		found.Spec.Replicas = &newSize
+		if err = r.Update(ctx, found); err != nil {
+			log.Error(err, "Failed to update Deployment",
+				"Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
+
+			// Re-fetch the mykeystore Custom Resource before update the status
+			// so that we have the latest state of the resource on the cluster and we will avoid
+			// raise the issue "the object has been modified, please apply
+			// your changes to the latest version and try again" which would re-trigger the reconciliation
+			if err := r.Get(ctx, req.NamespacedName, mykeystore); err != nil {
+				log.Error(err, "Failed to re-fetch mykeystore")
+				return requeueIfError(err)
+			}
+
+			// The following implementation will update the status
+			meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
+				Type:   typeAvailableMyKeyStore,
+				Status: metav1.ConditionFalse, Reason: "Resizing",
+				Message: fmt.Sprintf("Failed to update the size for the custom resource (%s): (%s)", mykeystore.Name, err),
+			})
+
+			if err := r.Status().Update(ctx, mykeystore); err != nil {
+				log.Error(err, "Failed to update MyKeyStore status")
+				return requeueIfError(err)
+			}
+
+			return requeueIfError(err)
+		}
+		return requeueImmediately()
 
 	} else if sizeDiff < 0 {
 		removePodName := generatePodNode(mykeystore, int(currSize)-1)
