@@ -448,6 +448,7 @@ func (m *Manager) SetRequest(key, value string) error {
 
 		client, err := m.clientManager.GetClient(member.Name)
 		if err != nil {
+			errorCh <- err
 			logrus.Debugf("SetRequest err = %v", err)
 			continue
 		}
@@ -503,6 +504,7 @@ func (m *Manager) GetRequest(key string) (*rpc.RpcValue, error) {
 
 		client, err := m.clientManager.GetClient(member.Name)
 		if err != nil {
+			errorCh <- err
 			logrus.Debugf("GetRequest err = %v", err)
 			continue
 		}
@@ -576,6 +578,7 @@ func (m *Manager) EpochTreeObjectRequest(partitionId int, epoch int64, timeout t
 
 		client, err := m.clientManager.GetClient(member.Name)
 		if err != nil {
+			errorCh <- err
 			logrus.Debugf("EpochTreeObjectRequest err = %v", err)
 			continue
 		}
@@ -704,6 +707,7 @@ func (m *Manager) EpochTreeLastValidRequest(partitionId int32, timeout time.Dura
 
 		client, err := m.clientManager.GetClient(member.Name)
 		if err != nil {
+			errorCh <- err
 			logrus.Debugf("EpochTreeLastValidRequest err = %v", err)
 			continue
 		}
@@ -919,8 +923,6 @@ func (m *Manager) PoliteStreamRequest(PartitionId int, LowerEpoch, UpperEpoch in
 	if len(membersLastValid) == 0 {
 		return errors.New("membersLastValid is 0")
 	}
-
-	logrus.Debugf("sort f:%d %s l:%d %s #%d", membersLastValid[0].epochTreeLastValid.LowerEpoch, membersLastValid[0].member.Name, membersLastValid[len(membersLastValid)-1].epochTreeLastValid.LowerEpoch, membersLastValid[len(membersLastValid)-1].member.Name, len(membersLastValid))
 
 	for _, lastValid := range membersLastValid {
 		// logrus.Warnf("sync name %s lastValid %d", lastValid.member.Name, lastValid.epochTreeLastValid.LowerEpoch)
