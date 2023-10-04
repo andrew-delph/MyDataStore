@@ -476,7 +476,7 @@ func (m *Manager) SetRequest(key, value string) error {
 	timeout := time.After(time.Second * time.Duration(m.config.Manager.DefaultTimeout))
 	responseCount := 0
 
-	for i := 0; i < m.config.Manager.ReplicaCount && responseCount < m.config.Manager.WriteQuorum; i++ {
+	for i := 0; i < len(nodes) && responseCount < m.config.Manager.WriteQuorum; i++ {
 		select {
 		case <-responseCh:
 			responseCount++
