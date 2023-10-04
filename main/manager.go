@@ -157,12 +157,12 @@ func (m *Manager) startWorker(workerId int) {
 			switch task := data.(type) {
 
 			case rpc.PartitionsHealthCheckTask:
-				logrus.Warn("PartitionsHealthCheckTask")
+				// logrus.Warn("PartitionsHealthCheckTask")
 				err := m.consistencyController.IsHealthy()
 				task.ResCh <- err
 
 			case rpc.AddTempNodeTask:
-				logrus.Warn("AddTempNodeTask")
+				// logrus.Warn("AddTempNodeTask")
 				m.consensusCluster.LockEpoch()
 				name := task.Name
 				err := m.ring.AddTempNode(CreateRingMember(name))
@@ -170,7 +170,7 @@ func (m *Manager) startWorker(workerId int) {
 				task.ResCh <- err
 
 			case rpc.ResetTempNodeTask:
-				logrus.Warn("ResetTempNodeTask")
+				// logrus.Warn("ResetTempNodeTask")
 				m.consensusCluster.UnlockEpoch()
 				m.ring.ResetTempRing()
 				task.ResCh <- true
@@ -251,7 +251,7 @@ func (m *Manager) startWorker(workerId int) {
 			case gossip.LeaveTask:
 				logrus.Warnf("worker LeaveTask: %+v", task)
 				m.consensusCluster.RemoveServer(task.Name)
-				// m.ring.RemoveNode(task.Name)
+				m.ring.RemoveNode(task.Name)
 
 			case consensus.EpochTask:
 				m.CurrentEpoch = task.Epoch
@@ -368,7 +368,7 @@ func (m *Manager) startWorker(workerId int) {
 
 				epochTreeObjectBytes, err := m.db.Get([]byte(index))
 				if err != nil {
-					logrus.Warnf("GetEpochTreeObjectTask err = %v index %v  active: %v", err, index, m.consistencyController.IsPartitionActive(int(task.PartitionId)))
+					// logrus.Warnf("GetEpochTreeObjectTask err = %v index %v  active: %v", err, index, m.consistencyController.IsPartitionActive(int(task.PartitionId)))
 					err = errors.Wrapf(err, "active: %v", m.consistencyController.IsPartitionActive(int(task.PartitionId)))
 					task.ResCh <- err
 					continue
@@ -840,6 +840,9 @@ func (m *Manager) VerifyEpoch(PartitionId int, Epoch int64) error {
 	var data []byte
 
 	if Epoch < 0 {
+		return nil
+	}
+	if m.consistencyController.IsPartitionActive(PartitionId) == false {
 		return nil
 	}
 

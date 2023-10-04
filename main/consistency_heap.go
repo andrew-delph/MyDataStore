@@ -80,10 +80,10 @@ func (h *ConsistencyHeap) ManualPush(PartitionId int, Epoch int64, SyncTask bool
 	h.PushItem(ConsistencyItem{PartitionId: PartitionId, Epoch: Epoch, SyncTask: SyncTask, Attemps: Attemps})
 }
 
-func (h *ConsistencyHeap) RequeueItem(item ConsistencyItem) {
+func (h *ConsistencyHeap) RequeueItem(item ConsistencyItem, err error) {
 	item.Attemps++
-	if item.Attemps > 3 {
-		logrus.Warnf("requeue item: %+v", item)
+	if item.Attemps > 10 {
+		logrus.Warnf("requeue item: %+v err: %v", item, err)
 	}
 	heap.Push(h, item)
 }
