@@ -14,9 +14,9 @@ func main() {
 	// }()
 	logrus.Info("starting")
 
-	logrus.SetFormatter(&logrus.TextFormatter{
-		DisableTimestamp: true,
-	})
+	// logrus.SetFormatter(&logrus.TextFormatter{
+	// 	DisableTimestamp: true,
+	// })
 
 	c := config.GetConfig()
 	initMetrics(c.Manager.Hostname)
