@@ -843,7 +843,8 @@ func (m *Manager) VerifyEpoch(PartitionId int, Epoch int64) error {
 		return nil
 	}
 	if m.consistencyController.IsPartitionActive(PartitionId) == false {
-		return nil
+		logrus.Warn("VERIFY PARTITION THAT IS NOT ACTIVE!")
+		// return nil
 	}
 
 	index, err = BuildEpochTreeObjectIndex(PartitionId, Epoch)
@@ -939,7 +940,7 @@ func (m *Manager) VerifyEpoch(PartitionId int, Epoch int64) error {
 		return nil
 	} else {
 		err = m.PoliteStreamRequest(int(partitionEpochObject.Partition), Epoch, Epoch+1, diffSet.List())
-		err = errors.Errorf("validCount= %d<%d Epoch %d trees %d err = %v", validCount, m.config.Manager.ReadQuorum, Epoch, len(epochTreeObjects), err)
+		err = errors.Errorf("validCount= %d<%d Epoch %d trees %d diffSet= %v err = %v", validCount, m.config.Manager.ReadQuorum, Epoch, len(epochTreeObjects), diffSet.List(), err)
 		return err
 	}
 }
@@ -966,9 +967,9 @@ func (m *Manager) PoliteStreamRequest(PartitionId int, LowerEpoch, UpperEpoch in
 		if err != nil {
 			logrus.Errorf("SyncPartitionRequest err = %v", err)
 		} else if lastValid.epochTreeLastValid.LowerEpoch >= UpperEpoch {
-			return nil
+			// return nil
 		}
 	}
 
-	return errors.New("PoliteStreamRequest no valid member.")
+	return fmt.Errorf("PoliteStreamRequest no valid member. membersLastValid %d", len(membersLastValid))
 }

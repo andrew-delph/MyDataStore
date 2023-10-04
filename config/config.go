@@ -49,6 +49,7 @@ type RpcConfig struct {
 }
 type HttpConfig struct {
 	DefaultTimeout int `mapstructure:"DEFAULT_TIMEOUT"`
+	Hostname       string
 }
 
 type Config struct {
@@ -98,6 +99,7 @@ func getConfigOverride(allow_override bool) Config {
 	config.Manager.Hostname = hostname
 	config.Gossip.Name = hostname
 	config.Consensus.Name = hostname
+	config.Http.Hostname = hostname
 
 	// // Print the JSON string
 	// settings := viper.AllSettings()

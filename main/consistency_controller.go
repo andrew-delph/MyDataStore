@@ -232,13 +232,13 @@ func (ps *PartitionState) StartConsumer() error {
 			if ps.lastEpoch < 0 {
 				return
 			}
-			lower := int64(0)
 			if ps.active.Load() {
-				for i := lower; i < ps.lastEpoch; i++ {
-					// logrus.Warnf("sync queue verify p %d e %d", ps.partitionId, i)
-					ps.heap.PushVerifyTask(ps.partitionId, i)
-				}
-				// ps.heap.PushVerifyTask(ps.partitionId, ps.lastEpoch)
+				// lower := int64(0)
+				// for i := lower; i < ps.lastEpoch; i++ {
+				// 	// logrus.Warnf("sync queue verify p %d e %d", ps.partitionId, i)
+				// 	ps.heap.PushVerifyTask(ps.partitionId, i)
+				// }
+				ps.heap.PushVerifyTask(ps.partitionId, ps.lastEpoch)
 			}
 
 		case UpdatePartitionsEvent: // TODO create test case for this
@@ -251,7 +251,14 @@ func (ps *PartitionState) StartConsumer() error {
 				partitionActive.WithLabelValues(partitionLabel).Set(0)
 			}
 			if event.CurrPartitions.Has(ps.partitionId) && ps.active.CompareAndSwap(false, true) { // TODO create test case for this
-				ps.heap.PushSyncTask(ps.partitionId, ps.lastEpoch)
+				lower := int64(0)
+				if ps.active.Load() {
+					for i := lower; i <= ps.lastEpoch; i++ {
+						// logrus.Warnf("sync queue verify p %d e %d", ps.partitionId, i)
+						ps.heap.PushVerifyTask(ps.partitionId, i)
+					}
+					// ps.heap.PushVerifyTask(ps.partitionId, ps.lastEpoch)
+				}
 			} else if !event.CurrPartitions.Has(ps.partitionId) && ps.active.CompareAndSwap(true, false) {
 				logrus.Debugf("updated lost partition active %d", ps.partitionId)
 			}
