@@ -186,13 +186,13 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 		err := notifyNewTempNode(r, ctx, req, log, mykeystore, newPodName)
 		if err != nil {
 			logrus.Error(err)
-			return requeueImmediately()
+			return requeueAfter(time.Second*5, nil)
 		}
 
 		err = waitForPodsHealthy(r, ctx, req, log, mykeystore)
 		if err != nil {
 			logrus.Error(err)
-			return requeueImmediately()
+			return requeueAfter(time.Second*5, nil)
 		}
 
 		newSize := *found.Spec.Replicas + 1
@@ -224,7 +224,7 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 				return requeueIfError(err)
 			}
 
-			return requeueIfError(err)
+			return requeueIfError(nil)
 		}
 		return requeueImmediately()
 
@@ -232,6 +232,11 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 		removePodName := generatePodNode(mykeystore, int(currSize)-1)
 		logrus.Warnf("Needs to decrease replicas size. sizeDiff %d removePodName %s", sizeDiff, removePodName)
 		return requeueImmediately()
+	}
+
+	err = notifyResetTempNode(r, ctx, req, log, mykeystore)
+	if err != nil {
+		return requeueAfter(time.Second*5, nil)
 	}
 
 	// health check pods
@@ -321,6 +326,45 @@ func notifyNewTempNode(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Re
 		return fmt.Errorf("AddTempNode had %d errors", errorCount)
 	}
 	logrus.Warnf("all pods AddTempNode. # = %v", len(pods.Items))
+	return nil
+}
+
+func notifyResetTempNode(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Request, log logr.Logger, mykeystore *cachev1alpha1.MyKeyStore) error {
+	pods := &corev1.PodList{}
+	err := r.List(ctx, pods, client.MatchingLabels{"app": mykeystore.Name})
+	if err != nil {
+		return err
+	}
+	errorCount := 0
+	// logrus.Warnf("AddTempNode list= %v err = %v", len(pods.Items), err)
+	for _, pod := range pods.Items {
+		addr := fmt.Sprintf("%s.%s.%s", pod.Name, mykeystore.Name, pod.Namespace)
+		conn, client, err := rpc.CreateRawRpcClient(addr, 7070)
+		if err != nil {
+			logrus.Errorf("Client %s err = %v", addr, err)
+			errorCount++
+			continue
+		}
+		defer conn.Close()
+		req := &rpc.RpcStandardObject{}
+		res, err := client.ResetTempNode(ctx, req)
+		if err != nil {
+			logrus.Errorf("ResetTempNode Client %s res err = %v", pod.Name, err)
+			errorCount++
+			continue
+		} else if res.Error {
+			err = errors.New(res.Message)
+			logrus.Errorf("ResetTempNode Client %s res err msg = %v", pod.Name, err)
+			errorCount++
+			continue
+		}
+		// logrus.Warnf("ResetTempNode Client %s res= %v", pod.Name, res.Message)
+	}
+
+	if errorCount > 0 {
+		return fmt.Errorf("ResetTempNode had %d errors", errorCount)
+	}
+	logrus.Warnf("all pods ResetTempNode. # = %v", len(pods.Items))
 	return nil
 }
 

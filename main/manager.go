@@ -169,6 +169,12 @@ func (m *Manager) startWorker(workerId int) {
 				// m.clientManager.AddTempClient(task.Name)
 				task.ResCh <- err
 
+			case rpc.ResetTempNodeTask:
+				logrus.Warn("ResetTempNodeTask")
+				m.consensusCluster.UnlockEpoch()
+				m.ring.ResetTempRing()
+				task.ResCh <- true
+
 			case rpc.RemoveTempNodeTask:
 				name := task.Name
 				err := m.ring.RemoveTempNode(name)
@@ -362,6 +368,7 @@ func (m *Manager) startWorker(workerId int) {
 
 				epochTreeObjectBytes, err := m.db.Get([]byte(index))
 				if err != nil {
+					logrus.Warnf("GetEpochTreeObjectTask err = %v index %v  active: %v", err, index, m.consistencyController.IsPartitionActive(int(task.PartitionId)))
 					err = errors.Wrapf(err, "active: %v", m.consistencyController.IsPartitionActive(int(task.PartitionId)))
 					task.ResCh <- err
 					continue
@@ -589,6 +596,8 @@ func (m *Manager) EpochTreeObjectRequest(partitionId int, epoch int64, timeout t
 			defer cancel()
 			res, err := client.GetEpochTree(ctx, treeReq)
 			if err != nil {
+
+				logrus.Errorf("GetEpochTree %s err %v partitionId %d epoch %d", member.Name, err, partitionId, epoch)
 				errorCh <- err
 			} else {
 				responseCh <- res
@@ -822,11 +831,6 @@ func (m *Manager) SyncPartitionRequest(member *RingMember, partitionId int32, lo
 }
 
 func (m *Manager) VerifyEpoch(PartitionId int, Epoch int64) error {
-	if Epoch < 0 {
-		return nil
-	}
-
-	// loop until successful verify
 	var err error
 	var myTree *merkletree.MerkleTree
 	var otherTree *merkletree.MerkleTree
@@ -834,6 +838,26 @@ func (m *Manager) VerifyEpoch(PartitionId int, Epoch int64) error {
 	var index string
 	var diff []int32
 	var data []byte
+
+	if Epoch < 0 {
+		return nil
+	}
+
+	index, err = BuildEpochTreeObjectIndex(PartitionId, Epoch)
+	if err != nil {
+		return err
+	}
+
+	epochTreeObjectBytes, err := m.db.Get([]byte(index))
+	if err == nil {
+		epochTreeObject := &rpc.RpcEpochTreeObject{}
+		err = proto.Unmarshal(epochTreeObjectBytes, epochTreeObject)
+		if err == nil && epochTreeObject.Valid {
+			// logrus.Warn("Fetch EpochTreeObject is valid")
+			return nil
+		}
+	}
+
 	partitionLabel := fmt.Sprintf("%d", PartitionId)
 	logrus.Debug("partitionLabel = ", partitionLabel)
 	epochLabel := fmt.Sprintf("%d", Epoch)
@@ -855,14 +879,12 @@ func (m *Manager) VerifyEpoch(PartitionId int, Epoch int64) error {
 	}
 
 	// save to db
-	index, err = BuildEpochTreeObjectIndex(PartitionId, Epoch)
-	if err != nil {
-		return err
-	}
+
 	err = m.db.Put([]byte(index), data)
 	if err != nil {
 		return err
 	}
+	partitionEpochObjectBuilt.WithLabelValues(partitionLabel, epochLabel).Set(1)
 
 	var epochTreeObjects []*rpc.RpcEpochTreeObject
 
@@ -909,8 +931,8 @@ func (m *Manager) VerifyEpoch(PartitionId int, Epoch int64) error {
 			return err
 		}
 		// logrus.Debugf("verified P=%v E=%v", partitionEpochObject.Partition, partitionEpochObject.LowerEpoch)
-
-		partitionValidEpochGague.WithLabelValues(partitionLabel, epochLabel).Set(1)
+		partitionEpochObjectBuilt.WithLabelValues(partitionLabel, epochLabel).Set(1)
+		partitionEpochObjectVerified.WithLabelValues(partitionLabel, epochLabel).Set(1)
 		return nil
 	} else {
 		err = m.PoliteStreamRequest(int(partitionEpochObject.Partition), Epoch, Epoch+1, diffSet.List())

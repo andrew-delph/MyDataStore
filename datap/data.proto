@@ -26,6 +26,8 @@ service InternalNodeService {
   rpc AddTempNode(TempNode) returns (StandardObject);
 
   rpc RemoveTempNode(TempNode) returns (StandardObject);
+
+  rpc ResetTempNode(StandardObject) returns (StandardObject);
   
 }
 

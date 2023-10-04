@@ -162,6 +162,13 @@ func (cc *ConsistencyController) SyncPartition(item ConsistencyItem) {
 	if cc.IsPartitionActive(item.PartitionId) == false {
 		return
 	}
+	lower := int64(0)
+	// }
+	logrus.Warnf("SyncPartition p %d lower %d", item.PartitionId, lower)
+	for i := lower; i < item.Epoch; i++ {
+		logrus.Warnf("sync queue verify p %d e %d", item.PartitionId, i)
+		cc.heap.PushVerifyTask(item.PartitionId, i)
+	}
 	logrus.Debugf("new partition sync %d", item.PartitionId)
 	resCh := make(chan interface{})
 	cc.reqCh <- SyncPartitionTask{PartitionId: int32(item.PartitionId), ResCh: resCh, UpperEpoch: item.Epoch}
@@ -173,15 +180,15 @@ func (cc *ConsistencyController) SyncPartition(item ConsistencyItem) {
 		} else {
 			logrus.Debugf("SyncPartition:  err partrition %d res = %+v", item.PartitionId, res)
 		}
-		lower := res.LowerEpoch
-		// if lower < 0 {
-		lower = 0
+		// lower := res.LowerEpoch
+		// // if lower < 0 {
+		// lower = 0
+		// // }
+		// logrus.Warnf("SyncPartition p %d lower %d", item.PartitionId, lower)
+		// for i := lower; i < res.UpperEpoch; i++ {
+		// 	logrus.Warnf("sync queue verify p %d e %d", item.PartitionId, i)
+		// 	cc.heap.PushVerifyTask(item.PartitionId, i)
 		// }
-		logrus.Warnf("SyncPartition p %d lower %d", item.PartitionId, lower)
-		for i := lower; i < res.UpperEpoch; i++ {
-			logrus.Warnf("sync queue verify p %d e %d", item.PartitionId, i)
-			cc.heap.PushVerifyTask(item.PartitionId, i)
-		}
 	case nil:
 		logrus.Debugf("SyncPartition: DOESNT NEED TO SYNC")
 	case error:
@@ -224,8 +231,13 @@ func (ps *PartitionState) StartConsumer() error {
 			if ps.lastEpoch < 0 {
 				return
 			}
+			lower := int64(0)
 			if ps.active.Load() {
-				ps.heap.PushVerifyTask(ps.partitionId, ps.lastEpoch)
+				for i := lower; i < ps.lastEpoch; i++ {
+					logrus.Warnf("sync queue verify p %d e %d", ps.partitionId, i)
+					ps.heap.PushVerifyTask(ps.partitionId, i)
+				}
+				// ps.heap.PushVerifyTask(ps.partitionId, ps.lastEpoch)
 			}
 
 		case UpdatePartitionsEvent: // TODO create test case for this

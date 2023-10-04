@@ -32,13 +32,15 @@ var (
 )
 
 var (
-	partitionsGained         prometheus.Counter
-	partitionsLost           prometheus.Counter
-	partitionsTotal          prometheus.Gauge
-	healthyPartitionsGauge   prometheus.Gauge
-	unhealthyPartitionsGauge prometheus.Gauge
-	partitionActive          prometheus.GaugeVec
-	partitionQueueSize       prometheus.Gauge
+	partitionsGained             prometheus.Counter
+	partitionsLost               prometheus.Counter
+	partitionsTotal              prometheus.Gauge
+	healthyPartitionsGauge       prometheus.Gauge
+	unhealthyPartitionsGauge     prometheus.Gauge
+	partitionActive              prometheus.GaugeVec
+	partitionQueueSize           prometheus.Gauge
+	partitionEpochObjectBuilt    prometheus.GaugeVec
+	partitionEpochObjectVerified prometheus.GaugeVec
 )
 
 func initMetrics(hostname string) {
@@ -90,6 +92,24 @@ func initMetrics(hostname string) {
 			ConstLabels: constantLabels,
 		},
 		[]string{"partitionId"},
+	)
+
+	partitionEpochObjectBuilt = *promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name:        "partition_epoch_object_built",
+			Help:        "if the partition epoch is written",
+			ConstLabels: constantLabels,
+		},
+		[]string{"partitionId", "epoch"},
+	)
+
+	partitionEpochObjectVerified = *promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name:        "partition_epoch_object_verified",
+			Help:        "if the partition epoch is written",
+			ConstLabels: constantLabels,
+		},
+		[]string{"partitionId", "epoch"},
 	)
 
 	partitionQueueSize = promauto.NewGauge(

@@ -76,6 +76,10 @@ type RemoveTempNodeTask struct {
 	Name  string
 }
 
+type ResetTempNodeTask struct {
+	ResCh chan interface{}
+}
+
 func (rpcWrapper *RpcWrapper) StartRpcServer() {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", rpcWrapper.rpcConfig.Port))
 	if err != nil {
@@ -246,6 +250,25 @@ func (rpcWrapper *RpcWrapper) RemoveTempNode(ctx context.Context, req *datap.Tem
 			Message: res.Error(),
 			Error:   true,
 		}, nil
+	default:
+		logrus.Panicf("rpc unkown res type: %v", reflect.TypeOf(res))
+	}
+	return nil, nil
+}
+
+func (rpcWrapper *RpcWrapper) ResetTempNode(ctx context.Context, req *datap.StandardObject) (*datap.StandardObject, error) {
+	logrus.Debugf("ResetTempNode")
+	resCh := make(chan interface{})
+	rpcWrapper.reqCh <- ResetTempNodeTask{ResCh: resCh}
+	rawRes := utils.RecieveChannelTimeout(resCh, 20)
+	switch res := rawRes.(type) {
+	case bool:
+		return &datap.StandardObject{
+			Message: "temp node removed",
+			Error:   false,
+		}, nil
+	case error:
+		return nil, res
 	default:
 		logrus.Panicf("rpc unkown res type: %v", reflect.TypeOf(res))
 	}

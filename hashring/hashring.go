@@ -247,7 +247,7 @@ func (ring *Hashring) RemoveNode(name string) {
 }
 
 func (ring *Hashring) AddTempNode(member consistent.Member) error {
-	ring.resetTempRing()
+	ring.ResetTempRing()
 	ring.rwLock.Lock()
 	defer ring.rwLock.Unlock()
 	ring.tempConsistent.Add(member)
@@ -255,14 +255,14 @@ func (ring *Hashring) AddTempNode(member consistent.Member) error {
 }
 
 func (ring *Hashring) RemoveTempNode(name string) error {
-	ring.resetTempRing()
+	ring.ResetTempRing()
 	ring.rwLock.Lock()
 	defer ring.rwLock.Unlock()
 	ring.tempConsistent.Remove(name)
 	return ring.notifyPartitionUpdate()
 }
 
-func (ring *Hashring) resetTempRing() {
+func (ring *Hashring) ResetTempRing() {
 	ring.rwLock.Lock()
 	defer ring.rwLock.Unlock()
 	currMembers := ring.currConsistent.GetMembers()
