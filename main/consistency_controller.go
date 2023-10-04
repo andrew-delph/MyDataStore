@@ -235,7 +235,7 @@ func (ps *PartitionState) StartConsumer() error {
 			lower := int64(0)
 			if ps.active.Load() {
 				for i := lower; i < ps.lastEpoch; i++ {
-					logrus.Warnf("sync queue verify p %d e %d", ps.partitionId, i)
+					// logrus.Warnf("sync queue verify p %d e %d", ps.partitionId, i)
 					ps.heap.PushVerifyTask(ps.partitionId, i)
 				}
 				// ps.heap.PushVerifyTask(ps.partitionId, ps.lastEpoch)
