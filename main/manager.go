@@ -79,7 +79,6 @@ func NewManager(c config.Config) Manager {
 }
 
 func (m *Manager) StartManager() {
-	initMetrics(m.config.Manager.Hostname)
 	if m.config.Manager.PartitionBuckets%2 != 0 {
 		logrus.Fatalf("PartitionBuckets must be even. PartitionBuckets = %d", m.config.Manager.PartitionBuckets)
 	}
@@ -158,14 +157,16 @@ func (m *Manager) startWorker(workerId int) {
 			switch task := data.(type) {
 
 			case rpc.PartitionsHealthCheckTask:
+				logrus.Warn("PartitionsHealthCheckTask")
 				err := m.consistencyController.IsHealthy()
 				task.ResCh <- err
 
 			case rpc.AddTempNodeTask:
+				logrus.Warn("AddTempNodeTask")
 				m.consensusCluster.LockEpoch()
 				name := task.Name
 				err := m.ring.AddTempNode(CreateRingMember(name))
-				m.clientManager.AddTempClient(task.Name)
+				// m.clientManager.AddTempClient(task.Name)
 				task.ResCh <- err
 
 			case rpc.RemoveTempNodeTask:
@@ -244,7 +245,7 @@ func (m *Manager) startWorker(workerId int) {
 			case gossip.LeaveTask:
 				logrus.Warnf("worker LeaveTask: %+v", task)
 				m.consensusCluster.RemoveServer(task.Name)
-				m.ring.RemoveNode(task.Name)
+				// m.ring.RemoveNode(task.Name)
 
 			case consensus.EpochTask:
 				m.CurrentEpoch = task.Epoch
@@ -527,7 +528,7 @@ func (m *Manager) GetRequest(key string) (*rpc.RpcValue, error) {
 	responseCount := 0
 	var recentValue *rpc.RpcValue
 	timeout := time.After(time.Second * time.Duration(m.config.Manager.DefaultTimeout))
-	for i := 0; i < m.config.Manager.ReplicaCount && responseCount < m.config.Manager.ReadQuorum; i++ {
+	for i := 0; i < len(nodes) && responseCount < m.config.Manager.ReadQuorum; i++ {
 		select {
 		case res := <-responseCh:
 

@@ -38,6 +38,7 @@ var (
 	healthyPartitionsGauge   prometheus.Gauge
 	unhealthyPartitionsGauge prometheus.Gauge
 	partitionActive          prometheus.GaugeVec
+	partitionQueueSize       prometheus.Gauge
 )
 
 func initMetrics(hostname string) {
@@ -89,5 +90,13 @@ func initMetrics(hostname string) {
 			ConstLabels: constantLabels,
 		},
 		[]string{"partitionId"},
+	)
+
+	partitionQueueSize = promauto.NewGauge(
+		prometheus.GaugeOpts{
+			Name:        "partition_queue_size",
+			Help:        "the size of the consistency controller queue",
+			ConstLabels: constantLabels,
+		},
 	)
 }

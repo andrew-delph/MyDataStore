@@ -10,6 +10,7 @@ import (
 
 func TestConsistencyHeap(t *testing.T) {
 	h := NewConsistencyHeap()
+	h.Size()
 
 	for i := 0; i < 10; i++ {
 		h.PushSyncTask(1, int64(2))

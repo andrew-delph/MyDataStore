@@ -19,6 +19,8 @@ func main() {
 	})
 
 	c := config.GetConfig()
+	initMetrics(c.Manager.Hostname)
+
 	manager := NewManager(c)
 	manager.StartManager()
 }

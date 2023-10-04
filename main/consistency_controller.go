@@ -101,6 +101,7 @@ func (cc *ConsistencyController) HandleHashringChange(currPartitions utils.IntSe
 
 func (cc *ConsistencyController) startWorker() error {
 	for {
+		partitionQueueSize.Set(float64(cc.heap.Size()))
 		item := cc.heap.PopItem()
 		// logrus.Warn("ConsistencyController item=", item)
 		// defer logrus.Warn("DONE ConsistencyController item=", item)
@@ -149,7 +150,7 @@ func (cc *ConsistencyController) VerifyPartitionEpoch(item ConsistencyItem) {
 	case error:
 		err := errors.Wrap(res, "VerifyPartitionEpoch")
 		logrus.Debug(err)
-		// logrus.Error(err)
+		logrus.Error(err)
 		cc.heap.RequeueItem(item)
 
 	default:
@@ -173,9 +174,10 @@ func (cc *ConsistencyController) SyncPartition(item ConsistencyItem) {
 			logrus.Debugf("SyncPartition:  err partrition %d res = %+v", item.PartitionId, res)
 		}
 		lower := res.LowerEpoch
-		if lower < 0 {
-			lower = 0
-		}
+		// if lower < 0 {
+		lower = 0
+		// }
+		logrus.Warnf("SyncPartition p %d lower %d", item.PartitionId, lower)
 		for i := lower; i < res.UpperEpoch; i++ {
 			logrus.Warnf("sync queue verify p %d e %d", item.PartitionId, i)
 			cc.heap.PushVerifyTask(item.PartitionId, i)
@@ -183,8 +185,8 @@ func (cc *ConsistencyController) SyncPartition(item ConsistencyItem) {
 	case nil:
 		logrus.Debugf("SyncPartition: DOESNT NEED TO SYNC")
 	case error:
-		logrus.Debug(errors.Wrap(res, "SyncPartition"))
-		cc.heap.RequeueItem(item)
+		logrus.Error(errors.Wrap(res, "SyncPartition"))
+		// cc.heap.RequeueItem(item)
 	default:
 		logrus.Panicf("SyncPartition: unkown res type: %v", reflect.TypeOf(res))
 	}

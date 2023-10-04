@@ -21,9 +21,16 @@ type ConsistencyHeap struct {
 }
 
 func NewConsistencyHeap() *ConsistencyHeap {
-	h := &ConsistencyHeap{}
+	queue := []ConsistencyItem{}
+	h := &ConsistencyHeap{queue: queue}
 	h.cond = sync.NewCond(&h.mu)
 	return h
+}
+
+func (h *ConsistencyHeap) Size() int {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return len(h.queue)
 }
 
 func (h *ConsistencyHeap) Len() int {

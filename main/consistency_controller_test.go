@@ -65,6 +65,7 @@ func TestRxGoObservers(t *testing.T) {
 }
 
 func TestConsistencyControllerObservers(t *testing.T) {
+	initMetrics("test")
 	// TODO show this
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
