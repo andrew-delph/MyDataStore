@@ -925,7 +925,7 @@ func (m *Manager) VerifyEpoch(PartitionId int, Epoch int64) error {
 		}
 	}
 
-	if validCount >= m.config.Manager.ReadQuorum {
+	if validCount >= m.config.Manager.ReplicaCount {
 		partitionEpochObject.Valid = true
 		data, err = proto.Marshal(partitionEpochObject)
 		if err != nil {
