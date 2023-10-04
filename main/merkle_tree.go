@@ -58,6 +58,7 @@ func (h *CustomHash) Hash() int64 {
 type MerkleBucket struct {
 	bucketId int32
 	hasher   *CustomHash
+	size     int32
 }
 
 func (bucket MerkleBucket) CalculateHash() ([]byte, error) {
@@ -86,8 +87,8 @@ func (manager *Manager) RawPartitionMerkleTree(partitionId int, lowerEpoch, uppe
 	// Build content list in sorted order of keys
 	bucketList := make([]merkletree.Content, manager.config.Manager.PartitionBuckets)
 
-	count := 0
 	for i := 0; i < manager.config.Manager.PartitionBuckets; i++ {
+		size := int32(0)
 		bucket := MerkleBucket{hasher: &CustomHash{}, bucketId: int32(i)}
 		index1, err := BuildEpochIndex(partitionId, uint64(i), lowerEpoch, "")
 		if err != nil {
@@ -103,11 +104,11 @@ func (manager *Manager) RawPartitionMerkleTree(partitionId int, lowerEpoch, uppe
 			if err != nil {
 				return nil, err
 			}
-			count++
+			size++
 			it.Next()
 		}
 		it.Release()
-
+		bucket.size = size
 		bucketList[i] = &bucket
 	}
 
@@ -116,6 +117,7 @@ func (manager *Manager) RawPartitionMerkleTree(partitionId int, lowerEpoch, uppe
 
 func MerkleTreeToPartitionEpochObject(tree *merkletree.MerkleTree, partitionId int, lowerEpoch, upperEpoch int64) (*rpc.RpcEpochTreeObject, error) {
 	bucketHashes := make([][]byte, 0)
+	bucketSizes := make([]int32, 0)
 	for _, leaf := range tree.Leafs {
 		bucket, ok := leaf.C.(*MerkleBucket)
 		if !ok {
@@ -126,9 +128,10 @@ func MerkleTreeToPartitionEpochObject(tree *merkletree.MerkleTree, partitionId i
 			return nil, errors.Wrap(err, "MerkleTreeToPartitionEpochObject")
 		}
 		bucketHashes = append(bucketHashes, hash)
+		bucketSizes = append(bucketSizes, bucket.size)
 	}
 
-	epochTreeObject := &rpc.RpcEpochTreeObject{LowerEpoch: lowerEpoch, UpperEpoch: upperEpoch, Partition: int32(partitionId), Buckets: bucketHashes}
+	epochTreeObject := &rpc.RpcEpochTreeObject{LowerEpoch: lowerEpoch, UpperEpoch: upperEpoch, Partition: int32(partitionId), Buckets: bucketHashes, BucketsSize: bucketSizes}
 	return epochTreeObject, nil
 }
 
@@ -139,7 +142,8 @@ func EpochTreeObjectToMerkleTree(partitionEpochObject *rpc.RpcEpochTreeObject) (
 		if err != nil {
 			return nil, err
 		}
-		contentList = append(contentList, &MerkleBucket{hasher: &CustomHash{value: hashInt64}, bucketId: int32(i)})
+		size := partitionEpochObject.BucketsSize[i]
+		contentList = append(contentList, &MerkleBucket{hasher: &CustomHash{value: hashInt64}, bucketId: int32(i), size: size})
 	}
 	return merkletree.NewTree(contentList)
 }
@@ -160,9 +164,12 @@ func DifferentMerkleTreeBucketsDFS(node1 *merkletree.Node, node2 *merkletree.Nod
 	if !bytes.Equal(node1.Hash, node2.Hash) {
 		if node1.Left == nil && node1.Right == nil {
 			var bucketId1 int32
+			var size1 int32
+			var size2 int32
 			switch bucket1 := node1.C.(type) {
 			case *MerkleBucket:
 				bucketId1 = bucket1.bucketId
+				size1 = bucket1.size
 			default:
 				return nil, errors.Errorf("failed to decode MerkleBucket. type = %s", reflect.TypeOf(bucket1))
 			}
@@ -171,6 +178,7 @@ func DifferentMerkleTreeBucketsDFS(node1 *merkletree.Node, node2 *merkletree.Nod
 			switch bucket2 := node2.C.(type) {
 			case *MerkleBucket:
 				bucketId2 = bucket2.bucketId
+				size2 = bucket2.size
 			default:
 				return nil, errors.Errorf("failed to decode MerkleBucket. type = %s", reflect.TypeOf(bucket2))
 			}
@@ -179,6 +187,7 @@ func DifferentMerkleTreeBucketsDFS(node1 *merkletree.Node, node2 *merkletree.Nod
 				return nil, errors.Errorf("bucketIds dont match. bucketId1 %v bucketId2%v", bucketId1, bucketId2)
 			}
 
+			logrus.Warnf("sizes: bucketId1= %d bucketId2= %d", size1, size2)
 			differences = append(differences, bucketId1)
 		} else {
 			// Recurse into child nodes

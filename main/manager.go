@@ -921,6 +921,7 @@ func (m *Manager) VerifyEpoch(PartitionId int, Epoch int64) error {
 
 		if len(diff) == 0 {
 			validCount++
+		} else {
 		}
 	}
 

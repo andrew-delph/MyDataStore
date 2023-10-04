@@ -64,7 +64,8 @@ message EpochTreeObject{
   int64 lower_epoch = 2;
   int64 upper_epoch = 3;
   repeated bytes buckets =4;
-  bool valid =5;
+  repeated int32 buckets_size =5;
+  bool valid =6;
 }
 
 

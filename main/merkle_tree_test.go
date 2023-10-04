@@ -13,6 +13,7 @@ import (
 )
 
 func TestMerkleTreeRaw(t *testing.T) {
+	initMetrics("test")
 	var err error
 
 	writeValuesNum := 100
@@ -122,6 +123,7 @@ func TestMerkleTreeRaw(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	logrus.Warn("obj1 sizes", obj1.BucketsSize)
 	obj2, err := MerkleTreeToPartitionEpochObject(tree2, 0, 1, 3)
 	if err != nil {
 		t.Error(err)
