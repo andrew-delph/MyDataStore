@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"reflect"
 	"sort"
+	"sync"
 	"syscall"
 	"time"
 
@@ -76,6 +77,20 @@ func NewManager(c config.Config) Manager {
 		clientManager:         clientManager,
 		debugTick:             time.NewTicker(time.Second * 5),
 	}
+}
+
+var currEpochLock sync.RWMutex
+
+func (m *Manager) SetCurrentEpoch(Epoch int64) {
+	currEpochLock.Lock()
+	defer currEpochLock.Unlock()
+	m.CurrentEpoch = Epoch
+}
+
+func (m *Manager) GetCurrentEpoch() int64 {
+	currEpochLock.RLock()
+	defer currEpochLock.RUnlock()
+	return m.CurrentEpoch
 }
 
 func (m *Manager) StartManager() {
@@ -254,7 +269,7 @@ func (m *Manager) startWorker(workerId int) {
 				m.ring.RemoveNode(task.Name)
 
 			case consensus.EpochTask:
-				m.CurrentEpoch = task.Epoch
+				m.SetCurrentEpoch(task.Epoch)
 				m.consistencyController.PublishEpoch(task.Epoch)
 				task.ResCh <- true
 
@@ -276,7 +291,7 @@ func (m *Manager) startWorker(workerId int) {
 					}
 				}
 
-				if m.CurrentEpoch == 0 {
+				if m.GetCurrentEpoch() == int64(0) {
 					err := m.consensusCluster.UpdateEpoch()
 					if err != nil {
 						logrus.Error("UpdateEpoch err = %v", err)
@@ -286,7 +301,7 @@ func (m *Manager) startWorker(workerId int) {
 			case rpc.SetValueTask:
 				logrus.Debugf("worker SetValueTask: %+v", task)
 
-				if task.Value.Epoch < m.CurrentEpoch-1 {
+				if task.Value.Epoch < m.GetCurrentEpoch()-1 {
 					task.ResCh <- errors.New("cannot set lagging epoch")
 					continue
 				}
@@ -448,7 +463,7 @@ func (m *Manager) SetRequest(key, value string) error {
 	}
 
 	unixTimestamp := time.Now().Unix()
-	setReq := &rpc.RpcValue{Key: key, Value: value, Epoch: m.CurrentEpoch, UnixTimestamp: unixTimestamp}
+	setReq := &rpc.RpcValue{Key: key, Value: value, Epoch: m.GetCurrentEpoch(), UnixTimestamp: unixTimestamp}
 
 	responseCh := make(chan *rpc.RpcStandardObject, m.config.Manager.ReplicaCount)
 	errorCh := make(chan error, m.config.Manager.ReplicaCount)
@@ -679,7 +694,7 @@ func (m *Manager) GetEpochTreeLastValid(partitionId int32) (*rpc.RpcEpochTreeObj
 	if err != nil {
 		return nil, errors.Wrap(err, "BuildEpochTreeObjectIndex")
 	}
-	index2, err := BuildEpochTreeObjectIndex(int(partitionId), m.CurrentEpoch)
+	index2, err := BuildEpochTreeObjectIndex(int(partitionId), m.GetCurrentEpoch())
 	if err != nil {
 		return nil, errors.Wrap(err, "BuildEpochTreeObjectIndex")
 	}
