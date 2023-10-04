@@ -285,6 +285,11 @@ func (m *Manager) startWorker(workerId int) {
 
 			case rpc.SetValueTask:
 				logrus.Debugf("worker SetValueTask: %+v", task)
+
+				if task.Value.Epoch < m.CurrentEpoch-1 {
+					task.ResCh <- errors.New("cannot set lagging epoch")
+					continue
+				}
 				err := m.SetValue(task.Value)
 				if err != nil {
 					task.ResCh <- err
