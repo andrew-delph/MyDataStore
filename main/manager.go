@@ -215,11 +215,34 @@ func (m *Manager) startWorker(workerId int) {
 
 			case rpc.AddTempNodeTask:
 				// logrus.Warn("AddTempNodeTask")
-				m.consensusCluster.LockEpoch()
 				name := task.Name
 				err := m.ring.AddTempNode(CreateRingMember(name))
+				if err != nil {
+					task.ResCh <- err
+					continue
+				}
+				err = m.consensusCluster.UpdateEpoch()
+				if err != nil {
+					logrus.Error("UpdateEpoch temp1 err = %v", err)
+					task.ResCh <- err
+					continue
+				}
+				err = m.consensusCluster.UpdateEpoch()
+				if err != nil {
+					logrus.Error("UpdateEpoch temp2 err = %v", err)
+					task.ResCh <- err
+					continue
+				}
+				err = m.consensusCluster.UpdateEpoch()
+				if err != nil {
+					logrus.Error("UpdateEpoch temp3 err = %v", err)
+					task.ResCh <- err
+					continue
+				}
+				m.consensusCluster.LockEpoch()
+
 				// m.clientManager.AddTempClient(task.Name)
-				task.ResCh <- err
+				task.ResCh <- nil
 
 			case rpc.ResetTempNodeTask:
 				// logrus.Warn("ResetTempNodeTask")
@@ -308,7 +331,7 @@ func (m *Manager) startWorker(workerId int) {
 				m.ring.AddNode(CreateRingMember(task.Name))
 
 			case gossip.LeaveTask:
-				logrus.Warnf("worker LeaveTask: %+v", task)
+				// logrus.Warnf("worker LeaveTask: %+v", task)
 				m.consensusCluster.RemoveServer(task.Name)
 				m.ring.RemoveNode(task.Name)
 

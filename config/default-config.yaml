@@ -3,9 +3,9 @@ manager:
   read_quorum: 2
   write_quorum: 2
   default_timeout: 10
-  req_channel_size: 1000
+  req_channel_size: 20
   workers_count: 100
-  partition_concurrency: 20
+  partition_concurrency: 5
   partition_count: 20
   partition_buckets: 1000
   partition_replicas: 2
