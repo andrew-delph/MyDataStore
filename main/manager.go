@@ -293,7 +293,11 @@ func (m *Manager) startWorker(workerId int) {
 			case http.SetTask:
 				logrus.Debugf("worker SetTask: %+v", task)
 				members, err := m.SetRequest(task.Key, task.Value)
-				task.ResCh <- http.SetResponse{Error: err, Members: members}
+				errorStr := ""
+				if err != nil {
+					errorStr = err.Error()
+				}
+				task.ResCh <- http.SetResponse{Error: errorStr, Members: members}
 
 			case http.GetTask:
 				logrus.Debugf("worker GetTask: %+v", task)

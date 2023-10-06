@@ -47,7 +47,7 @@ type SetResponse struct {
 	Key     string
 	Value   string
 	Members []string
-	Error   error
+	Error   string
 }
 
 type HealthTask struct {
@@ -88,7 +88,7 @@ func (s HttpServer) setHandler(w http.ResponseWriter, r *http.Request) {
 	case SetResponse:
 		data, _ := json.Marshal(res)
 		w.Header().Set("Content-Type", "application/json")
-		if res.Error != nil {
+		if res.Error != "" {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 		w.Write(data)
