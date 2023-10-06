@@ -274,7 +274,7 @@ func (m *Manager) startWorker(workerId int) {
 				task.ResCh <- true
 
 			case consensus.LeaderChangeTask:
-				logrus.Warnf("worker LeaderChangeTask: %+v", task)
+				// logrus.Warnf("worker LeaderChangeTask: %+v", task)
 
 				if !task.IsLeader {
 					continue
@@ -523,6 +523,7 @@ func (m *Manager) GetRequest(key string) (*rpc.RpcValue, error) {
 	getReq := &rpc.RpcGetRequestMessage{Key: key}
 	responseCh := make(chan *rpc.RpcValue, m.config.Manager.ReplicaCount)
 	errorCh := make(chan error, m.config.Manager.ReplicaCount)
+	var statuses []codes.Code
 	clientErrors := 0
 	for _, node := range nodes {
 		member, ok := node.(RingMember)
@@ -540,11 +541,13 @@ func (m *Manager) GetRequest(key string) (*rpc.RpcValue, error) {
 
 		go func() {
 			// ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
+			// ctx, cancel := context.WithCancel(context.Background())
+			// defer cancel()
+			ctx := context.Background()
 			res, err := client.GetRequest(ctx, getReq)
 			if err != nil {
 				st, ok := status.FromError(err)
+				statuses = append(statuses, st.Code())
 				if ok && st.Code() != codes.NotFound {
 					logrus.Errorf("GetRequest name: %v code %v", member.Name, st.Code())
 				}
@@ -582,7 +585,7 @@ func (m *Manager) GetRequest(key string) (*rpc.RpcValue, error) {
 			_ = err
 
 		case <-timeout:
-			return nil, fmt.Errorf("GET TIMEOUT: responseCount = %d clientErrors = %d", responseCount, clientErrors)
+			return nil, fmt.Errorf("GET TIMEOUT: responseCount = %d clientErrors = %d nodes = %d statuses = %v", responseCount, clientErrors, len(nodes), statuses)
 		}
 	}
 	if responseCount < m.config.Manager.ReadQuorum {

@@ -228,7 +228,7 @@ func (consensusCluster *ConsensusCluster) AddVoter(nodeName, nodeIP string) erro
 		logrus.Errorf("retry AddVoter: %v", err)
 		return consensusCluster.AddVoter(nodeName, nodeIP)
 	}
-	logrus.Warnf("AddVoter Success: %s", nodeName)
+	// logrus.Warnf("AddVoter Success: %s", nodeName)
 	return nil
 }
 
