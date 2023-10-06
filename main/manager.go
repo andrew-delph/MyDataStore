@@ -153,7 +153,7 @@ func (m *Manager) StartManager() {
 	if err != nil {
 		logrus.Errorf("Failed to db Close err = %v", err)
 	} else {
-		logrus.Warn("DB CLOSE SUCCESS")
+		// logrus.Warn("DB CLOSE SUCCESS")
 	}
 }
 
@@ -168,6 +168,7 @@ type StopWorkerTask struct {
 }
 
 func (m *Manager) stopWorkers() error {
+	defer utils.TrackTime(time.Now(), 0, "Manager stopWorkers")
 	var wg sync.WaitGroup
 	wg.Add(m.config.Manager.WokersCount)
 	for i := 0; i < m.config.Manager.WokersCount; i++ {

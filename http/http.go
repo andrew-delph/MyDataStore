@@ -49,7 +49,7 @@ func CreateHttpServer(httpConfig config.HttpConfig, reqCh chan interface{}) Http
 
 func redirectRequest(w http.ResponseWriter, r *http.Request) {
 	requestedURL := r.URL.String()
-	logrus.Warn("requestedURL ", requestedURL)
+	// logrus.Warn("requestedURL ", requestedURL)
 	http.Redirect(w, r, requestedURL, http.StatusFound)
 }
 
@@ -179,6 +179,7 @@ func (s HttpServer) StartHttp() {
 }
 
 func (s HttpServer) Shutdown() error {
+	defer utils.TrackTime(time.Now(), 0, "Http Shutdown")
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 

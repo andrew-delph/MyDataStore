@@ -299,10 +299,12 @@ func (consensusCluster *ConsensusCluster) Details() error {
 }
 
 func (consensusCluster *ConsensusCluster) Snapshot() error {
+	defer utils.TrackTime(time.Now(), 0, "Consensus Snapshot")
 	return consensusCluster.raftNode.Snapshot().Error()
 }
 
 func (consensusCluster *ConsensusCluster) Shutdown() error {
+	defer utils.TrackTime(time.Now(), 0, "Consensus Shutdown")
 	err := consensusCluster.raftNode.VerifyLeader().Error()
 	if err != nil {
 		return nil
