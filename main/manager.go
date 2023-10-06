@@ -584,16 +584,18 @@ func (m *Manager) SetRequest(key, value string) ([]string, error) {
 
 	timeout := time.After(time.Second * time.Duration(m.config.Manager.DefaultTimeout))
 	responseCount := 0
+	errorCount := 0
 
 	for responseCount < m.config.Manager.WriteQuorum {
 		select {
 		case <-responseCh:
 			responseCount++
 		case err := <-errorCh:
+			errorCount++
 			// logrus.Errorf("SetRequest errorCh: %v", err)
 			_ = err // Handle error if necessary
 		case <-timeout:
-			return members, fmt.Errorf("timed out waiting for responses. responseCount = %d", responseCount)
+			return members, fmt.Errorf("SET: timed out waiting for responses. responseCount = %d errorCount = %d", responseCount, errorCount)
 		}
 	}
 	if responseCount < m.config.Manager.WriteQuorum {

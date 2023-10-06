@@ -37,15 +37,12 @@ type GetTask struct {
 }
 
 type GetResponse struct {
-	Key            string
 	Value          string
 	Failed_members []string
 	Error          string
 }
 
 type SetResponse struct {
-	Key     string
-	Value   string
 	Members []string
 	Error   string
 }
@@ -193,7 +190,6 @@ func (s HttpServer) StartHttp() {
 	http.HandleFunc("/health", s.healthHandler)
 	http.HandleFunc("/ready", s.readyHandler)
 	http.Handle("/metrics", promhttp.Handler())
-	http.ListenAndServe(":8080", nil)
 	srv := &http.Server{
 		Addr: ":8080",
 	}
