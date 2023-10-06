@@ -181,7 +181,6 @@ func (s HttpServer) StartHttp() {
 }
 
 func (s HttpServer) Shutdown() error {
-	defer utils.TrackTime(time.Now(), 0, "Http Shutdown")
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 

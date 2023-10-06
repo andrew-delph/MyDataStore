@@ -117,6 +117,8 @@ func (m *Manager) StartManager() {
 	signal.Notify(signals, syscall.SIGTERM)
 	<-signals
 	logrus.Warn("Received SIGTERM signal")
+
+	// TODO add TrackTime for all requests...
 	defer utils.TrackTime(time.Now(), 0, "GRACEFUL SHUTDOWN")
 
 	err = m.consensusCluster.Snapshot()
@@ -168,7 +170,6 @@ type StopWorkerTask struct {
 }
 
 func (m *Manager) stopWorkers() error {
-	defer utils.TrackTime(time.Now(), 0, "Manager stopWorkers")
 	var wg sync.WaitGroup
 	wg.Add(m.config.Manager.WokersCount)
 	for i := 0; i < m.config.Manager.WokersCount; i++ {

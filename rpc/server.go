@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net"
 	"reflect"
-	"time"
 
 	"github.com/gogo/status"
 
@@ -82,7 +81,6 @@ type ResetTempNodeTask struct {
 }
 
 func (rpcWrapper *RpcWrapper) Stop() error {
-	defer utils.TrackTime(time.Now(), 0, "Rpc GracefulStop")
 	rpcWrapper.grpc.GracefulStop()
 	return nil
 }
