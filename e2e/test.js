@@ -22,7 +22,7 @@ export let options = {
       // How long the test lasts
       duration: "2h",
       // How many iterations per timeUnit
-      rate: 10,
+      rate: 30,
       // Start `rate` iterations per second
       timeUnit: "1s",
       // Pre-allocate VUs
@@ -188,7 +188,7 @@ export default function () {
         iterationNumber
       ),
   });
-
+  return;
   sleep(5);
 
   // Get a value from the map

@@ -66,6 +66,7 @@ message EpochTreeObject{
   repeated bytes buckets =4;
   repeated int32 buckets_size =5;
   bool valid =6;
+   int32 items =7;
 }
 
 

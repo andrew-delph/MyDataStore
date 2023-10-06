@@ -942,6 +942,7 @@ func (m *Manager) VerifyEpoch(PartitionId int, Epoch int64) error {
 		if len(diff) == 0 {
 			validCount++
 		} else {
+			logrus.Warnf("diff %d items count: my %d other %d other_valid %v", len(diff), partitionEpochObject.Items, epochTreeObject.Items, epochTreeObject.Valid)
 		}
 	}
 
@@ -961,7 +962,7 @@ func (m *Manager) VerifyEpoch(PartitionId int, Epoch int64) error {
 		return nil
 	} else {
 		err = m.PoliteStreamRequest(int(partitionEpochObject.Partition), Epoch, Epoch+1, diffSet.List())
-		err = errors.Errorf("validCount= %d<%d Epoch %d trees %d diffSet= %v err = %v", validCount, m.config.Manager.ReadQuorum, Epoch, len(epochTreeObjects), diffSet.List(), err)
+		err = errors.Errorf("validCount= %d<%d Epoch %d trees %d diffSet= %v err = %v", validCount, m.config.Manager.ReadQuorum, Epoch, len(epochTreeObjects), len(diffSet.List()), err)
 		return err
 	}
 }

@@ -118,6 +118,7 @@ func (manager *Manager) RawPartitionMerkleTree(partitionId int, lowerEpoch, uppe
 func MerkleTreeToPartitionEpochObject(tree *merkletree.MerkleTree, partitionId int, lowerEpoch, upperEpoch int64) (*rpc.RpcEpochTreeObject, error) {
 	bucketHashes := make([][]byte, 0)
 	bucketSizes := make([]int32, 0)
+	items := int32(0)
 	for _, leaf := range tree.Leafs {
 		bucket, ok := leaf.C.(*MerkleBucket)
 		if !ok {
@@ -129,9 +130,10 @@ func MerkleTreeToPartitionEpochObject(tree *merkletree.MerkleTree, partitionId i
 		}
 		bucketHashes = append(bucketHashes, hash)
 		bucketSizes = append(bucketSizes, bucket.size)
+		items += bucket.size
 	}
 
-	epochTreeObject := &rpc.RpcEpochTreeObject{LowerEpoch: lowerEpoch, UpperEpoch: upperEpoch, Partition: int32(partitionId), Buckets: bucketHashes, BucketsSize: bucketSizes}
+	epochTreeObject := &rpc.RpcEpochTreeObject{LowerEpoch: lowerEpoch, UpperEpoch: upperEpoch, Partition: int32(partitionId), Buckets: bucketHashes, BucketsSize: bucketSizes, Items: items}
 	return epochTreeObject, nil
 }
 
@@ -142,7 +144,13 @@ func EpochTreeObjectToMerkleTree(partitionEpochObject *rpc.RpcEpochTreeObject) (
 		if err != nil {
 			return nil, err
 		}
-		size := partitionEpochObject.BucketsSize[i]
+		size := int32(0)
+		if i < len(partitionEpochObject.BucketsSize) {
+			size = partitionEpochObject.BucketsSize[i]
+		} else {
+			logrus.Warnf("LEN = %d i = %d", len(partitionEpochObject.BucketsSize), i)
+		}
+
 		contentList = append(contentList, &MerkleBucket{hasher: &CustomHash{value: hashInt64}, bucketId: int32(i), size: size})
 	}
 	return merkletree.NewTree(contentList)
@@ -187,7 +195,7 @@ func DifferentMerkleTreeBucketsDFS(node1 *merkletree.Node, node2 *merkletree.Nod
 				return nil, errors.Errorf("bucketIds dont match. bucketId1 %v bucketId2%v", bucketId1, bucketId2)
 			}
 
-			logrus.Warnf("sizes: bucketId1= %d bucketId2= %d", size1, size2)
+			logrus.Debugf("sizes: bucketId1= %d bucketId2= %d", size1, size2)
 			differences = append(differences, bucketId1)
 		} else {
 			// Recurse into child nodes

@@ -13,7 +13,7 @@ import (
 )
 
 func TestMerkleTreeRaw(t *testing.T) {
-	initMetrics("test")
+	initMetrics("tesdsdst")
 	var err error
 
 	writeValuesNum := 100
