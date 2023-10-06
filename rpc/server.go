@@ -80,6 +80,11 @@ type ResetTempNodeTask struct {
 	ResCh chan interface{}
 }
 
+func (rpcWrapper *RpcWrapper) Stop() error {
+	rpcWrapper.grpc.GracefulStop()
+	return nil
+}
+
 func (rpcWrapper *RpcWrapper) StartRpcServer() {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", rpcWrapper.rpcConfig.Port))
 	if err != nil {

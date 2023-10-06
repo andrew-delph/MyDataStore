@@ -137,6 +137,18 @@ func (m *Manager) StartManager() {
 	if err != nil {
 		logrus.Errorf("Failed to http Shutdown err = %v", err)
 	}
+
+	err = m.rpcWrapper.Stop()
+	if err != nil {
+		logrus.Errorf("Failed to rpc Stop err = %v", err)
+	}
+
+	err = m.db.Close()
+	if err != nil {
+		logrus.Errorf("Failed to db Close err = %v", err)
+	} else {
+		logrus.Warn("DB CLOSE SUCCESS")
+	}
 }
 
 func (m *Manager) startWorkers() {
@@ -161,7 +173,7 @@ func (m *Manager) startWorker(workerId int) {
 
 			err = m.consistencyController.IsHealthy()
 			if err != nil {
-				logrus.Warnf("consistencyController health err= %v", err)
+				// logrus.Warnf("consistencyController health err= %v", err)
 			}
 
 		case data, ok := <-m.reqCh:
@@ -549,7 +561,7 @@ func (m *Manager) GetRequest(key string) (*rpc.RpcValue, error) {
 				st, ok := status.FromError(err)
 				statuses = append(statuses, st.Code())
 				if ok && st.Code() != codes.NotFound {
-					logrus.Errorf("GetRequest name: %v code %v", member.Name, st.Code())
+					// logrus.Errorf("GetRequest name: %v code %v", member.Name, st.Code())
 				}
 				errorCh <- err
 			} else {
