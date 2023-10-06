@@ -292,12 +292,8 @@ func (m *Manager) startWorker(workerId int) {
 
 			case http.SetTask:
 				logrus.Debugf("worker SetTask: %+v", task)
-				err := m.SetRequest(task.Key, task.Value)
-				if err != nil {
-					task.ResCh <- err
-				} else {
-					task.ResCh <- "value set"
-				}
+				members, err := m.SetRequest(task.Key, task.Value)
+				task.ResCh <- http.SetResponse{Error: err, Members: members}
 
 			case http.GetTask:
 				logrus.Debugf("worker GetTask: %+v", task)
@@ -526,10 +522,10 @@ func (m *Manager) startWorker(workerId int) {
 	}
 }
 
-func (m *Manager) SetRequest(key, value string) error {
+func (m *Manager) SetRequest(key, value string) ([]string, error) {
 	nodes, err := m.ring.GetClosestN(key, m.config.Manager.ReplicaCount, true)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	unixTimestamp := time.Now().Unix()
@@ -538,11 +534,15 @@ func (m *Manager) SetRequest(key, value string) error {
 	responseCh := make(chan *rpc.RpcStandardObject, m.config.Manager.ReplicaCount)
 	errorCh := make(chan error, m.config.Manager.ReplicaCount)
 
+	var members []string
+
 	for _, node := range nodes {
 		member, ok := node.(RingMember)
 		if !ok {
-			return errors.New("failed to decode node")
+			return members, errors.New("failed to decode node")
 		}
+
+		members = append(members, member.Name)
 
 		client, err := m.clientManager.GetClient(member.Name)
 		if err != nil {
@@ -575,13 +575,13 @@ func (m *Manager) SetRequest(key, value string) error {
 			// logrus.Errorf("SetRequest errorCh: %v", err)
 			_ = err // Handle error if necessary
 		case <-timeout:
-			return fmt.Errorf("timed out waiting for responses. responseCount = %d", responseCount)
+			return members, fmt.Errorf("timed out waiting for responses. responseCount = %d", responseCount)
 		}
 	}
 	if responseCount < m.config.Manager.WriteQuorum {
-		return fmt.Errorf("failed WriteQuorum. responseCount = %d", responseCount)
+		return members, fmt.Errorf("failed WriteQuorum. responseCount = %d", responseCount)
 	} else {
-		return nil
+		return members, nil
 	}
 }
 

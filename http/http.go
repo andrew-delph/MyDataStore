@@ -43,6 +43,13 @@ type GetResponse struct {
 	Error          error
 }
 
+type SetResponse struct {
+	Key     string
+	Value   string
+	Members []string
+	Error   error
+}
+
 type HealthTask struct {
 	ResCh chan interface{}
 }
@@ -78,8 +85,13 @@ func (s HttpServer) setHandler(w http.ResponseWriter, r *http.Request) {
 
 	rawRes := utils.RecieveChannelTimeout(resCh, s.httpConfig.DefaultTimeout)
 	switch res := rawRes.(type) {
-	case string:
-		fmt.Fprintf(w, res)
+	case SetResponse:
+		data, _ := json.Marshal(res)
+		w.Header().Set("Content-Type", "application/json")
+		if res.Error != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+		w.Write(data)
 	case error:
 		http.Error(w, fmt.Sprintf("%v hostname = %s", res, s.httpConfig.Hostname), http.StatusInternalServerError)
 	default:

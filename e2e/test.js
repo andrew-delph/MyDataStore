@@ -190,12 +190,15 @@ export default function () {
         iterationNumber
       ),
   });
+  const set_members = setRes.json("Members");
   sleep(5);
 
   // Get a value from the map
   let getRes = http.get(`http://${address}/get?key=${key}`, {
     tags: { name: "get" },
   });
+
+  const get_members = getRes.json("Failed_members");
 
   check(getRes, {
     "get status is 200": (r) => r.status === 200,
@@ -208,4 +211,8 @@ export default function () {
         iterationNumber
       ),
   });
+
+  if (getRes.status != 200) {
+    console.log("set_members", set_members, "get_members", get_members);
+  }
 }
