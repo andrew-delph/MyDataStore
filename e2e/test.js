@@ -182,22 +182,14 @@ export default function () {
       tags: { name: "set" },
     }
   );
+  check(setRes, {
+    "set status is 200": (r) => r.status === 200,
+  });
 
   if (setRes.status != 200) {
-    console.error("SET REQUEST FAILED");
+    console.error("SET REQUEST FAILED:", setRes.status, setRes.body);
     return;
   }
-
-  check(setRes, {
-    "set status is 200": (r) =>
-      r.status === 200 ||
-      console.error(
-        "set:",
-        r.status,
-        `${r.body}`.replace(/\n/g, ""),
-        iterationNumber
-      ),
-  });
 
   for (let i = 0; i < 500; i++) {
     // Get a value from the map
