@@ -2,7 +2,7 @@ manager:
   replica_count: 3
   read_quorum: 2
   write_quorum: 2
-  default_timeout: 5
+  default_timeout: 10
   req_channel_size: 1000
   workers_count: 100
   partition_concurrency: 20
@@ -29,4 +29,4 @@ storage:
 rpc:
   port: 7070
 http:
-  default_timeout: 10
+  default_timeout: 20

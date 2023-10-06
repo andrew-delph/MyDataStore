@@ -3,6 +3,7 @@ package main
 import (
 	"container/heap"
 	"sync"
+	"time"
 
 	"github.com/sirupsen/logrus"
 )
@@ -82,9 +83,10 @@ func (h *ConsistencyHeap) ManualPush(PartitionId int, Epoch int64, SyncTask bool
 
 func (h *ConsistencyHeap) RequeueItem(item ConsistencyItem, err error) {
 	item.Attemps++
-	if item.Attemps > 10 {
+	if item.Attemps > 400 {
 		logrus.Warnf("requeue item: %+v err: %v", item, err)
 	}
+	time.Sleep(time.Second)
 	heap.Push(h, item)
 }
 

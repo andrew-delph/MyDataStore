@@ -523,7 +523,7 @@ func (m *Manager) GetRequest(key string) (*rpc.RpcValue, error) {
 	getReq := &rpc.RpcGetRequestMessage{Key: key}
 	responseCh := make(chan *rpc.RpcValue, m.config.Manager.ReplicaCount)
 	errorCh := make(chan error, m.config.Manager.ReplicaCount)
-
+	clientErrors := 0
 	for _, node := range nodes {
 		member, ok := node.(RingMember)
 		if !ok {
@@ -533,18 +533,21 @@ func (m *Manager) GetRequest(key string) (*rpc.RpcValue, error) {
 		client, err := m.clientManager.GetClient(member.Name)
 		if err != nil {
 			errorCh <- err
+			clientErrors++
 			logrus.Debugf("GetRequest err = %v", err)
 			continue
 		}
 
 		go func() {
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			// ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 			res, err := client.GetRequest(ctx, getReq)
-			st, ok := status.FromError(err)
-			if ok && st.Code() == codes.NotFound {
-				responseCh <- nil
-			} else if err != nil {
+			if err != nil {
+				st, ok := status.FromError(err)
+				if ok && st.Code() != codes.NotFound {
+					logrus.Errorf("GetRequest name: %v st %+v code %v", member.Name, *st, st.Code())
+				}
 				errorCh <- err
 			} else {
 				responseCh <- res
@@ -560,8 +563,7 @@ func (m *Manager) GetRequest(key string) (*rpc.RpcValue, error) {
 		case res := <-responseCh:
 
 			if res == nil {
-				// not found
-				continue
+				logrus.Panic("GET res is nil!")
 			}
 
 			responseCount++ // Include not found as a valid response?
@@ -573,10 +575,14 @@ func (m *Manager) GetRequest(key string) (*rpc.RpcValue, error) {
 			}
 		case err := <-errorCh:
 			// logrus.Errorf("GetRequest errorCh %v", err)
+			// st, ok := status.FromError(err)
+			// if ok && st.Code() != codes.NotFound {
+			// 	logrus.Errorf("GetRequest st %+v code %v", *st, st.Code())
+			// }
 			_ = err
 
 		case <-timeout:
-			return nil, fmt.Errorf("timed out waiting for responses. responseCount = %d", responseCount)
+			return nil, fmt.Errorf("GET TIMEOUT: responseCount = %d clientErrors = %d", responseCount, clientErrors)
 		}
 	}
 	if responseCount < m.config.Manager.ReadQuorum {
@@ -942,9 +948,9 @@ func (m *Manager) VerifyEpoch(PartitionId int, Epoch int64) error {
 		if len(diff) == 0 {
 			validCount++
 		} else {
-			logrus.Warnf("diff %d items count: my %d other %d other_valid %v", len(diff), partitionEpochObject.Items, epochTreeObject.Items, epochTreeObject.Valid)
+			// logrus.Warnf("diff %d items count: my %d other %d other_valid %v", len(diff), partitionEpochObject.Items, epochTreeObject.Items, epochTreeObject.Valid)
 			if epochTreeObject.Valid == true {
-				logrus.Error(errors.New("failed valid check against valid tree"))
+				// logrus.Error(errors.New("failed valid check against valid tree"))
 				validDiff = true
 			}
 		}

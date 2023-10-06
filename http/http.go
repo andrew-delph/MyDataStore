@@ -71,7 +71,7 @@ func (s HttpServer) setHandler(w http.ResponseWriter, r *http.Request) {
 	case string:
 		fmt.Fprintf(w, res)
 	case error:
-		http.Error(w, fmt.Sprintf("%v hostname= %s", res, s.httpConfig.Hostname), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("%v hostname = %s", res, s.httpConfig.Hostname), http.StatusInternalServerError)
 	default:
 		logrus.Panicf("http unkown res type: %v", reflect.TypeOf(res))
 	}
@@ -95,7 +95,7 @@ func (s HttpServer) getHandler(w http.ResponseWriter, r *http.Request) {
 	case nil:
 		http.Error(w, "value not found", http.StatusNotFound)
 	case error:
-		http.Error(w, fmt.Sprintf("%v hostname= %s", res, s.httpConfig.Hostname), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("%v hostname = %s", res, s.httpConfig.Hostname), http.StatusInternalServerError)
 	default:
 		logrus.Panicf("http unkown res type: %v", reflect.TypeOf(res))
 	}
