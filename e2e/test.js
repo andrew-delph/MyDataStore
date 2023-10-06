@@ -165,14 +165,15 @@ export function remove() {
 }
 
 // options = { duration: "2h", vus: 1 };
-// options = { iterations: 100, vus: 1 };
+// options = { iterations: 1, vus: 1 };
 export default function () {
   const iterationNumber = exec.scenario.iterationInTest;
 
   // the key value to insert
-  let key = randomString(15);
+  let key = randomString(5);
+  let value = randomString(5);
   // key = "test!";
-  let value = randomString(15);
+  // value = "123000";
 
   // Set a value to the map
   let setRes = http.get(`http://${address}/set?key=${key}&value=${value}`, {

@@ -15,6 +15,7 @@ type BadgerStorage struct {
 
 func NewBadgerStorage(conf config.StorageConfig) BadgerStorage {
 	ops := badger.DefaultOptions(conf.DataPath)
+
 	ops.Logger = nil
 	db, err := badger.Open(ops)
 	if err != nil {

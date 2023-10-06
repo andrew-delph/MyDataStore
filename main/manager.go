@@ -54,6 +54,7 @@ func NewManager(c config.Config) Manager {
 	httpServer := http.CreateHttpServer(c.Http, reqCh)
 	gossipCluster := gossip.CreateGossipCluster(c.Gossip, reqCh)
 	db := storage.NewBadgerStorage(c.Storage)
+	// db := storage.NewLevelDbStorage(c.Storage)
 	consensusCluster := consensus.CreateConsensusCluster(c.Consensus, reqCh)
 	ring := hashring.CreateHashring(c.Manager, reqCh)
 
@@ -302,7 +303,7 @@ func (m *Manager) startWorker(workerId int) {
 				logrus.Debugf("worker GetTask: %+v", task)
 				value, err := m.GetRequest(task.Key)
 				if err != nil {
-					task.ResCh <- err
+					task.ResCh <- errors.Wrapf(err, "ring_members: %d", len(m.ring.GetMembers()))
 				} else if value == nil {
 					task.ResCh <- nil
 				} else {
@@ -375,6 +376,7 @@ func (m *Manager) startWorker(workerId int) {
 				}
 				err := m.SetValue(task.Value)
 				if err != nil {
+					logrus.Warnf("SetValue err = %v", err)
 					task.ResCh <- err
 				} else {
 					task.ResCh <- true
@@ -593,6 +595,7 @@ func (m *Manager) GetRequest(key string) (*rpc.RpcValue, error) {
 	responseCh := make(chan *rpc.RpcValue, m.config.Manager.ReplicaCount)
 	errorCh := make(chan error, m.config.Manager.ReplicaCount)
 	var statuses []codes.Code
+	var failed_members []string
 	clientErrors := 0
 	for _, node := range nodes {
 		member, ok := node.(RingMember)
@@ -617,6 +620,7 @@ func (m *Manager) GetRequest(key string) (*rpc.RpcValue, error) {
 			if err != nil {
 				st, ok := status.FromError(err)
 				statuses = append(statuses, st.Code())
+				failed_members = append(failed_members, member.Name)
 				if ok && st.Code() != codes.NotFound {
 					// logrus.Errorf("GetRequest name: %v code %v", member.Name, st.Code())
 				}
@@ -654,7 +658,7 @@ func (m *Manager) GetRequest(key string) (*rpc.RpcValue, error) {
 			_ = err
 
 		case <-timeout:
-			return nil, fmt.Errorf("GET TIMEOUT: responseCount = %d clientErrors = %d nodes = %d statuses = %v", responseCount, clientErrors, len(nodes), statuses)
+			return nil, fmt.Errorf("GET TIMEOUT: responseCount = %d clientErrors = %d nodes = %d statuses = %v failed_members = %v", responseCount, clientErrors, len(nodes), statuses, failed_members)
 		}
 	}
 	if responseCount < m.config.Manager.ReadQuorum {
