@@ -68,14 +68,12 @@ func (h hasher) Sum64(data []byte) uint64 {
 	return xxhash.Sum64(data)
 }
 
-
 func (ring *Hashring) IsHealthy() error {
-	if len(ring.GetMembers()) < ring.managerConfig.ReplicaCount && ring.getTaskListSize()>0 {
+	if len(ring.GetMembers()) < ring.managerConfig.ReplicaCount && ring.getTaskListSize() > 0 {
 		return errors.New("waiting on update nodes debounce")
 	}
 	return nil
 }
-
 
 func (ring *Hashring) getTaskListSize() int {
 	ring.rwLock.RLock()
@@ -220,6 +218,7 @@ func (ring *Hashring) UpdateRing() {
 			logrus.Panicf("Hashring unknown task: %v", reflect.TypeOf(task))
 		}
 	}
+	ring.taskList = []interface{}{}
 	ring.notifyPartitionUpdate()
 }
 

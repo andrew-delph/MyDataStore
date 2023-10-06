@@ -251,7 +251,7 @@ func (m *Manager) startWorker(workerId int) {
 
 				err = m.ring.IsHealthy()
 				if err != nil {
-					logrus.Debugf("IsHealthy err = %v", err)
+					logrus.Warnf("ring.IsHealthy err = %v", err)
 					task.ResCh <- err
 					continue
 				}
@@ -526,8 +526,9 @@ func (m *Manager) SetRequest(key, value string) error {
 		}
 
 		go func() {
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
+			// ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			// defer cancel()
+			ctx := context.Background()
 			res, err := client.SetRequest(ctx, setReq)
 			if err != nil {
 				errorCh <- errors.Wrapf(err, "member %s", member.Name)
