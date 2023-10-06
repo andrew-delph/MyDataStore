@@ -61,6 +61,10 @@ func (storage BadgerStorage) NewTransaction(update bool) Transaction {
 }
 
 func (storage BadgerStorage) Close() error {
+	err := storage.db.Sync()
+	if err != nil {
+		return err
+	}
 	return storage.db.Close()
 }
 

@@ -11,7 +11,7 @@ manager:
   partition_replicas: 2
   data_path: "/data/storage"
   load: 2.1
-  ring_debounce: 7.5
+  ring_debounce: 30
 consensus:
   epoch_time: 100
   data_path: "/data/raft"

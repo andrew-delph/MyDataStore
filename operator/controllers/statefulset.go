@@ -198,6 +198,17 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 		newSize := *found.Spec.Replicas + 1
 		logrus.Warnf("ALL PARTITIONS HEALTHY. READY TO SCALE UP. newSize %d", newSize)
 
+		meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
+			Type:   typeRolloutMyKeyStore,
+			Status: metav1.ConditionTrue, Reason: "Increase Size",
+			Message: fmt.Sprintf("newSize (%d)", newSize),
+		})
+
+		if err := r.Status().Update(ctx, mykeystore); err != nil {
+			log.Error(err, "Failed to update MyKeyStore status")
+			return requeueIfError(err)
+		}
+
 		found.Spec.Replicas = &newSize
 		if err = r.Update(ctx, found); err != nil {
 			log.Error(err, "Failed to update Deployment",
@@ -245,6 +256,17 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 
 		newSize := *found.Spec.Replicas + -1
 		logrus.Warnf("ALL PARTITIONS HEALTHY. READY TO SCALE DOWN. newSize %d", newSize)
+
+		meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
+			Type:   typeRolloutMyKeyStore,
+			Status: metav1.ConditionTrue, Reason: "Decrease Size",
+			Message: fmt.Sprintf("newSize (%d)", newSize),
+		})
+
+		if err := r.Status().Update(ctx, mykeystore); err != nil {
+			log.Error(err, "Failed to update MyKeyStore status")
+			return requeueIfError(err)
+		}
 
 		found.Spec.Replicas = &newSize
 		if err = r.Update(ctx, found); err != nil {
@@ -423,7 +445,7 @@ func notifyResetTempNode(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.
 		addr := fmt.Sprintf("%s.%s.%s", pod.Name, mykeystore.Name, pod.Namespace)
 		conn, client, err := rpc.CreateRawRpcClient(addr, 7070)
 		if err != nil {
-			logrus.Errorf("Client %s err = %v", addr, err)
+			// logrus.Errorf("Client %s err = %v", addr, err)
 			errorCount++
 			continue
 		}
@@ -431,12 +453,12 @@ func notifyResetTempNode(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.
 		req := &rpc.RpcStandardObject{}
 		res, err := client.ResetTempNode(ctx, req)
 		if err != nil {
-			logrus.Errorf("ResetTempNode Client %s res err = %v", pod.Name, err)
+			// logrus.Errorf("ResetTempNode Client %s res err = %v", pod.Name, err)
 			errorCount++
 			continue
 		} else if res.Error {
 			err = errors.New(res.Message)
-			logrus.Errorf("ResetTempNode Client %s res err msg = %v", pod.Name, err)
+			// logrus.Errorf("ResetTempNode Client %s res err msg = %v", pod.Name, err)
 			errorCount++
 			continue
 		}
