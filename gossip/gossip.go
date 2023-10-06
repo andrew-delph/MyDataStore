@@ -10,7 +10,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/andrew-delph/my-key-store/config"
-	"github.com/andrew-delph/my-key-store/utils"
 )
 
 func gossipTest() {
@@ -82,7 +81,6 @@ func (gossipCluster *GossipCluster) Join() error {
 }
 
 func (gossipCluster *GossipCluster) Leave() error {
-	defer utils.TrackTime(time.Now(), 0, "Gossip Leave")
 	return gossipCluster.list.Leave(time.Second * 5)
 }
 

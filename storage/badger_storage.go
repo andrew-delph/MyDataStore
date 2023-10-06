@@ -2,13 +2,11 @@ package storage
 
 import (
 	"bytes"
-	"time"
 
 	"github.com/dgraph-io/badger"
 	"github.com/sirupsen/logrus"
 
 	"github.com/andrew-delph/my-key-store/config"
-	"github.com/andrew-delph/my-key-store/utils"
 )
 
 type BadgerStorage struct {
@@ -62,7 +60,6 @@ func (storage BadgerStorage) NewTransaction(update bool) Transaction {
 }
 
 func (storage BadgerStorage) Close() error {
-	defer utils.TrackTime(time.Now(), 0, "Badger Close")
 	return storage.db.Close()
 }
 
