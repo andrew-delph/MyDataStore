@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/andrew-delph/my-key-store/rpc"
+	"github.com/andrew-delph/my-key-store/utils"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -126,7 +127,7 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 	if rolloutStatus != nil && rolloutStatus.Status == metav1.ConditionTrue {
 		// logrus.Warnf("time %v", time.Since(rolloutStatus.LastTransitionTime.Time))
 		if found.Status.UpdatedReplicas != found.Status.Replicas || found.Status.ReadyReplicas != found.Status.Replicas || time.Since(rolloutStatus.LastTransitionTime.Time) < time.Second*10 {
-			logrus.Warnf("rollout: %v %v need: %v", found.Status.UpdatedReplicas, found.Status.ReadyReplicas, found.Status.Replicas)
+			logrus.Warnf("rollout: %v need: %v", utils.Min(found.Status.UpdatedReplicas, found.Status.ReadyReplicas), found.Status.Replicas)
 
 			return requeueAfter(time.Second*5, nil)
 		} else {

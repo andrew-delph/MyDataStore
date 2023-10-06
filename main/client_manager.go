@@ -27,6 +27,13 @@ func (cm *ClientManager) AddClient(name string, rpcClient rpc.RpcClient) {
 	cm.clientMap[name] = rpcClient
 }
 
+func (cm *ClientManager) RemoveClient(name string) {
+	cm.rwLock.Lock()
+	defer cm.rwLock.Unlock()
+	logrus.Debugf("RemoveClient %s", name)
+	delete(cm.clientMap, name)
+}
+
 func (cm *ClientManager) AddTempClient(name string) {
 	cm.rwLock.Lock()
 	defer cm.rwLock.Unlock()

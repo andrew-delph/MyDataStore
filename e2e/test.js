@@ -170,15 +170,18 @@ export default function () {
   const iterationNumber = exec.scenario.iterationInTest;
 
   // the key value to insert
-  let key = randomString(5);
-  let value = randomString(5);
+  let set_key = randomString(5);
+  let set_value = randomString(5);
   // key = "test!";
   // value = "123000";
 
   // Set a value to the map
-  let setRes = http.get(`http://${address}/set?key=${key}&value=${value}`, {
-    tags: { name: "set" },
-  });
+  let setRes = http.get(
+    `http://${address}/set?key=${set_key}&value=${set_value}`,
+    {
+      tags: { name: "set" },
+    }
+  );
 
   check(setRes, {
     "set status is 200": (r) =>
@@ -194,25 +197,38 @@ export default function () {
   sleep(5);
 
   // Get a value from the map
-  let getRes = http.get(`http://${address}/get?key=${key}`, {
+  let getRes = http.get(`http://${address}/get?key=${set_key}`, {
     tags: { name: "get" },
   });
 
   const get_members = getRes.json("Failed_members");
+  const get_value = getRes.json("Value");
 
   check(getRes, {
     "get status is 200": (r) => r.status === 200,
-    "get the correct value": (r) =>
-      r.json("Value") === value ||
-      console.error(
-        "get:",
-        r.status,
-        `${r.body}`.replace(/\n/g, ""),
-        iterationNumber
-      ),
+    "get the correct value": (r) => r.json("Value") === set_value,
+    // "get the correct value": (r) =>
+    //   r.json("Value") === value ||
+    //   console.error(
+    //     "get:",
+    //     r.status,
+    //     `${r.body}`.replace(/\n/g, ""),
+    //     iterationNumber
+    //   ),
   });
 
   if (getRes.status != 200) {
-    console.log("set_members", set_members, "get_members", get_members);
+    console.log(
+      "status",
+      getRes.status,
+      "set_members",
+      set_members,
+      "get_members",
+      get_members,
+      "set_value",
+      set_value,
+      "get_value",
+      get_value
+    );
   }
 }

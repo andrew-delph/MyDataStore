@@ -298,13 +298,11 @@ func (m *Manager) startWorker(workerId int) {
 			case http.GetTask:
 				logrus.Debugf("worker GetTask: %+v", task)
 				value, failed_members, err := m.GetRequest(task.Key)
-				if err != nil {
-					task.ResCh <- http.GetResponse{Error: errors.Wrapf(err, "ring_members: %d", len(m.ring.GetMembers()))}
-				} else if value == nil {
-					task.ResCh <- http.GetResponse{Failed_members: failed_members}
-				} else {
-					task.ResCh <- http.GetResponse{Failed_members: failed_members, Value: value.Value}
+				var valueStr string
+				if value != nil {
+					valueStr = value.Value
 				}
+				task.ResCh <- http.GetResponse{Value: valueStr, Error: err, Failed_members: failed_members}
 
 			case gossip.JoinTask:
 				logrus.Debugf("worker JoinTask: %+v", task)
@@ -330,6 +328,7 @@ func (m *Manager) startWorker(workerId int) {
 
 			case gossip.LeaveTask:
 				// logrus.Warnf("worker LeaveTask: %+v", task)
+				m.clientManager.RemoveClient(task.Name)
 				m.consensusCluster.RemoveServer(task.Name)
 				m.ring.RemoveNode(task.Name)
 
