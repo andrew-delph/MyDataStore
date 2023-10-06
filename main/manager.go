@@ -616,8 +616,7 @@ func (m *Manager) EpochTreeObjectRequest(partitionId int, epoch int64, timeout t
 			defer cancel()
 			res, err := client.GetEpochTree(ctx, treeReq)
 			if err != nil {
-
-				logrus.Errorf("GetEpochTree %s err %v partitionId %d epoch %d", member.Name, err, partitionId, epoch)
+				// logrus.Errorf("GetEpochTree %s err %v partitionId %d epoch %d", member.Name, err, partitionId, epoch)
 				errorCh <- err
 			} else {
 				responseCh <- res
@@ -926,6 +925,7 @@ func (m *Manager) VerifyEpoch(PartitionId int, Epoch int64) error {
 	// compare the difference to the otherTree
 	validCount := 0
 	diffSet := utils.NewInt32Set()
+	validDiff := false
 	for _, epochTreeObject := range epochTreeObjects {
 		otherTree, err = EpochTreeObjectToMerkleTree(epochTreeObject)
 		if err != nil {
@@ -943,10 +943,14 @@ func (m *Manager) VerifyEpoch(PartitionId int, Epoch int64) error {
 			validCount++
 		} else {
 			logrus.Warnf("diff %d items count: my %d other %d other_valid %v", len(diff), partitionEpochObject.Items, epochTreeObject.Items, epochTreeObject.Valid)
+			if epochTreeObject.Valid == true {
+				logrus.Error(errors.New("failed valid check against valid tree"))
+				validDiff = true
+			}
 		}
 	}
 
-	if validCount >= m.config.Manager.ReplicaCount {
+	if validCount >= m.config.Manager.ReplicaCount || validDiff == true {
 		partitionEpochObject.Valid = true
 		data, err = proto.Marshal(partitionEpochObject)
 		if err != nil {

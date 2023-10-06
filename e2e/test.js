@@ -188,7 +188,6 @@ export default function () {
         iterationNumber
       ),
   });
-  return;
   sleep(5);
 
   // Get a value from the map
