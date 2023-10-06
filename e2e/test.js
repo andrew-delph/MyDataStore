@@ -11,24 +11,24 @@ export let options = {
   // iterations: 20,
   // vus: 5,
   scenarios: {
-    // load: {
-    //   executor: "constant-vus",
-    //   vus: 1,
-    //   duration: "5m",
-    //   exec: "default",
-    // },
-    constant_arrival: {
-      executor: "constant-arrival-rate",
-      // How long the test lasts
+    load: {
+      executor: "constant-vus",
+      vus: 20,
       duration: "2h",
-      // How many iterations per timeUnit
-      rate: 30,
-      // Start `rate` iterations per second
-      timeUnit: "1s",
-      // Pre-allocate VUs
-      preAllocatedVUs: 400,
-      maxVUs: 2000,
+      exec: "default",
     },
+    // constant_arrival: {
+    //   executor: "constant-arrival-rate",
+    //   // How long the test lasts
+    //   duration: "2h",
+    //   // How many iterations per timeUnit
+    //   rate: 30,
+    //   // Start `rate` iterations per second
+    //   timeUnit: "1s",
+    //   // Pre-allocate VUs
+    //   preAllocatedVUs: 400,
+    //   maxVUs: 2000,
+    // },
     // ramping_arrival: {
     //   executor: "ramping-arrival-rate",
     //   startRate: 50,
@@ -171,6 +171,7 @@ export default function () {
 
   // the key value to insert
   let key = randomString(15);
+  key = "test!";
   let value = randomString(15);
 
   // Set a value to the map
@@ -188,6 +189,7 @@ export default function () {
         iterationNumber
       ),
   });
+  return;
   sleep(5);
 
   // Get a value from the map

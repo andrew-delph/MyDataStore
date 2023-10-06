@@ -512,7 +512,7 @@ func getStatefulSet(mykeystore *cachev1alpha1.MyKeyStore) *appsv1.StatefulSet {
 									Port: intstr.FromInt(8080),
 								},
 							},
-							InitialDelaySeconds: 20,
+							InitialDelaySeconds: 5,
 							PeriodSeconds:       5,
 						},
 						LivenessProbe: &corev1.Probe{

@@ -1,6 +1,7 @@
 package hashring
 
 import (
+	"errors"
 	"reflect"
 	"sync"
 	"time"
@@ -65,6 +66,21 @@ type hasher struct{}
 
 func (h hasher) Sum64(data []byte) uint64 {
 	return xxhash.Sum64(data)
+}
+
+
+func (ring *Hashring) IsHealthy() error {
+	if len(ring.GetMembers()) < ring.managerConfig.ReplicaCount && ring.getTaskListSize()>0 {
+		return errors.New("waiting on update nodes debounce")
+	}
+	return nil
+}
+
+
+func (ring *Hashring) getTaskListSize() int {
+	ring.rwLock.RLock()
+	defer ring.rwLock.RUnlock()
+	return len(ring.taskList)
 }
 
 func (ring *Hashring) FindPartitionID(key []byte) int {
