@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -33,6 +34,13 @@ type SetTask struct {
 type GetTask struct {
 	Key   string
 	ResCh chan interface{}
+}
+
+type GetResponse struct {
+	Key            string
+	Value          string
+	Failed_members []string
+	Error          error
 }
 
 type HealthTask struct {
@@ -92,8 +100,13 @@ func (s HttpServer) getHandler(w http.ResponseWriter, r *http.Request) {
 
 	rawRes := utils.RecieveChannelTimeout(resCh, s.httpConfig.DefaultTimeout)
 	switch res := rawRes.(type) {
-	case string:
-		fmt.Fprintf(w, res)
+	case GetResponse:
+		data, _ := json.Marshal(res)
+		w.Header().Set("Content-Type", "application/json")
+		if res.Error != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+		w.Write(data)
 	case nil:
 		http.Error(w, "value not found", http.StatusNotFound)
 	case error:

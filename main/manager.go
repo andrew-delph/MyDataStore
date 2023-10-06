@@ -301,13 +301,13 @@ func (m *Manager) startWorker(workerId int) {
 
 			case http.GetTask:
 				logrus.Debugf("worker GetTask: %+v", task)
-				value, err := m.GetRequest(task.Key)
+				value, failed_members, err := m.GetRequest(task.Key)
 				if err != nil {
-					task.ResCh <- errors.Wrapf(err, "ring_members: %d", len(m.ring.GetMembers()))
+					task.ResCh <- http.GetResponse{Error: errors.Wrapf(err, "ring_members: %d", len(m.ring.GetMembers()))}
 				} else if value == nil {
-					task.ResCh <- nil
+					task.ResCh <- http.GetResponse{Failed_members: failed_members}
 				} else {
-					task.ResCh <- value.Value
+					task.ResCh <- http.GetResponse{Failed_members: failed_members, Value: value.Value}
 				}
 
 			case gossip.JoinTask:
@@ -585,10 +585,10 @@ func (m *Manager) SetRequest(key, value string) error {
 	}
 }
 
-func (m *Manager) GetRequest(key string) (*rpc.RpcValue, error) {
+func (m *Manager) GetRequest(key string) (*rpc.RpcValue, []string, error) {
 	nodes, err := m.ring.GetClosestN(key, m.config.Manager.ReplicaCount, true)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	getReq := &rpc.RpcGetRequestMessage{Key: key}
@@ -600,7 +600,7 @@ func (m *Manager) GetRequest(key string) (*rpc.RpcValue, error) {
 	for _, node := range nodes {
 		member, ok := node.(RingMember)
 		if !ok {
-			return nil, errors.New("failed to decode node")
+			return nil, failed_members, errors.New("failed to decode node")
 		}
 
 		client, err := m.clientManager.GetClient(member.Name)
@@ -658,15 +658,15 @@ func (m *Manager) GetRequest(key string) (*rpc.RpcValue, error) {
 			_ = err
 
 		case <-timeout:
-			return nil, fmt.Errorf("GET TIMEOUT: responseCount = %d clientErrors = %d nodes = %d statuses = %v failed_members = %v", responseCount, clientErrors, len(nodes), statuses, failed_members)
+			return nil, failed_members, fmt.Errorf("GET TIMEOUT: responseCount = %d clientErrors = %d nodes = %d statuses = %v failed_members = %v", responseCount, clientErrors, len(nodes), statuses, failed_members)
 		}
 	}
 	if responseCount < m.config.Manager.ReadQuorum {
-		return nil, fmt.Errorf("failed ReadQuorum. responseCount = %d", responseCount)
+		return nil, failed_members, fmt.Errorf("failed ReadQuorum. responseCount = %d", responseCount)
 	} else if recentValue == nil {
-		return nil, nil
+		return nil, failed_members, nil
 	} else {
-		return recentValue, nil
+		return recentValue, failed_members, nil
 	}
 }
 

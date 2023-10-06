@@ -200,7 +200,7 @@ export default function () {
   check(getRes, {
     "get status is 200": (r) => r.status === 200,
     "get the correct value": (r) =>
-      r.body === value ||
+      r.json("Value") === value ||
       console.error(
         "get:",
         r.status,
