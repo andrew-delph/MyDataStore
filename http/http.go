@@ -40,7 +40,7 @@ type GetResponse struct {
 	Key            string
 	Value          string
 	Failed_members []string
-	Error          error
+	Error          string
 }
 
 type SetResponse struct {
@@ -115,8 +115,10 @@ func (s HttpServer) getHandler(w http.ResponseWriter, r *http.Request) {
 	case GetResponse:
 		data, _ := json.Marshal(res)
 		w.Header().Set("Content-Type", "application/json")
-		if res.Error != nil {
+		if res.Error != "" {
 			w.WriteHeader(http.StatusInternalServerError)
+		} else if res.Value == "" {
+			w.WriteHeader(http.StatusNotFound)
 		}
 		w.Write(data)
 	case nil:

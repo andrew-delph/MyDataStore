@@ -183,6 +183,11 @@ export default function () {
     }
   );
 
+  if (setRes.status != 200) {
+    console.error("SET REQUEST FAILED");
+    return;
+  }
+
   check(setRes, {
     "set status is 200": (r) =>
       r.status === 200 ||
@@ -193,42 +198,50 @@ export default function () {
         iterationNumber
       ),
   });
-  const set_members = setRes.json("Members");
-  sleep(5);
 
-  // Get a value from the map
-  let getRes = http.get(`http://${address}/get?key=${set_key}`, {
-    tags: { name: "get" },
-  });
+  for (let i = 0; i < 500; i++) {
+    // Get a value from the map
+    let getRes = http.get(`http://${address}/get?key=${set_key}`, {
+      tags: { name: "get" },
+    });
+    const set_members = setRes.json("Members") || [];
+    const get_members = getRes.json("Failed_members") || [];
+    const get_value = getRes.json("Value");
+    const get_error = getRes.json("Error") || getRes.body;
+    set_members.sort();
+    get_members.sort();
 
-  const get_members = getRes.json("Failed_members");
-  const get_value = getRes.json("Value");
-
-  check(getRes, {
-    "get status is 200": (r) => r.status === 200,
-    "get the correct value": (r) => r.json("Value") === set_value,
-    // "get the correct value": (r) =>
-    //   r.json("Value") === value ||
-    //   console.error(
-    //     "get:",
-    //     r.status,
-    //     `${r.body}`.replace(/\n/g, ""),
-    //     iterationNumber
-    //   ),
-  });
-
-  if (getRes.status != 200) {
-    console.log(
-      "status",
-      getRes.status,
-      "set_members",
-      set_members,
-      "get_members",
-      get_members,
-      "set_value",
-      set_value,
-      "get_value",
-      get_value
-    );
+    check(getRes, {
+      "get status is 200": (r) => r.status === 200,
+      "get the correct value": (r) => r.json("Value") === set_value,
+      // "get the correct value": (r) =>
+      //   r.json("Value") === value ||
+      //   console.error(
+      //     "get:",
+      //     r.status,
+      //     `${r.body}`.replace(/\n/g, ""),
+      //     iterationNumber
+      //   ),
+    });
+    if (getRes.status != 200) {
+      const diff = get_members.filter((item) => !set_members.includes(item));
+      console.log(
+        "i",
+        i,
+        "status",
+        getRes.status,
+        "diff",
+        diff,
+        "get_members",
+        get_members.length,
+        "set_value",
+        set_value,
+        "get_value",
+        get_value,
+        "err",
+        get_error
+      );
+    }
+    sleep(5);
   }
 }

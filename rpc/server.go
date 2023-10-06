@@ -104,8 +104,16 @@ func (rpcWrapper *RpcWrapper) SetRequest(ctx context.Context, value *datap.Value
 		return nil, err
 	}
 	rawRes := <-resCh
-	logrus.Debug("SetRequest res ", rawRes)
-	return &datap.StandardObject{Message: "Value set"}, nil
+	switch res := rawRes.(type) {
+	case bool:
+		return &datap.StandardObject{Message: "Value set"}, nil
+	case error:
+		// logrus.Errorf("SetRequest err = %v", res)
+		return nil, res
+	default:
+		logrus.Panicf("http unkown res type: %v", reflect.TypeOf(res))
+	}
+	return nil, errors.New("?????")
 }
 
 func (rpcWrapper *RpcWrapper) GetRequest(ctx context.Context, req *datap.GetRequestMessage) (*datap.Value, error) {
@@ -115,7 +123,7 @@ func (rpcWrapper *RpcWrapper) GetRequest(ctx context.Context, req *datap.GetRequ
 	if err != nil {
 		return nil, err
 	}
-	rawRes := utils.RecieveChannelTimeout(resCh, 5)
+	rawRes := <-resCh
 	switch res := rawRes.(type) {
 	case *datap.Value:
 		return res, nil

@@ -302,7 +302,11 @@ func (m *Manager) startWorker(workerId int) {
 				if value != nil {
 					valueStr = value.Value
 				}
-				task.ResCh <- http.GetResponse{Value: valueStr, Error: err, Failed_members: failed_members}
+				errorStr := ""
+				if err != nil {
+					errorStr = err.Error()
+				}
+				task.ResCh <- http.GetResponse{Value: valueStr, Error: errorStr, Failed_members: failed_members}
 
 			case gossip.JoinTask:
 				logrus.Debugf("worker JoinTask: %+v", task)
@@ -330,7 +334,7 @@ func (m *Manager) startWorker(workerId int) {
 				// logrus.Warnf("worker LeaveTask: %+v", task)
 				m.clientManager.RemoveClient(task.Name)
 				m.consensusCluster.RemoveServer(task.Name)
-				m.ring.RemoveNode(task.Name)
+				// m.ring.RemoveNode(task.Name)
 
 			case consensus.EpochTask:
 				m.SetCurrentEpoch(task.Epoch)
@@ -557,7 +561,7 @@ func (m *Manager) SetRequest(key, value string) ([]string, error) {
 			res, err := client.SetRequest(ctx, setReq)
 			if err != nil {
 				errorCh <- errors.Wrapf(err, "member %s", member.Name)
-			} else {
+			} else if res != nil {
 				responseCh <- res
 			}
 		}()
@@ -610,6 +614,8 @@ func (m *Manager) GetRequest(key string) (*rpc.RpcValue, []string, error) {
 			continue
 		}
 
+		failed_members = append(failed_members, member.Name)
+
 		go func() {
 			// ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			// ctx, cancel := context.WithCancel(context.Background())
@@ -619,7 +625,6 @@ func (m *Manager) GetRequest(key string) (*rpc.RpcValue, []string, error) {
 			if err != nil {
 				st, ok := status.FromError(err)
 				statuses = append(statuses, st.Code())
-				failed_members = append(failed_members, member.Name)
 				if ok && st.Code() != codes.NotFound {
 					// logrus.Errorf("GetRequest name: %v code %v", member.Name, st.Code())
 				}

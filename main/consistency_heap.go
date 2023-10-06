@@ -83,7 +83,7 @@ func (h *ConsistencyHeap) ManualPush(PartitionId int, Epoch int64, SyncTask bool
 
 func (h *ConsistencyHeap) RequeueItem(item ConsistencyItem, err error) {
 	item.Attemps++
-	if item.Attemps > 4 {
+	if item.Attemps > 100 {
 		logrus.Warnf("requeue item: %+v err: %v", item, err)
 	}
 	time.Sleep(time.Second)
