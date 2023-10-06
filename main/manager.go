@@ -338,7 +338,7 @@ func (m *Manager) startWorker(workerId int) {
 				// logrus.Warnf("worker LeaveTask: %+v", task)
 				m.clientManager.RemoveClient(task.Name)
 				m.consensusCluster.RemoveServer(task.Name)
-				// m.ring.RemoveNode(task.Name)
+				m.ring.RemoveNode(task.Name)
 
 			case consensus.EpochTask:
 				m.SetCurrentEpoch(task.Epoch)
