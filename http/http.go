@@ -47,10 +47,12 @@ func CreateHttpServer(httpConfig config.HttpConfig, reqCh chan interface{}) Http
 	return HttpServer{httpConfig: httpConfig, reqCh: reqCh, srv: new(http.Server)}
 }
 
-func redirectRequest(w http.ResponseWriter, r *http.Request) {
-	requestedURL := r.URL.String()
-	// logrus.Warn("requestedURL ", requestedURL)
-	http.Redirect(w, r, requestedURL, http.StatusFound)
+func handleShuttingDown(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusServiceUnavailable)
+	fmt.Fprintln(w, "Service is shutting down. Please retry your request on another server.")
+	// requestedURL := r.URL.String()
+	// // logrus.Warn("requestedURL ", requestedURL)
+	// http.Redirect(w, r, requestedURL, http.StatusFound)
 }
 
 // Define a setHandler function
@@ -62,7 +64,7 @@ func (s HttpServer) setHandler(w http.ResponseWriter, r *http.Request) {
 
 	err := utils.WriteChannelTimeout(s.reqCh, SetTask{Key: key, Value: value, ResCh: resCh}, s.httpConfig.DefaultTimeout)
 	if err != nil {
-		redirectRequest(w, r)
+		handleShuttingDown(w, r)
 		return
 	}
 
@@ -84,7 +86,7 @@ func (s HttpServer) getHandler(w http.ResponseWriter, r *http.Request) {
 
 	err := utils.WriteChannelTimeout(s.reqCh, GetTask{Key: key, ResCh: resCh}, s.httpConfig.DefaultTimeout)
 	if err != nil {
-		redirectRequest(w, r)
+		handleShuttingDown(w, r)
 		return
 	}
 
