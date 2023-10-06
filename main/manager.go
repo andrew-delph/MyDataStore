@@ -711,6 +711,19 @@ func (m *Manager) SetValue(value *rpc.RpcValue) error {
 	}
 	trx := m.db.NewTransaction(true)
 	defer trx.Discard()
+	existingBytes, err := trx.Get([]byte(keyIndex))
+	if err == nil {
+		existingValue := &rpc.RpcValue{}
+		err = proto.Unmarshal(existingBytes, existingValue)
+		if err != nil {
+			return err
+		}
+		// logrus.Warnf("existing value found. %v %v / %v %v / %v %v", existingValue.Epoch, value.Epoch, existingValue.UnixTimestamp, value.UnixTimestamp, existingValue.Epoch >= value.Epoch, existingValue.UnixTimestamp > value.UnixTimestamp)
+		if existingValue.Epoch >= value.Epoch && existingValue.UnixTimestamp > value.UnixTimestamp {
+			return errors.New("a newer value already exists")
+		}
+	}
+
 	trx.Set([]byte(keyIndex), valueData)
 	trx.Set([]byte(epochIndex), timestampBytes)
 	return trx.Commit()
