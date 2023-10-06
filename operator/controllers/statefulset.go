@@ -201,7 +201,7 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 
 		meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
 			Type:   typeRolloutMyKeyStore,
-			Status: metav1.ConditionTrue, Reason: "Increase Size",
+			Status: metav1.ConditionTrue, Reason: "ScaleUp",
 			Message: fmt.Sprintf("newSize (%d)", newSize),
 		})
 
@@ -260,7 +260,7 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 
 		meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
 			Type:   typeRolloutMyKeyStore,
-			Status: metav1.ConditionTrue, Reason: "Decrease Size",
+			Status: metav1.ConditionTrue, Reason: "ScaleUpDown",
 			Message: fmt.Sprintf("newSize (%d)", newSize),
 		})
 

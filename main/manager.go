@@ -235,12 +235,7 @@ func (m *Manager) startWorker(workerId int) {
 					task.ResCh <- err
 					continue
 				}
-				err = m.consensusCluster.UpdateEpoch()
-				if err != nil {
-					logrus.Error("UpdateEpoch temp3 err = %v", err)
-					task.ResCh <- err
-					continue
-				}
+
 				m.consensusCluster.LockEpoch()
 
 				// m.clientManager.AddTempClient(task.Name)
@@ -255,7 +250,23 @@ func (m *Manager) startWorker(workerId int) {
 			case rpc.RemoveTempNodeTask:
 				name := task.Name
 				err := m.ring.RemoveTempNode(name)
-				task.ResCh <- err
+				if err != nil {
+					task.ResCh <- err
+					continue
+				}
+				err = m.consensusCluster.UpdateEpoch()
+				if err != nil {
+					logrus.Error("UpdateEpoch temp1 err = %v", err)
+					task.ResCh <- err
+					continue
+				}
+				err = m.consensusCluster.UpdateEpoch()
+				if err != nil {
+					logrus.Error("UpdateEpoch temp2 err = %v", err)
+					task.ResCh <- err
+					continue
+				}
+				task.ResCh <- nil
 
 			case http.HealthTask:
 				err := m.consensusCluster.IsHealthy()

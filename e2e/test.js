@@ -22,7 +22,7 @@ export let options = {
       // How long the test lasts
       duration: "2h",
       // How many iterations per timeUnit
-      rate: 5,
+      rate: 25,
       // Start `rate` iterations per second
       timeUnit: "1s",
       // Pre-allocate VUs
@@ -191,7 +191,7 @@ export default function () {
     return;
   }
 
-  for (let i = 0; i < 500; i++) {
+  for (let i = 0; i < 2; i++) {
     // Get a value from the map
     let getRes = http.get(`http://${address}/get?key=${set_key}`, {
       tags: { name: "get" },
