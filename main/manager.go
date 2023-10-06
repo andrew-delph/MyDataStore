@@ -1082,7 +1082,7 @@ func (m *Manager) PoliteStreamRequest(PartitionId int, LowerEpoch, UpperEpoch in
 		// logrus.Warnf("sync name %s lastValid %d", lastValid.member.Name, lastValid.epochTreeLastValid.LowerEpoch)
 		err := m.SyncPartitionRequest(lastValid.member, int32(PartitionId), LowerEpoch, UpperEpoch, buckets, time.Second*60*3)
 		if err != nil {
-			logrus.Errorf("SyncPartitionRequest err = %v", err)
+			// logrus.Errorf("SyncPartitionRequest err = %v", err)
 		} else if lastValid.epochTreeLastValid.LowerEpoch >= UpperEpoch {
 			// return nil
 		}
