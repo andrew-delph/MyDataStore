@@ -546,7 +546,7 @@ func (m *Manager) GetRequest(key string) (*rpc.RpcValue, error) {
 			if err != nil {
 				st, ok := status.FromError(err)
 				if ok && st.Code() != codes.NotFound {
-					logrus.Errorf("GetRequest name: %v st %+v code %v", member.Name, *st, st.Code())
+					logrus.Errorf("GetRequest name: %v code %v", member.Name, st.Code())
 				}
 				errorCh <- err
 			} else {
