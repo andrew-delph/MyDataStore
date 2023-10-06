@@ -124,14 +124,19 @@ func compare2dBytes(a, b [][]byte) bool {
 	return true
 }
 
-func trackTime(start time.Time, limit time.Duration, name string) {
+func TrackTime(start time.Time, limit time.Duration, name string) {
 	elapsed := time.Since(start)
 	if elapsed > limit {
 		logrus.Warnf("trackTime: %s took %.2f seconds", name, elapsed.Seconds())
 	}
 }
 
-func WriteChannelTimeout(ch chan interface{}, value interface{}, timeoutSeconds int) error {
+func WriteChannelTimeout(ch chan interface{}, value interface{}, timeoutSeconds int) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = errors.New("channel is closed")
+		}
+	}()
 	select {
 	case ch <- value:
 		return nil

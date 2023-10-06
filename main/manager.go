@@ -117,6 +117,7 @@ func (m *Manager) StartManager() {
 	signal.Notify(signals, syscall.SIGTERM)
 	<-signals
 	logrus.Warn("Received SIGTERM signal")
+	defer utils.TrackTime(time.Now(), 0, "GRACEFUL SHUTDOWN")
 
 	err = m.consensusCluster.Snapshot()
 	if err != nil {
@@ -143,6 +144,11 @@ func (m *Manager) StartManager() {
 		logrus.Errorf("Failed to rpc Stop err = %v", err)
 	}
 
+	err = m.stopWorkers()
+	if err != nil {
+		logrus.Errorf("Failed to stop manager workers err = %v", err)
+	}
+
 	err = m.db.Close()
 	if err != nil {
 		logrus.Errorf("Failed to db Close err = %v", err)
@@ -157,9 +163,23 @@ func (m *Manager) startWorkers() {
 	}
 }
 
+type StopWorkerTask struct {
+	wg *sync.WaitGroup
+}
+
+func (m *Manager) stopWorkers() error {
+	var wg sync.WaitGroup
+	wg.Add(m.config.Manager.WokersCount)
+	for i := 0; i < m.config.Manager.WokersCount; i++ {
+		m.reqCh <- StopWorkerTask{wg: &wg}
+	}
+	wg.Wait() // TODO add a timeout
+	close(m.reqCh)
+	return nil
+}
+
 func (m *Manager) startWorker(workerId int) {
 	logrus.Debugf("starting worker %d", workerId)
-	defer logrus.Panicf("ending worker %d", workerId)
 
 	for {
 	workerLoop:
@@ -182,6 +202,10 @@ func (m *Manager) startWorker(workerId int) {
 				return
 			}
 			switch task := data.(type) {
+
+			case StopWorkerTask:
+				defer task.wg.Done()
+				return
 
 			case rpc.PartitionsHealthCheckTask:
 				// logrus.Warn("PartitionsHealthCheckTask")
