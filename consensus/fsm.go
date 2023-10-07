@@ -7,8 +7,9 @@ import (
 
 	"github.com/hashicorp/raft"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/protobuf/proto"
 
-	"github.com/andrew-delph/my-key-store/utils"
+	"github.com/andrew-delph/my-key-store/datap"
 )
 
 var applyLock sync.RWMutex
@@ -16,7 +17,7 @@ var applyLock sync.RWMutex
 var snapshotLock sync.RWMutex
 
 type FSM struct {
-	Epoch int64
+	data  *datap.Fsm
 	reqCh chan interface{}
 	index *uint64
 }
@@ -24,25 +25,26 @@ type FSM struct {
 func (fsm *FSM) Apply(logEntry *raft.Log) interface{} {
 	applyLock.Lock()
 	defer applyLock.Unlock()
-	epoch, err := utils.DecodeBytesToInt64(logEntry.Data)
+
+	data := &datap.Fsm{}
+	err := proto.Unmarshal(logEntry.Data, data)
 	if err != nil {
-		logrus.Error("DecodeBytesToInt64 Error on Apply: %v", err)
+		return err
+	}
+	fsm.data = data
+
+	if fsm.data.Epoch > data.Epoch {
+		logrus.Warnf("epoch is less fsm %d new %d index %d old %d", fsm.data.Epoch, data.Epoch, logEntry.Index, *fsm.index)
 		return nil
 	}
 
-	if fsm.Epoch > epoch {
-		logrus.Warnf("epoch is less fsm %d new %d index %d old %d", fsm.Epoch, epoch, logEntry.Index, *fsm.index)
-		return nil
-	}
-	fsm.Epoch = epoch
-	*fsm.index = logEntry.Index
 	resCh := make(chan interface{})
-	fsm.reqCh <- EpochTask{Epoch: epoch, ResCh: resCh}
+	fsm.reqCh <- EpochTask{Epoch: data.Epoch, ResCh: resCh}
 	rawRes := <-resCh
 
-	logrus.Debugf("Apply res: %v", rawRes)
+	logrus.Debug("rawRes %v", rawRes)
 
-	return epoch
+	return nil
 }
 
 func (fsm *FSM) Snapshot() (raft.FSMSnapshot, error) {
@@ -51,7 +53,12 @@ func (fsm *FSM) Snapshot() (raft.FSMSnapshot, error) {
 	snapshotLock.Lock()
 	defer snapshotLock.Unlock()
 
-	return &FSMSnapshot{StateValue: fsm.Epoch}, nil
+	dataBytes, err := proto.Marshal(fsm.data)
+	if err != nil {
+		return nil, err
+	}
+
+	return &FSMSnapshot{DataBytes: dataBytes}, nil
 }
 
 func (fsm *FSM) Restore(serialized io.ReadCloser) error {
@@ -60,14 +67,20 @@ func (fsm *FSM) Restore(serialized io.ReadCloser) error {
 		return err
 	}
 
-	fsm.Epoch = snapshot.StateValue
-	logrus.Warnf("Restore raft %d", snapshot.StateValue)
+	data := &datap.Fsm{}
+	err := proto.Unmarshal(snapshot.DataBytes, data)
+	if err != nil {
+		return err
+	}
+
+	fsm.data = data
+	logrus.Warnf("Restore raft %v", data)
 
 	return serialized.Close()
 }
 
 type FSMSnapshot struct {
-	StateValue int64 `json:"value"`
+	DataBytes []byte `json:"value"`
 }
 
 func (fsmSnapshot *FSMSnapshot) Persist(sink raft.SnapshotSink) error {

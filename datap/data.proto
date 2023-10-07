@@ -69,4 +69,9 @@ message EpochTreeObject{
    int32 items =7;
 }
 
+message Fsm{
+  int64 epoch = 1;
+  repeated string members = 2;
+}
+
 

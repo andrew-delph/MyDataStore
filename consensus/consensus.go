@@ -14,9 +14,10 @@ import (
 	raftboltdb "github.com/hashicorp/raft-boltdb"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/andrew-delph/my-key-store/config"
-	"github.com/andrew-delph/my-key-store/utils"
+	"github.com/andrew-delph/my-key-store/datap"
 )
 
 func consensusTest() {
@@ -115,7 +116,7 @@ func (consensusCluster *ConsensusCluster) StartConsensusCluster() error {
 		logrus.Fatal(err)
 	}
 
-	fsm := &FSM{reqCh: consensusCluster.reqCh, index: new(uint64)}
+	fsm := &FSM{reqCh: consensusCluster.reqCh, index: new(uint64), data: &datap.Fsm{}}
 
 	raftNode, err := raft.NewRaft(consensusCluster.raftConf, fsm, logStore, stableStore, snapshotStore, trans)
 	if err != nil {
@@ -250,23 +251,70 @@ func (consensusCluster *ConsensusCluster) UpdateEpoch() error {
 	if err != nil {
 		return nil
 	}
+
 	if consensusCluster.epochLock {
 		logrus.Warn("epoch is currently locked")
-		return nil
 	}
-	newEpoch := consensusCluster.fsm.Epoch + 1
-	logrus.Debugf("Leader Update Epoch. Epoch = %d", newEpoch)
 
-	epochBytes, err := utils.EncodeInt64ToBytes(newEpoch)
+	cloneBytes, err := proto.Marshal(consensusCluster.fsm.data)
 	if err != nil {
-		logrus.Errorf("EncodeInt64ToBytes Err= %v", err)
 		return err
 	}
-	logEntry := consensusCluster.raftNode.Apply(epochBytes, 0)
+
+	clone := &datap.Fsm{}
+	err = proto.Unmarshal(cloneBytes, clone)
+	if err != nil {
+		return err
+	}
+
+	clone.Epoch = clone.Epoch + 1
+
+	updateBytes, err := proto.Marshal(clone)
+	if err != nil {
+		return err
+	}
+
+	logEntry := consensusCluster.raftNode.Apply(updateBytes, 0)
 	err = logEntry.Error()
 
 	if err == nil {
-		logrus.Warnf("Leader Update Epoch. Epoch = %d", newEpoch)
+		logrus.Warnf("Leader Updated Epoch")
+	} else {
+		logrus.Errorf("update fsm Err= %v", err)
+	}
+	logrus.Debugf("Done.")
+	return err
+}
+
+func (consensusCluster *ConsensusCluster) UpdateMembers(members []string) error {
+	err := consensusCluster.raftNode.VerifyLeader().Error()
+	if err != nil {
+		return nil
+	}
+
+	cloneBytes, err := proto.Marshal(consensusCluster.fsm.data)
+	if err != nil {
+		return err
+	}
+
+	clone := &datap.Fsm{}
+	err = proto.Unmarshal(cloneBytes, clone)
+	if err != nil {
+		return err
+	}
+
+	clone.Members = members
+
+	updateBytes, err := proto.Marshal(clone)
+	if err != nil {
+		return err
+	}
+
+	logEntry := consensusCluster.raftNode.Apply(updateBytes, 0)
+	err = logEntry.Error()
+
+	if err == nil {
+		logrus.Warnf("Leader Updated Members")
 	} else {
 		logrus.Errorf("update fsm Err= %v", err)
 	}
@@ -276,7 +324,7 @@ func (consensusCluster *ConsensusCluster) UpdateEpoch() error {
 
 func (consensusCluster *ConsensusCluster) IsHealthy() error {
 	currState := consensusCluster.raftNode.State()
-	currEpoch := consensusCluster.fsm.Epoch
+	currEpoch := consensusCluster.fsm.data.Epoch
 	currLeader := consensusCluster.raftNode.Leader()
 
 	appliedIndex := consensusCluster.raftNode.AppliedIndex()
