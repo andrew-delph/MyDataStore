@@ -99,11 +99,11 @@ func (rpcWrapper *RpcWrapper) StartRpcServer() {
 func (rpcWrapper *RpcWrapper) SetRequest(ctx context.Context, value *datap.Value) (*datap.StandardObject, error) {
 	logrus.Debugf("SERVER Handling SetRequest: key=%s value=%s epoch=%d", value.Key, value.Value, value.Epoch)
 	resCh := make(chan interface{})
-	err := utils.WriteChannelTimeout(rpcWrapper.reqCh, SetValueTask{Value: value, ResCh: resCh}, 2)
+	err := utils.WriteChannelTimeout(rpcWrapper.reqCh, SetValueTask{Value: value, ResCh: resCh}, rpcWrapper.rpcConfig.DefaultTimeout)
 	if err != nil {
 		return nil, err
 	}
-	rawRes := <-resCh
+	rawRes := utils.RecieveChannelTimeout(resCh, rpcWrapper.rpcConfig.DefaultTimeout)
 	switch res := rawRes.(type) {
 	case bool:
 		return &datap.StandardObject{Message: "Value set"}, nil
@@ -123,7 +123,8 @@ func (rpcWrapper *RpcWrapper) GetRequest(ctx context.Context, req *datap.GetRequ
 	if err != nil {
 		return nil, err
 	}
-	rawRes := <-resCh
+
+	rawRes := utils.RecieveChannelTimeout(resCh, rpcWrapper.rpcConfig.DefaultTimeout)
 	switch res := rawRes.(type) {
 	case *datap.Value:
 		return res, nil
