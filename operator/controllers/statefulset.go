@@ -281,11 +281,11 @@ func waitForPodsHealthy(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 		res, err := client.PartitionsHealthCheck(ctx, req)
 		if err != nil {
 			err = rpc.ExtractError(err)
-			logrus.Errorf("Client %s res err = %v", pod.Name, err)
+			logrus.Errorf("Client %s err = %v", pod.Name, err)
 			errorCount++
 		} else if res.Error {
 			err = errors.New(res.Message)
-			logrus.Errorf("Client %s res err msg = %v", pod.Name, err)
+			logrus.Errorf("Client %s err msg = %v", pod.Name, err)
 			errorCount++
 		}
 		// logrus.Warnf("Client %s res= %v", pod.Name, res.Message)
@@ -318,12 +318,12 @@ func notifyNewTempNode(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Re
 		res, err := client.AddTempNode(ctx, req)
 		if err != nil {
 			err = rpc.ExtractError(err)
-			logrus.Errorf("notifyNewTempNode Client %s res err = %v", pod.Name, err)
+			logrus.Errorf("notifyNewTempNode Client %s err = %v", pod.Name, err)
 			errorCount++
 			continue
 		} else if res.Error {
 			err = errors.New(res.Message)
-			logrus.Errorf("notifyNewTempNode Client %s res err msg = %v", pod.Name, err)
+			logrus.Errorf("notifyNewTempNode Client %s err msg = %v", pod.Name, err)
 			errorCount++
 			continue
 		}
@@ -358,12 +358,12 @@ func notifyRemoveTempNode(r *MyKeyStoreReconciler, ctx context.Context, req ctrl
 		res, err := client.RemoveTempNode(ctx, req)
 		if err != nil {
 			err = rpc.ExtractError(err)
-			logrus.Errorf("notifyRemoveTempNode Client %s res err = %v", pod.Name, err)
+			logrus.Errorf("notifyRemoveTempNode Client %s err = %v", pod.Name, err)
 			errorCount++
 			continue
 		} else if res.Error {
 			err = errors.New(res.Message)
-			logrus.Errorf("notifyRemoveTempNode Client %s res err msg = %v", pod.Name, err)
+			logrus.Errorf("notifyRemoveTempNode Client %s err msg = %v", pod.Name, err)
 			errorCount++
 			continue
 		}
@@ -397,12 +397,12 @@ func notifyResetTempNode(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.
 		req := &rpc.RpcStandardObject{}
 		res, err := client.ResetTempNode(ctx, req)
 		if err != nil {
-			// logrus.Errorf("ResetTempNode Client %s res err = %v", pod.Name, err)
+			// logrus.Errorf("ResetTempNode Client %s err = %v", pod.Name, err)
 			errorCount++
 			continue
 		} else if res.Error {
 			err = errors.New(res.Message)
-			// logrus.Errorf("ResetTempNode Client %s res err msg = %v", pod.Name, err)
+			// logrus.Errorf("ResetTempNode Client %s err msg = %v", pod.Name, err)
 			errorCount++
 			continue
 		}
