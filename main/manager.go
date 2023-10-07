@@ -579,7 +579,7 @@ func (m *Manager) SetRequest(key, value string) ([]string, error) {
 			ctx := context.Background()
 			res, err := client.SetRequest(ctx, setReq)
 			if err != nil {
-				errorCh <- errors.Wrapf(err, "member %s", member.Name)
+				errorCh <- err
 			} else if res != nil {
 				responseCh <- res
 			}
