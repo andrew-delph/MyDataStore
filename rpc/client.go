@@ -1,10 +1,13 @@
 package rpc
 
 import (
+	"errors"
 	"fmt"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+
+	"github.com/gogo/status"
 
 	datap "github.com/andrew-delph/my-key-store/datap"
 )
@@ -32,4 +35,12 @@ func CreateRawRpcClient(ip string, port int) (*grpc.ClientConn, RpcClient, error
 	internalClient := datap.NewInternalNodeServiceClient(conn)
 
 	return conn, internalClient, nil
+}
+
+func ExtractError(err error) error {
+	st, ok := status.FromError(err)
+	if ok {
+		return errors.New(st.Message())
+	}
+	return err
 }

@@ -279,6 +279,7 @@ func waitForPodsHealthy(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 		req := &rpc.RpcStandardObject{}
 		res, err := client.PartitionsHealthCheck(ctx, req)
 		if err != nil {
+			err = rpc.ExtractError(err)
 			logrus.Errorf("Client %s res err = %v", pod.Name, err)
 			return err
 		} else if res.Error {
@@ -312,6 +313,7 @@ func notifyNewTempNode(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Re
 		req := &rpc.RpcTempNode{Name: tempNode}
 		res, err := client.AddTempNode(ctx, req)
 		if err != nil {
+			err = rpc.ExtractError(err)
 			logrus.Errorf("AddTempNode Client %s res err = %v", pod.Name, err)
 			errorCount++
 			continue
@@ -351,6 +353,7 @@ func notifyRemoveTempNode(r *MyKeyStoreReconciler, ctx context.Context, req ctrl
 		req := &rpc.RpcTempNode{Name: tempNode}
 		res, err := client.RemoveTempNode(ctx, req)
 		if err != nil {
+			err = rpc.ExtractError(err)
 			logrus.Errorf("RemoveTempNode Client %s res err = %v", pod.Name, err)
 			errorCount++
 			continue
