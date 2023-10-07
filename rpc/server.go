@@ -101,7 +101,7 @@ func (rpcWrapper *RpcWrapper) SetRequest(ctx context.Context, value *datap.Value
 	resCh := make(chan interface{})
 	err := utils.WriteChannelTimeout(rpcWrapper.reqCh, SetValueTask{Value: value, ResCh: resCh}, rpcWrapper.rpcConfig.DefaultTimeout)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.ResourceExhausted, err.Error())
 	}
 	rawRes := utils.RecieveChannelTimeout(resCh, rpcWrapper.rpcConfig.DefaultTimeout)
 	switch res := rawRes.(type) {
@@ -109,7 +109,7 @@ func (rpcWrapper *RpcWrapper) SetRequest(ctx context.Context, value *datap.Value
 		return &datap.StandardObject{Message: "Value set"}, nil
 	case error:
 		// logrus.Errorf("SetRequest err = %v", res)
-		return nil, res
+		return nil, status.Error(codes.Internal, res.Error())
 	default:
 		logrus.Panicf("http unkown res type: %v", reflect.TypeOf(res))
 	}
@@ -132,7 +132,7 @@ func (rpcWrapper *RpcWrapper) GetRequest(ctx context.Context, req *datap.GetRequ
 		return nil, status.Errorf(codes.NotFound, "Resource not found")
 	case error:
 		logrus.Errorf("GetRequest err = %v", res)
-		return nil, res
+		return nil, status.Error(codes.Internal, res.Error())
 	default:
 		logrus.Panicf("http unkown res type: %v", reflect.TypeOf(res))
 	}
