@@ -987,7 +987,7 @@ func (m *Manager) VerifyEpoch(PartitionId int, Epoch int64) error {
 	}
 	if m.consistencyController.IsPartitionActive(PartitionId) == false {
 		logrus.Warn("VERIFY PARTITION THAT IS NOT ACTIVE!")
-		// return nil
+		return nil
 	}
 
 	index, err = BuildEpochTreeObjectIndex(PartitionId, Epoch)
