@@ -936,17 +936,10 @@ func (m *Manager) SyncPartitionRequest(member *RingMember, partitionId int32, lo
 				continue
 			}
 		}
-		// write the epochIndex value...
-		timestampBytes, err := utils.EncodeInt64ToBytes(value.UnixTimestamp)
-		if err != nil {
-			logrus.Fatal("FAILED TO ENCOUDE UnixTimestamp IN SYNC")
-		}
-		m.db.Put([]byte(epochIndex), timestampBytes)
 
 		myValue, err := m.GetValue(value.Key)
 		if myValue != nil && myValue.UnixTimestamp >= value.UnixTimestamp {
 			logrus.Debugf("GetValue ALREADY SYNCED!!!!!!!!!!!!!!!! KEY = %s", value.Key)
-			continue
 		} else {
 			getReq := &rpc.RpcGetRequestMessage{Key: value.Key}
 
@@ -966,6 +959,16 @@ func (m *Manager) SyncPartitionRequest(member *RingMember, partitionId int32, lo
 			} else {
 				logrus.Debugf("SYNC SUCCESS KEY = %s", syncedValue.Key)
 			}
+		}
+
+		// write the epochIndex value...
+		timestampBytes, err := utils.EncodeInt64ToBytes(value.UnixTimestamp)
+		if err != nil {
+			logrus.Fatal("FAILED TO ENCOUDE UnixTimestamp IN SYNC")
+		}
+		err = m.db.Put([]byte(epochIndex), timestampBytes)
+		if err != nil {
+			logrus.Fatal("FAILED TO PUT EpochIndex IN SYNC")
 		}
 
 		// verify each epoch from bottom up
@@ -988,8 +991,8 @@ func (m *Manager) VerifyEpoch(PartitionId int, Epoch int64) error {
 		return nil
 	}
 	if m.consistencyController.IsPartitionActive(PartitionId) == false {
-		logrus.Warn("VERIFY PARTITION THAT IS NOT ACTIVE!")
-		return nil
+		// logrus.Warn("VERIFY PARTITION THAT IS NOT ACTIVE!")
+		// return nil
 	}
 
 	index, err = BuildEpochTreeObjectIndex(PartitionId, Epoch)

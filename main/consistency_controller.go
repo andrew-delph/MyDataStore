@@ -89,7 +89,7 @@ func (cc *ConsistencyController) HandleHashringChange(currPartitions utils.IntSe
 	partitionsGained.Add(float64(gained))
 	partitionsTotal.Set(float64(len(currPartitions.List())))
 	if lost > 0 || gained > 0 {
-		logrus.Warnf("partitions lost  %d gained %d", lost, gained)
+		// logrus.Warnf("partitions lost  %d gained %d", lost, gained)
 	}
 	cc.currPartitions = currPartitions
 	var wg sync.WaitGroup

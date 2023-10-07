@@ -127,7 +127,7 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 	if rolloutStatus != nil && rolloutStatus.Status == metav1.ConditionTrue {
 		// logrus.Warnf("time %v", time.Since(rolloutStatus.LastTransitionTime.Time))
 		if found.Status.UpdatedReplicas != found.Status.Replicas || found.Status.ReadyReplicas != found.Status.Replicas || time.Since(rolloutStatus.LastTransitionTime.Time) < time.Second*10 {
-			logrus.Warnf("rollout: %v need: %v", utils.Min(found.Status.UpdatedReplicas, found.Status.ReadyReplicas), found.Status.Replicas)
+			logrus.Debugf("rollout: %v need: %v", utils.Min(found.Status.UpdatedReplicas, found.Status.ReadyReplicas), found.Status.Replicas)
 
 			return requeueAfter(time.Second*5, nil)
 		} else {
@@ -186,7 +186,7 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 		logrus.Warnf("Create temp node %s", newPodName)
 		err := notifyNewTempNode(r, ctx, req, log, mykeystore, newPodName)
 		if err != nil {
-			logrus.Error(err)
+			// logrus.Error(err)
 			return requeueAfter(time.Second*5, nil)
 		}
 
