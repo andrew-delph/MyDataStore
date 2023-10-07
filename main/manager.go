@@ -553,6 +553,7 @@ func (m *Manager) SetRequest(key, value string) ([]string, error) {
 	errorCh := make(chan error, m.config.Manager.ReplicaCount)
 
 	var members []string
+	var statuses []codes.Code
 
 	clientErrors := 0
 
@@ -594,11 +595,15 @@ func (m *Manager) SetRequest(key, value string) ([]string, error) {
 		case <-responseCh:
 			responseCount++
 		case err := <-errorCh:
+			st, ok := status.FromError(err)
+			if ok {
+				statuses = append(statuses, st.Code())
+			}
 			errorCount++
 			// logrus.Errorf("SetRequest errorCh: %v", err)
 			_ = err // Handle error if necessary
 		case <-timeout:
-			return members, fmt.Errorf("SET: timed out waiting for responses. responseCount = %d errorCount = %d clientErrors = %d", responseCount, errorCount, clientErrors)
+			return members, fmt.Errorf("SET: Timeout. responseCount = %d errorCount = %d clientErrors = %d statuses = %v", responseCount, errorCount, clientErrors, statuses)
 		}
 	}
 	if responseCount < m.config.Manager.WriteQuorum {

@@ -134,6 +134,7 @@ func TrackTime(start time.Time, limit time.Duration, name string) {
 func WriteChannelTimeout(ch chan interface{}, value interface{}, timeoutSeconds int) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
+			logrus.Error("WRITE CHANNEL CLOSED")
 			err = errors.New("channel is closed")
 		}
 	}()
@@ -141,6 +142,7 @@ func WriteChannelTimeout(ch chan interface{}, value interface{}, timeoutSeconds 
 	case ch <- value:
 		return nil
 	case <-time.After(time.Duration(timeoutSeconds) * time.Second):
+		logrus.Error("WRITE TIMEOUT")
 		return errors.New("write operation timed out")
 	}
 }
@@ -149,10 +151,12 @@ func RecieveChannelTimeout(ch chan interface{}, timeoutSeconds int) interface{} 
 	select {
 	case value, ok := <-ch:
 		if !ok {
+			logrus.Error("READ CHANNEL CLOSED")
 			return errors.New("channel closed")
 		}
 		return value
 	case <-time.After(time.Duration(timeoutSeconds) * time.Second):
+		logrus.Error("READ TIMEOUT")
 		return errors.New("receive operation timed out")
 	}
 }

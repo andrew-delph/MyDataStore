@@ -7,6 +7,7 @@ import { textSummary } from "https://jslib.k6.io/k6-summary/0.0.2/index.js";
 import exec from "k6/execution";
 
 export let options = {
+  noConnectionReuse: false,
   summaryTrendStats: ["avg", "min", "med", "max"],
   // iterations: 20,
   // vus: 5,
@@ -22,7 +23,7 @@ export let options = {
       // How long the test lasts
       duration: "2h",
       // How many iterations per timeUnit
-      rate: 25,
+      rate: 10,
       // Start `rate` iterations per second
       timeUnit: "1s",
       // Pre-allocate VUs

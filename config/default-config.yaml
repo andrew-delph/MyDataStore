@@ -5,15 +5,15 @@ manager:
   default_timeout: 10
   req_channel_size: 20
   workers_count: 100
+  partition_count: 100
   partition_concurrency: 5
-  partition_count: 20
   partition_buckets: 1000
   partition_replicas: 2
   data_path: "/data/storage"
   load: 2.1
   ring_debounce: 7.5
 consensus:
-  epoch_time: 100
+  epoch_time: 500
   data_path: "/data/raft"
   enable_logs: false
   auto_bootstrap: true
