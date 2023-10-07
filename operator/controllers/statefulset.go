@@ -466,6 +466,12 @@ func getStatefulSet(mykeystore *cachev1alpha1.MyKeyStore) *appsv1.StatefulSet {
 						ImagePullPolicy: corev1.PullIfNotPresent,
 						// Ensure restrictive context for the container
 						// More info: https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted
+						Env: []corev1.EnvVar{
+							{
+								Name:  "OPERATOR",
+								Value: "true",
+							},
+						},
 						SecurityContext: &corev1.SecurityContext{
 							RunAsNonRoot:             &[]bool{false}[0],
 							AllowPrivilegeEscalation: &[]bool{false}[0],

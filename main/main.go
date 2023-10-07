@@ -21,6 +21,8 @@ func main() {
 	c := config.GetConfig()
 	initMetrics(c.Manager.Hostname)
 
+	logrus.Warnf("OPERATOR MODE: %v", c.Manager.Operator)
+
 	manager := NewManager(c)
 	manager.StartManager()
 }
