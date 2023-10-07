@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/andrew-delph/my-key-store/rpc"
-	"github.com/andrew-delph/my-key-store/utils"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -77,106 +76,49 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 	// to set the quantity of Deployment instances is the desired state on the cluster.
 	// Therefore, the following code will ensure the Deployment size is the same as defined
 	// via the Size spec of the Custom Resource which we are reconciling.
+
+	rolloutStatus := meta.FindStatusCondition(mykeystore.Status.Conditions, typeRolloutMyKeyStore)
+	if rolloutStatus != nil && rolloutStatus.Status == metav1.ConditionTrue {
+		incrementReady := found.Status.ReadyReplicas == found.Status.Replicas
+		updatedReplicas := found.Status.UpdatedReplicas
+		finalUpdate := found.Status.UpdatedReplicas == found.Status.Replicas
+		if time.Since(rolloutStatus.LastTransitionTime.Time) < time.Second*10 {
+			logrus.Warnf("CurrentReplicas %d Replicas %d UpdatedReplicas %d", found.Status.CurrentReplicas, found.Status.Replicas, found.Status.UpdatedReplicas)
+			return requeueAfter(time.Second*5, nil)
+		}
+
+		logrus.Warnf("IN ROLLOUT %v %v incrementReady = %v updatedReplicas = %v finalUpdate = %v", found.Status.ReadyReplicas, found.Status.Replicas, incrementReady, updatedReplicas, finalUpdate)
+		// logrus.Warnf("time %v", time.Since(rolloutStatus.LastTransitionTime.Time))
+		if !finalUpdate && incrementReady {
+			nextPartition := found.Status.Replicas - updatedReplicas - 1
+			logrus.Warnf("nextPartition ready! nextPartition %d", nextPartition)
+			err = manualRollout(r, ctx, req, log, mykeystore, found, nextPartition)
+			if err != nil {
+				logrus.Warnf("manualRollout err = %v", err)
+			}
+
+		} else if finalUpdate {
+			logrus.Warn("FINAL UPDATE!")
+			err = setRolloutStatus(r, ctx, log, mykeystore, found, false, "rollout finished!")
+			if err != nil {
+				logrus.Errorf("setRolloutStatus err = %v", err)
+			}
+		}
+		return requeueAfter(time.Second*5, nil)
+
+	}
+
 	image := mykeystore.Spec.Image
 	if found.Spec.Template.Spec.Containers[0].Image != image {
 		logrus.Warn("WRONG IMAGE image=", image)
 		found.Status.UpdateRevision = image
 		found.Spec.Template.Spec.Containers[0].Image = image
-		if err = r.Update(ctx, found); err != nil {
-			log.Error(err, "Failed to update Deployment",
-				"Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
-
-			// Re-fetch the mykeystore Custom Resource before update the status
-			// so that we have the latest state of the resource on the cluster and we will avoid
-			// raise the issue "the object has been modified, please apply
-			// your changes to the latest version and try again" which would re-trigger the reconciliation
-			if err := r.Get(ctx, req.NamespacedName, mykeystore); err != nil {
-				log.Error(err, "Failed to re-fetch mykeystore")
-				return requeueIfError(err)
-			}
-
-			// The following implementation will update the status
-			meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
-				Type:   typeAvailableMyKeyStore,
-				Status: metav1.ConditionFalse, Reason: "Rollout",
-				Message: fmt.Sprintf("Failed to update the image for the custom resource (%s): (%s)", mykeystore.Name, err),
-			})
-
-			if err := r.Status().Update(ctx, mykeystore); err != nil {
-				log.Error(err, "Failed to update MyKeyStore status")
-				return requeueIfError(err)
-			}
-
-			return requeueIfError(err)
+		err = manualRollout(r, ctx, req, log, mykeystore, found, found.Status.CurrentReplicas)
+		if err != nil {
+			logrus.Errorf("new size: %v", err)
 		}
-
-		meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
-			Type:   typeRolloutMyKeyStore,
-			Status: metav1.ConditionTrue, Reason: "RollingUpdate",
-			Message: fmt.Sprintf("image change (%s)", image),
-		})
-
-		if err := r.Status().Update(ctx, mykeystore); err != nil {
-			log.Error(err, "Failed to update MyKeyStore status")
-			return requeueIfError(err)
-		}
-		return noRequeue()
+		return requeueAfter(time.Second*5, nil)
 	}
-
-	rolloutStatus := meta.FindStatusCondition(mykeystore.Status.Conditions, typeRolloutMyKeyStore)
-	if rolloutStatus != nil && rolloutStatus.Status == metav1.ConditionTrue {
-		// logrus.Warnf("time %v", time.Since(rolloutStatus.LastTransitionTime.Time))
-		if found.Status.UpdatedReplicas != found.Status.Replicas || found.Status.ReadyReplicas != found.Status.Replicas || time.Since(rolloutStatus.LastTransitionTime.Time) < time.Second*10 {
-			logrus.Debugf("rollout: %v need: %v", utils.Min(found.Status.UpdatedReplicas, found.Status.ReadyReplicas), found.Status.Replicas)
-
-			return requeueAfter(time.Second*5, nil)
-		} else {
-			logrus.Warnf("rollout complete. took: %v logic: %v", time.Since(rolloutStatus.LastTransitionTime.Time), time.Since(rolloutStatus.LastTransitionTime.Time) > time.Second*20)
-			meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
-				Type:   typeRolloutMyKeyStore,
-				Status: metav1.ConditionFalse, Reason: "RollingUpdate",
-				Message: fmt.Sprintf("Rollout complete: %v", image),
-			})
-
-			if err := r.Status().Update(ctx, mykeystore); err != nil {
-				log.Error(err, "Failed to update MyKeyStore status")
-				return requeueIfError(err)
-			}
-		}
-	}
-
-	// size := mykeystore.Spec.Size
-	// if *found.Spec.Replicas != size {
-	// 	logrus.Warn("WRONG NUMBER OF REPLICAS")
-	// 	found.Spec.Replicas = &size
-	// 	if err = r.Update(ctx, found); err != nil {
-	// 		log.Error(err, "Failed to update Deployment",
-	// 			"Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
-
-	// 		// Re-fetch the mykeystore Custom Resource before update the status
-	// 		// so that we have the latest state of the resource on the cluster and we will avoid
-	// 		// raise the issue "the object has been modified, please apply
-	// 		// your changes to the latest version and try again" which would re-trigger the reconciliation
-	// 		if err := r.Get(ctx, req.NamespacedName, mykeystore); err != nil {
-	// 			log.Error(err, "Failed to re-fetch mykeystore")
-	// 			return requeueIfError(err)
-	// 		}
-
-	// 		// The following implementation will update the status
-	// 		meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
-	// 			Type:   typeAvailableMyKeyStore,
-	// 			Status: metav1.ConditionFalse, Reason: "Resizing",
-	// 			Message: fmt.Sprintf("Failed to update the size for the custom resource (%s): (%s)", mykeystore.Name, err),
-	// 		})
-
-	// 		if err := r.Status().Update(ctx, mykeystore); err != nil {
-	// 			log.Error(err, "Failed to update MyKeyStore status")
-	// 			return requeueIfError(err)
-	// 		}
-
-	// 		return requeueIfError(err)
-	// 	}
-	// }
 
 	currSize := *found.Spec.Replicas
 	reqSize := mykeystore.Spec.Size
@@ -199,44 +141,10 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 		newSize := *found.Spec.Replicas + 1
 		logrus.Warnf("ALL PARTITIONS HEALTHY. READY TO SCALE UP. newSize %d", newSize)
 
-		meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
-			Type:   typeRolloutMyKeyStore,
-			Status: metav1.ConditionTrue, Reason: "ScaleUp",
-			Message: fmt.Sprintf("newSize (%d)", newSize),
-		})
-
-		if err := r.Status().Update(ctx, mykeystore); err != nil {
-			log.Error(err, "Failed to update MyKeyStore status")
-			return requeueIfError(err)
-		}
-
 		found.Spec.Replicas = &newSize
-		if err = r.Update(ctx, found); err != nil {
-			log.Error(err, "Failed to update Deployment",
-				"Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
-
-			// Re-fetch the mykeystore Custom Resource before update the status
-			// so that we have the latest state of the resource on the cluster and we will avoid
-			// raise the issue "the object has been modified, please apply
-			// your changes to the latest version and try again" which would re-trigger the reconciliation
-			if err := r.Get(ctx, req.NamespacedName, mykeystore); err != nil {
-				log.Error(err, "Failed to re-fetch mykeystore")
-				return requeueIfError(err)
-			}
-
-			// The following implementation will update the status
-			meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
-				Type:   typeAvailableMyKeyStore,
-				Status: metav1.ConditionFalse, Reason: "Resizing",
-				Message: fmt.Sprintf("Failed to update the size for the custom resource (%s): (%s)", mykeystore.Name, err),
-			})
-
-			if err := r.Status().Update(ctx, mykeystore); err != nil {
-				log.Error(err, "Failed to update MyKeyStore status")
-				return requeueIfError(err)
-			}
-
-			return requeueIfError(nil)
+		err = manualRollout(r, ctx, req, log, mykeystore, found, found.Status.CurrentReplicas)
+		if err != nil {
+			logrus.Errorf("new size: err %v", err)
 		}
 		return requeueImmediately()
 
@@ -257,47 +165,11 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 
 		newSize := *found.Spec.Replicas - 1
 		logrus.Warnf("ALL PARTITIONS HEALTHY. READY TO SCALE DOWN. newSize %d", newSize)
-
-		meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
-			Type:   typeRolloutMyKeyStore,
-			Status: metav1.ConditionTrue, Reason: "ScaleUpDown",
-			Message: fmt.Sprintf("newSize (%d)", newSize),
-		})
-
-		if err := r.Status().Update(ctx, mykeystore); err != nil {
-			log.Error(err, "Failed to update MyKeyStore status")
-			return requeueIfError(err)
-		}
-
 		found.Spec.Replicas = &newSize
-		if err = r.Update(ctx, found); err != nil {
-			log.Error(err, "Failed to update Deployment",
-				"Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
-
-			// Re-fetch the mykeystore Custom Resource before update the status
-			// so that we have the latest state of the resource on the cluster and we will avoid
-			// raise the issue "the object has been modified, please apply
-			// your changes to the latest version and try again" which would re-trigger the reconciliation
-			if err := r.Get(ctx, req.NamespacedName, mykeystore); err != nil {
-				log.Error(err, "Failed to re-fetch mykeystore")
-				return requeueIfError(err)
-			}
-
-			// The following implementation will update the status
-			meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
-				Type:   typeAvailableMyKeyStore,
-				Status: metav1.ConditionFalse, Reason: "Resizing",
-				Message: fmt.Sprintf("Failed to update the size for the custom resource (%s): (%s)", mykeystore.Name, err),
-			})
-
-			if err := r.Status().Update(ctx, mykeystore); err != nil {
-				log.Error(err, "Failed to update MyKeyStore status")
-				return requeueIfError(err)
-			}
-
-			return requeueIfError(nil)
+		err = manualRollout(r, ctx, req, log, mykeystore, found, found.Status.CurrentReplicas)
+		if err != nil {
+			logrus.Errorf("new size: err %v", err)
 		}
-		return requeueImmediately()
 	}
 
 	err = notifyResetTempNode(r, ctx, req, log, mykeystore)
@@ -319,6 +191,70 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 	}
 
 	return nil, nil
+}
+
+func setRolloutStatus(r *MyKeyStoreReconciler, ctx context.Context, log logr.Logger, mykeystore *cachev1alpha1.MyKeyStore, found *appsv1.StatefulSet, status bool, message string) error {
+	var conditionStatus metav1.ConditionStatus
+	if status {
+		conditionStatus = metav1.ConditionTrue
+	} else {
+		conditionStatus = metav1.ConditionFalse
+	}
+	meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
+		Type:   typeRolloutMyKeyStore,
+		Status: conditionStatus, Reason: "RollingUpdate",
+		Message: message,
+	})
+
+	if err := r.Status().Update(ctx, mykeystore); err != nil {
+		log.Error(err, "Failed to update MyKeyStore status")
+		return err
+	}
+	return nil
+}
+
+func manualRollout(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Request, log logr.Logger, mykeystore *cachev1alpha1.MyKeyStore, found *appsv1.StatefulSet, ordinal int32) error {
+	found.Spec.UpdateStrategy.RollingUpdate.Partition = &ordinal
+	var err error
+	if err = r.Update(ctx, found); err != nil {
+		log.Error(err, "Failed to update Deployment",
+			"Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
+
+		// Re-fetch the mykeystore Custom Resource before update the status
+		// so that we have the latest state of the resource on the cluster and we will avoid
+		// raise the issue "the object has been modified, please apply
+		// your changes to the latest version and try again" which would re-trigger the reconciliation
+		if err := r.Get(ctx, req.NamespacedName, mykeystore); err != nil {
+			log.Error(err, "Failed to re-fetch mykeystore")
+			return err
+		}
+
+		// The following implementation will update the status
+		meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
+			Type:   typeAvailableMyKeyStore,
+			Status: metav1.ConditionFalse, Reason: "Rollout",
+			Message: "rollout message is not implemented.",
+		})
+
+		if err := r.Status().Update(ctx, mykeystore); err != nil {
+			log.Error(err, "Failed to update MyKeyStore status")
+			return err
+		}
+
+		return err
+	}
+
+	meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
+		Type:   typeRolloutMyKeyStore,
+		Status: metav1.ConditionTrue, Reason: "RollingUpdate",
+		Message: "rolling out message",
+	})
+
+	if err := r.Status().Update(ctx, mykeystore); err != nil {
+		log.Error(err, "Failed to update MyKeyStore status")
+		return err
+	}
+	return nil
 }
 
 func generatePodNode(mykeystore *cachev1alpha1.MyKeyStore, index int) string {
@@ -474,6 +410,7 @@ func notifyResetTempNode(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.
 }
 
 func getStatefulSet(mykeystore *cachev1alpha1.MyKeyStore) *appsv1.StatefulSet {
+	// found.Spec.UpdateStrategy.RollingUpdate.Partition
 	ls := labelsForMyKeyStore(mykeystore.Name)
 	replicas := mykeystore.Spec.Size
 
@@ -496,6 +433,9 @@ func getStatefulSet(mykeystore *cachev1alpha1.MyKeyStore) *appsv1.StatefulSet {
 		Spec: appsv1.StatefulSetSpec{
 			Replicas:    &replicas,
 			ServiceName: mykeystore.Name,
+			UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
+				RollingUpdate: &appsv1.RollingUpdateStatefulSetStrategy{},
+			},
 			Selector: &metav1.LabelSelector{
 				MatchLabels: ls,
 			},

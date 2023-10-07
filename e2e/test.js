@@ -165,7 +165,7 @@ export function remove() {
   return;
 }
 
-options = { duration: "2h", vus: 1 };
+// options = { duration: "2h", vus: 1 };
 // options = { iterations: 1, vus: 1 };
 export default function () {
   const iterationNumber = exec.scenario.iterationInTest;
@@ -191,8 +191,8 @@ export default function () {
     console.error("SET REQUEST FAILED:", setRes.status, setRes.body);
     return;
   }
-  console.log("value set");
-  while (true) {
+  // while (true) {
+  for (let i = 0; i < 10; i++) {
     // Get a value from the map
     let getRes = http.get(`http://${address}/get?key=${set_key}`, {
       tags: { name: "get" },
