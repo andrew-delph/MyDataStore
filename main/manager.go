@@ -554,6 +554,8 @@ func (m *Manager) SetRequest(key, value string) ([]string, error) {
 
 	var members []string
 
+	clientErrors := 0
+
 	for _, node := range nodes {
 		member, ok := node.(RingMember)
 		if !ok {
@@ -564,6 +566,7 @@ func (m *Manager) SetRequest(key, value string) ([]string, error) {
 
 		client, err := m.clientManager.GetClient(member.Name)
 		if err != nil {
+			clientErrors++
 			errorCh <- err
 			logrus.Debugf("SetRequest err = %v", err)
 			continue
@@ -595,7 +598,7 @@ func (m *Manager) SetRequest(key, value string) ([]string, error) {
 			// logrus.Errorf("SetRequest errorCh: %v", err)
 			_ = err // Handle error if necessary
 		case <-timeout:
-			return members, fmt.Errorf("SET: timed out waiting for responses. responseCount = %d errorCount = %d", responseCount, errorCount)
+			return members, fmt.Errorf("SET: timed out waiting for responses. responseCount = %d errorCount = %d clientErrors = %d", responseCount, errorCount, clientErrors)
 		}
 	}
 	if responseCount < m.config.Manager.WriteQuorum {

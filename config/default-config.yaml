@@ -28,5 +28,6 @@ storage:
   data_path: "/data/storage"
 rpc:
   port: 7070
+  default_timeout: 7
 http:
   default_timeout: 20

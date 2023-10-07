@@ -119,7 +119,7 @@ func (rpcWrapper *RpcWrapper) SetRequest(ctx context.Context, value *datap.Value
 func (rpcWrapper *RpcWrapper) GetRequest(ctx context.Context, req *datap.GetRequestMessage) (*datap.Value, error) {
 	logrus.Debugf("Handling GetRequest: key=%s ", req.Key)
 	resCh := make(chan interface{})
-	err := utils.WriteChannelTimeout(rpcWrapper.reqCh, GetValueTask{Key: req.Key, ResCh: resCh}, 2)
+	err := utils.WriteChannelTimeout(rpcWrapper.reqCh, GetValueTask{Key: req.Key, ResCh: resCh}, rpcWrapper.rpcConfig.DefaultTimeout)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +141,7 @@ func (rpcWrapper *RpcWrapper) GetRequest(ctx context.Context, req *datap.GetRequ
 func (rpcWrapper *RpcWrapper) StreamBuckets(req *datap.StreamBucketsRequest, stream datap.InternalNodeService_StreamBucketsServer) error {
 	logrus.Debugf("SERVER StreamBuckets Buckets %v LowerEpoch %v UpperEpoch %v Partition %v", req.Buckets, req.LowerEpoch, req.UpperEpoch, req.Partition)
 	resCh := make(chan interface{})
-	err := utils.WriteChannelTimeout(rpcWrapper.reqCh, StreamBucketsTask{PartitionId: req.Partition, Buckets: req.Buckets, LowerEpoch: req.LowerEpoch, UpperEpoch: req.UpperEpoch, ResCh: resCh}, 2)
+	err := utils.WriteChannelTimeout(rpcWrapper.reqCh, StreamBucketsTask{PartitionId: req.Partition, Buckets: req.Buckets, LowerEpoch: req.LowerEpoch, UpperEpoch: req.UpperEpoch, ResCh: resCh}, rpcWrapper.rpcConfig.DefaultTimeout)
 	if err != nil {
 		return err
 	}

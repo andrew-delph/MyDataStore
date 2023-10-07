@@ -45,7 +45,8 @@ type StorageConfig struct {
 }
 
 type RpcConfig struct {
-	Port int `mapstructure:"PORT"`
+	Port           int `mapstructure:"PORT"`
+	DefaultTimeout int `mapstructure:"DEFAULT_TIMEOUT"`
 }
 type HttpConfig struct {
 	DefaultTimeout int `mapstructure:"DEFAULT_TIMEOUT"`
