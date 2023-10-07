@@ -23,6 +23,7 @@ type ManagerConfig struct {
 	DataPath             string  `mapstructure:"DATA_PATH"` // TODO REMOVE THIS?
 	Hostname             string
 	RingDebounce         float64 `mapstructure:"RING_DEBOUNCE"`
+	Operator             bool
 }
 
 type ConsensusConfig struct {
@@ -101,6 +102,9 @@ func getConfigOverride(allow_override bool) Config {
 	config.Gossip.Name = hostname
 	config.Consensus.Name = hostname
 	config.Http.Hostname = hostname
+
+	_, exists := os.LookupEnv("OPERATOR")
+	config.Manager.Operator = exists
 
 	// // Print the JSON string
 	// settings := viper.AllSettings()

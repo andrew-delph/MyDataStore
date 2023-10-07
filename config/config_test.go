@@ -29,6 +29,7 @@ func TestConfigDefault(t *testing.T) {
 	assert.NotEqualValues(t, 0, config.Manager.Load, "PartitionConcurrency wrong value")
 	assert.NotEqualValues(t, 0, config.Manager.PartitionReplicas, "PartitionReplicas wrong value")
 	assert.NotEqualValues(t, 0, config.Manager.RingDebounce, "RingDebounce wrong value")
+	assert.EqualValues(t, false, config.Manager.Operator, "Operator wrong value")
 
 	// consensus config
 	assert.NotEqualValues(t, 0, config.Consensus.EpochTime, "EpochTime wrong value")
