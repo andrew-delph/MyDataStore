@@ -266,6 +266,8 @@ func (m *Manager) startWorker(workerId int) {
 					task.ResCh <- err
 					continue
 				}
+
+				m.consensusCluster.LockEpoch()
 				task.ResCh <- nil
 
 			case http.HealthTask:

@@ -255,7 +255,7 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 			return requeueAfter(time.Second*5, nil)
 		}
 
-		newSize := *found.Spec.Replicas + -1
+		newSize := *found.Spec.Replicas - 1
 		logrus.Warnf("ALL PARTITIONS HEALTHY. READY TO SCALE DOWN. newSize %d", newSize)
 
 		meta.SetStatusCondition(&mykeystore.Status.Conditions, metav1.Condition{
@@ -415,12 +415,12 @@ func notifyRemoveTempNode(r *MyKeyStoreReconciler, ctx context.Context, req ctrl
 		req := &rpc.RpcTempNode{Name: tempNode}
 		res, err := client.RemoveTempNode(ctx, req)
 		if err != nil {
-			logrus.Errorf("AddTempNode Client %s res err = %v", pod.Name, err)
+			logrus.Errorf("RemoveTempNode Client %s res err = %v", pod.Name, err)
 			errorCount++
 			continue
 		} else if res.Error {
 			err = errors.New(res.Message)
-			logrus.Errorf("AddTempNode Client %s res err msg = %v", pod.Name, err)
+			logrus.Errorf("RemoveTempNode Client %s res err msg = %v", pod.Name, err)
 			errorCount++
 			continue
 		}
@@ -428,9 +428,9 @@ func notifyRemoveTempNode(r *MyKeyStoreReconciler, ctx context.Context, req ctrl
 	}
 
 	if errorCount > 0 {
-		return fmt.Errorf("AddTempNode had %d errors", errorCount)
+		return fmt.Errorf("RemoveTempNode had %d errors", errorCount)
 	}
-	logrus.Warnf("all pods AddTempNode. # = %v", len(pods.Items))
+	logrus.Warnf("all pods RemoveTempNode. # = %v", len(pods.Items))
 	return nil
 }
 
