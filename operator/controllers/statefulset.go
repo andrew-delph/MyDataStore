@@ -83,7 +83,7 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 		updatedReplicas := found.Status.UpdatedReplicas
 		finalUpdate := found.Status.UpdatedReplicas == found.Status.Replicas
 		if time.Since(rolloutStatus.LastTransitionTime.Time) < time.Second*10 {
-			logrus.Warnf("CurrentReplicas %d Replicas %d UpdatedReplicas %d", found.Status.CurrentReplicas, found.Status.Replicas, found.Status.UpdatedReplicas)
+			logrus.Warnf("waiting status %+v", found.Status)
 			return requeueAfter(time.Second*5, nil)
 		}
 
@@ -97,7 +97,7 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 				logrus.Warnf("manualRollout err = %v", err)
 			}
 
-		} else if finalUpdate {
+		} else if finalUpdate && incrementReady {
 			logrus.Warn("FINAL UPDATE!")
 			err = setRolloutStatus(r, ctx, log, mykeystore, found, false, "rollout finished!")
 			if err != nil {
@@ -113,7 +113,7 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 		logrus.Warn("WRONG IMAGE image=", image)
 		found.Status.UpdateRevision = image
 		found.Spec.Template.Spec.Containers[0].Image = image
-		err = manualRollout(r, ctx, req, log, mykeystore, found, found.Status.CurrentReplicas)
+		err = manualRollout(r, ctx, req, log, mykeystore, found, found.Status.Replicas)
 		if err != nil {
 			logrus.Errorf("new size: %v", err)
 		}

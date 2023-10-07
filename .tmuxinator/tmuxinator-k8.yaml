@@ -8,6 +8,6 @@ windows:
         - ibazel -run_command_after_success='./deploy_k8.sh -r' -debounce='10s' build //main:store_image
         - ibazel -run_command_after_success='./deploy_operator.sh' build //operator:operator_image
         - while true; do stern statefulset/store; done
-        - watch kubectl get pods
+        - watch kubectl get pods -l app=store
         - while true; do stern deployment/operator-controller-manager -n operator-system --container manager --template '{{color .PodColor .ContainerName}} {{.Message}} {{"\n"}}'; done
         -

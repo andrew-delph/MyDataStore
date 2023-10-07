@@ -3,7 +3,6 @@ package main
 import (
 	"container/heap"
 	"sync"
-	"time"
 
 	"github.com/sirupsen/logrus"
 )
@@ -86,7 +85,7 @@ func (h *ConsistencyHeap) RequeueItem(item ConsistencyItem, err error) {
 	if item.Attemps > 100 {
 		logrus.Warnf("requeue item: %+v err: %v", item, err)
 	}
-	time.Sleep(time.Second)
+	// time.Sleep(time.Second)
 	heap.Push(h, item)
 }
 
