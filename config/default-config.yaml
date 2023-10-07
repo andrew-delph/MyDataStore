@@ -10,7 +10,7 @@ manager:
   partition_buckets: 1000
   partition_replicas: 2
   data_path: "/data/storage"
-  load: 2.1
+  load: 1.25
   ring_debounce: 7.5
 consensus:
   epoch_time: 500
