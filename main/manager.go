@@ -263,6 +263,10 @@ func (m *Manager) startWorker(workerId int) {
 					task.ResCh <- err
 					continue
 				}
+				if m.consensusCluster.IsEpochLocked() {
+					task.ResCh <- nil
+					continue
+				}
 				err = m.consensusCluster.UpdateFsm(m.GetCurrentEpoch()+1, m.gossipCluster.GetMembersNames())
 				if err != nil {
 					logrus.Error("UpdateFsm temp1 err = %v", err)
@@ -292,6 +296,10 @@ func (m *Manager) startWorker(workerId int) {
 				err := m.ring.RemoveTempNode(name)
 				if err != nil {
 					task.ResCh <- err
+					continue
+				}
+				if m.consensusCluster.IsEpochLocked() {
+					task.ResCh <- nil
 					continue
 				}
 				err = m.consensusCluster.UpdateFsm(m.GetCurrentEpoch()+1, m.gossipCluster.GetMembersNames())

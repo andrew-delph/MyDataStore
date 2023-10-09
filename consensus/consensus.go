@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -32,7 +33,7 @@ type ConsensusCluster struct {
 	epochTick       *time.Ticker
 	fsm             *FSM
 	memberLock      sync.Mutex
-	epochLock       bool
+	epochLock       int32
 }
 
 type FsmTask struct {
@@ -67,11 +68,17 @@ func CreateConsensusCluster(consensusConfig config.ConsensusConfig, reqCh chan i
 }
 
 func (consensusCluster *ConsensusCluster) LockEpoch() {
-	consensusCluster.epochLock = true
+	var i int32 = 1
+	atomic.StoreInt32(&consensusCluster.epochLock, i)
 }
 
 func (consensusCluster *ConsensusCluster) UnlockEpoch() {
-	consensusCluster.epochLock = false
+	var i int32 = 0
+	atomic.StoreInt32(&consensusCluster.epochLock, i)
+}
+
+func (consensusCluster *ConsensusCluster) IsEpochLocked() bool {
+	return atomic.LoadInt32(&consensusCluster.epochLock) == 1
 }
 
 func (consensusCluster *ConsensusCluster) StartConsensusCluster() error {
