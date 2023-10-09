@@ -66,18 +66,10 @@ type PartitionsHealthCheckTask struct {
 	ResCh chan interface{}
 }
 
-type AddTempNodeTask struct {
-	ResCh chan interface{}
-	Name  string
-}
-
-type RemoveTempNodeTask struct {
-	ResCh chan interface{}
-	Name  string
-}
-
-type ResetTempNodeTask struct {
-	ResCh chan interface{}
+type UpdateMembersTask struct {
+	ResCh       chan interface{}
+	Members     []string
+	TempMembers bool
 }
 
 func (rpcWrapper *RpcWrapper) Stop() error {
@@ -226,54 +218,10 @@ func (rpcWrapper *RpcWrapper) PartitionsHealthCheck(ctx context.Context, req *da
 	return nil, nil
 }
 
-func (rpcWrapper *RpcWrapper) AddTempNode(ctx context.Context, req *datap.TempNode) (*datap.StandardObject, error) {
-	logrus.Debugf("AddTempNode %s", req.Name)
-	resCh := make(chan interface{})
-	rpcWrapper.reqCh <- AddTempNodeTask{ResCh: resCh, Name: req.Name}
-	rawRes := utils.RecieveChannelTimeout(resCh, 20)
-	switch res := rawRes.(type) {
-	case nil:
-		return &datap.StandardObject{
-			Message: "temp node added",
-			Error:   false,
-		}, nil
-	case error:
-		return &datap.StandardObject{
-			Message: res.Error(),
-			Error:   true,
-		}, nil
-	default:
-		logrus.Panicf("rpc unkown res type: %v", reflect.TypeOf(res))
-	}
-	return nil, nil
-}
-
-func (rpcWrapper *RpcWrapper) RemoveTempNode(ctx context.Context, req *datap.TempNode) (*datap.StandardObject, error) {
-	logrus.Debugf("RemoveTempNode %s", req.Name)
-	resCh := make(chan interface{})
-	rpcWrapper.reqCh <- RemoveTempNodeTask{ResCh: resCh, Name: req.Name}
-	rawRes := utils.RecieveChannelTimeout(resCh, 20)
-	switch res := rawRes.(type) {
-	case nil:
-		return &datap.StandardObject{
-			Message: "temp node removed",
-			Error:   false,
-		}, nil
-	case error:
-		return &datap.StandardObject{
-			Message: res.Error(),
-			Error:   true,
-		}, nil
-	default:
-		logrus.Panicf("rpc unkown res type: %v", reflect.TypeOf(res))
-	}
-	return nil, nil
-}
-
-func (rpcWrapper *RpcWrapper) ResetTempNode(ctx context.Context, req *datap.StandardObject) (*datap.StandardObject, error) {
+func (rpcWrapper *RpcWrapper) UpdateMembers(ctx context.Context, req *datap.Members) (*datap.StandardObject, error) {
 	logrus.Debugf("ResetTempNode")
 	resCh := make(chan interface{})
-	rpcWrapper.reqCh <- ResetTempNodeTask{ResCh: resCh}
+	rpcWrapper.reqCh <- UpdateMembersTask{ResCh: resCh, Members: req.GetMembers(), TempMembers: req.GetTempMembers()}
 	rawRes := utils.RecieveChannelTimeout(resCh, 20)
 	switch res := rawRes.(type) {
 	case bool:

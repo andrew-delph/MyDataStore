@@ -255,67 +255,29 @@ func (m *Manager) startWorker(workerId int) {
 				err := m.consistencyController.IsHealthy()
 				task.ResCh <- err
 
-			case rpc.AddTempNodeTask:
-				// logrus.Warn("AddTempNodeTask")
-				name := task.Name
-				err := m.ring.AddTempNode(name)
-				if err != nil {
-					task.ResCh <- err
-					continue
-				}
-				if m.consensusCluster.IsEpochLocked() {
-					task.ResCh <- nil
-					continue
-				}
-				err = m.consensusCluster.UpdateFsm(m.GetCurrentEpoch()+1, m.gossipCluster.GetMembersNames())
-				if err != nil {
-					logrus.Error("UpdateFsm temp1 err = %v", err)
-					task.ResCh <- err
-					continue
-				}
-				err = m.consensusCluster.UpdateFsm(m.GetCurrentEpoch()+1, m.gossipCluster.GetMembersNames())
-				if err != nil {
-					logrus.Error("UpdateFsm temp2 err = %v", err)
-					task.ResCh <- err
-					continue
+			case rpc.UpdateMembersTask:
+				var err error
+
+				if task.TempMembers {
+					changed := m.ring.SetTempRingMembers(task.Members)
+					if changed {
+						err = m.consensusCluster.UpdateFsm(m.GetCurrentEpoch()+1, m.ring.GetMembersNames())
+						if err != nil {
+							logrus.Error("UpdateFsm temp1 err = %v", err)
+							task.ResCh <- err
+							continue
+						}
+						err = m.consensusCluster.UpdateFsm(m.GetCurrentEpoch()+1, m.ring.GetMembersNames())
+						if err != nil {
+							logrus.Error("UpdateFsm temp2 err = %v", err)
+							task.ResCh <- err
+							continue
+						}
+					}
+				} else {
+					m.ring.SetRingMembers(task.Members)
 				}
 
-				m.consensusCluster.LockEpoch()
-
-				// m.clientManager.AddTempClient(task.Name)
-				task.ResCh <- nil
-
-			case rpc.ResetTempNodeTask:
-				// logrus.Warn("ResetTempNodeTask")
-				m.consensusCluster.UnlockEpoch()
-				m.ring.ResetTempRing()
-				task.ResCh <- true
-
-			case rpc.RemoveTempNodeTask:
-				name := task.Name
-				err := m.ring.RemoveTempNode(name)
-				if err != nil {
-					task.ResCh <- err
-					continue
-				}
-				if m.consensusCluster.IsEpochLocked() {
-					task.ResCh <- nil
-					continue
-				}
-				err = m.consensusCluster.UpdateFsm(m.GetCurrentEpoch()+1, m.gossipCluster.GetMembersNames())
-				if err != nil {
-					logrus.Error("UpdateFsm temp1 err = %v", err)
-					task.ResCh <- err
-					continue
-				}
-				err = m.consensusCluster.UpdateFsm(m.GetCurrentEpoch()+1, m.gossipCluster.GetMembersNames())
-				if err != nil {
-					logrus.Error("UpdateFsm temp2 err = %v", err)
-					task.ResCh <- err
-					continue
-				}
-
-				m.consensusCluster.LockEpoch()
 				task.ResCh <- nil
 
 			case http.HealthTask:

@@ -20,7 +20,7 @@ type (
 	RpcStandardObject       = datap.StandardObject
 	RpcEpochTreeObject      = datap.EpochTreeObject
 	RpcStreamBucketsRequest = datap.StreamBucketsRequest
-	RpcTempNode             = datap.TempNode
+	RpcMembers              = datap.Members
 )
 
 func (rpcWrapper *RpcWrapper) CreateRpcClient(ip string) (*grpc.ClientConn, RpcClient, error) {

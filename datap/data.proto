@@ -23,11 +23,7 @@ service InternalNodeService {
 
   rpc PartitionsHealthCheck(StandardObject) returns (StandardObject);
 
-  rpc AddTempNode(TempNode) returns (StandardObject);
-
-  rpc RemoveTempNode(TempNode) returns (StandardObject);
-
-  rpc ResetTempNode(StandardObject) returns (StandardObject);
+  rpc UpdateMembers(Members) returns (StandardObject);
   
 }
 
@@ -72,6 +68,11 @@ message EpochTreeObject{
 message Fsm{
   int64 epoch = 1;
   repeated string members = 2;
+}
+
+message Members{
+  repeated string members = 1;
+  bool tempMembers = 2;
 }
 
 
