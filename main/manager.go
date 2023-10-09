@@ -202,7 +202,7 @@ func (m *Manager) startWorker(workerId int) {
 			}
 		case <-m.epochTick.C:
 
-			err := m.consensusCluster.UpdateFsm(m.GetCurrentEpoch()+1, m.gossipCluster.GetMembersNames(), m.gossipCluster.GetMembersNames())
+			err := m.consensusCluster.UpdateFsm(m.GetCurrentEpoch()+1, m.ring.GetMembersNames(false), m.ring.GetMembersNames(true))
 			if err != nil {
 				logrus.Error("UpdateFsm err = %v", err)
 			}
@@ -258,7 +258,7 @@ func (m *Manager) startWorker(workerId int) {
 
 			case rpc.UpdateMembersTask:
 				var err error
-				if m.ring.CompareMembers(task.Members, task.TempMembers) == false {
+				if m.ring.CompareMembers(task.Members, task.TempMembers) == true {
 					logrus.Warn("members already changed")
 					task.ResCh <- true
 					continue

@@ -338,9 +338,9 @@ func notifyMembers(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Reques
 	}
 
 	if errorCount > 0 {
-		return fmt.Errorf("ResetTempNode had %d errors", errorCount)
+		return fmt.Errorf("notifyMembers had %d errors", errorCount)
 	}
-	logrus.Warnf("all pods ResetTempNode. # = %v", len(pods.Items))
+	logrus.Warnf("all pods notifyMembers. # = %v", len(pods.Items))
 	return nil
 }
 
