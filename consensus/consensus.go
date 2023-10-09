@@ -123,7 +123,6 @@ func (consensusCluster *ConsensusCluster) StartConsensusCluster() error {
 	consensusCluster.raftNode = raftNode
 
 	// start the consensus worker
-	go consensusCluster.startWorker()
 
 	if consensusCluster.consensusConfig.AutoBootstrap {
 		go func() {
@@ -140,19 +139,6 @@ func (consensusCluster *ConsensusCluster) StartConsensusCluster() error {
 	}
 
 	return nil
-}
-
-func (consensusCluster *ConsensusCluster) startWorker() {
-	for true {
-		select {
-		case <-consensusCluster.epochTick.C:
-
-			err := consensusCluster.UpdateEpoch()
-			if err != nil {
-				logrus.Error("UpdateEpoch err = %v", err)
-			}
-		}
-	}
 }
 
 func (consensusCluster *ConsensusCluster) RaftBootstrap() error {

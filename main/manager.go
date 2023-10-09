@@ -45,6 +45,7 @@ type Manager struct {
 	clientManager         *ClientManager
 
 	debugTick    *time.Ticker
+	epochTick    *time.Ticker
 	CurrentEpoch int64
 }
 
@@ -77,6 +78,7 @@ func NewManager(c config.Config) Manager {
 		consistencyController: consistencyController,
 		clientManager:         clientManager,
 		debugTick:             time.NewTicker(time.Second * 5),
+		epochTick:             time.NewTicker(time.Duration(c.Consensus.EpochTime) * time.Second),
 	}
 }
 
@@ -197,6 +199,12 @@ func (m *Manager) startWorker(workerId int) {
 			err = m.consistencyController.IsHealthy()
 			if err != nil {
 				// logrus.Warnf("consistencyController health err= %v", err)
+			}
+		case <-m.epochTick.C:
+
+			err := m.consensusCluster.UpdateEpoch()
+			if err != nil {
+				logrus.Error("UpdateEpoch err = %v", err)
 			}
 		// case isLeader: <-m.consensusCluster.LeaderCh():
 		case isLeader := <-m.consensusCluster.LeaderCh():
