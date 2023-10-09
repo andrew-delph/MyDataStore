@@ -35,10 +35,6 @@ type ConsensusCluster struct {
 	epochLock       bool
 }
 
-type LeaderChangeTask struct {
-	IsLeader bool
-}
-
 type FsmTask struct {
 	Epoch   int64
 	Members []string
@@ -149,9 +145,6 @@ func (consensusCluster *ConsensusCluster) StartConsensusCluster() error {
 func (consensusCluster *ConsensusCluster) startWorker() {
 	for true {
 		select {
-		case isLeader := <-consensusCluster.raftNode.LeaderCh():
-			logrus.Debugf("leader change. %t %s", isLeader, consensusCluster.raftNode.State())
-			consensusCluster.reqCh <- LeaderChangeTask{IsLeader: isLeader}
 		case <-consensusCluster.epochTick.C:
 
 			err := consensusCluster.UpdateEpoch()
@@ -179,6 +172,10 @@ func (consensusCluster *ConsensusCluster) RaftBootstrap() error {
 		},
 	})
 	return bootstrapFuture.Error()
+}
+
+func (consensusCluster *ConsensusCluster) LeaderCh() <-chan bool {
+	return consensusCluster.raftNode.LeaderCh()
 }
 
 func (consensusCluster *ConsensusCluster) AddVoter(nodeName, nodeIP string) error {

@@ -198,10 +198,42 @@ func (m *Manager) startWorker(workerId int) {
 			if err != nil {
 				// logrus.Warnf("consistencyController health err= %v", err)
 			}
+		// case isLeader: <-m.consensusCluster.LeaderCh():
+		case isLeader := <-m.consensusCluster.LeaderCh():
+			// logrus.Warnf("worker LeaderChangeTask: %+v", task)
+
+			logrus.Warn("members: ", m.gossipCluster.GetMembersNames())
+
+			if !isLeader {
+				continue
+			}
+			logrus.Warn("I AM THE LEADER")
+
+			for _, member := range m.gossipCluster.GetMembers() {
+				err := m.consensusCluster.AddVoter(member.Name, member.Addr.String())
+				if err != nil {
+					err = errors.Wrap(err, "gossip.JoinTask")
+					logrus.Error(err)
+					continue
+				} else {
+					logrus.Debugf("AddVoter success")
+				}
+			}
+
+			if m.GetCurrentEpoch() == int64(0) {
+				err := m.consensusCluster.UpdateEpoch()
+				if err != nil {
+					logrus.Error("UpdateEpoch err = %v", err)
+				}
+			}
+			err := m.consensusCluster.UpdateMembers(m.GetCurrentEpoch(), m.gossipCluster.GetMembersNames())
+			if err != nil {
+				logrus.Warnf("PartitionsUpdateTask err = %v", err)
+			}
 
 		case data, ok := <-m.reqCh:
 			if !ok {
-				logrus.Fatal("Channel closed!")
+				logrus.Warn("Channel closed!")
 				return
 			}
 			switch task := data.(type) {
@@ -365,38 +397,6 @@ func (m *Manager) startWorker(workerId int) {
 				m.consistencyController.PublishEpoch(task.Epoch)
 
 				m.ring.SetRingMembers(task.Members)
-
-			case consensus.LeaderChangeTask:
-				// logrus.Warnf("worker LeaderChangeTask: %+v", task)
-
-				logrus.Warn("members: ", m.gossipCluster.GetMembersNames())
-
-				if !task.IsLeader {
-					continue
-				}
-				logrus.Warn("I AM THE LEADER")
-
-				for _, member := range m.gossipCluster.GetMembers() {
-					err := m.consensusCluster.AddVoter(member.Name, member.Addr.String())
-					if err != nil {
-						err = errors.Wrap(err, "gossip.JoinTask")
-						logrus.Error(err)
-						continue
-					} else {
-						logrus.Debugf("AddVoter success")
-					}
-				}
-
-				if m.GetCurrentEpoch() == int64(0) {
-					err := m.consensusCluster.UpdateEpoch()
-					if err != nil {
-						logrus.Error("UpdateEpoch err = %v", err)
-					}
-				}
-				err := m.consensusCluster.UpdateMembers(m.GetCurrentEpoch(), m.gossipCluster.GetMembersNames())
-				if err != nil {
-					logrus.Warnf("PartitionsUpdateTask err = %v", err)
-				}
 
 			case rpc.SetValueTask:
 				logrus.Debugf("worker SetValueTask: %+v", task)
