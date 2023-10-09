@@ -28,11 +28,11 @@ type Hashring struct {
 }
 
 type AddTask struct {
-	member consistent.Member
+	member string
 }
 
 type RemoveTask struct {
-	name string
+	member string
 }
 
 type RingUpdateTask struct {
@@ -242,11 +242,11 @@ func (ring *Hashring) UpdateRing() {
 	for _, rawTask := range ring.taskList {
 		switch task := rawTask.(type) {
 		case AddTask:
-			ring.currConsistent.Add(task.member)
-			ring.tempConsistent.Add(task.member)
+			ring.currConsistent.Add(CreateRingMember(task.member))
+			ring.tempConsistent.Add(CreateRingMember(task.member))
 		case RemoveTask:
-			ring.currConsistent.Remove(task.name)
-			ring.tempConsistent.Remove(task.name)
+			ring.currConsistent.Remove(task.member)
+			ring.tempConsistent.Remove(task.member)
 		default:
 			logrus.Panicf("Hashring unknown task: %v", reflect.TypeOf(task))
 		}
@@ -266,25 +266,25 @@ func (ring *Hashring) notifyPartitionUpdate() error {
 	return nil
 }
 
-func (ring *Hashring) AddNode(member consistent.Member) {
+func (ring *Hashring) AddNode(member string) {
 	ring.rwLock.Lock()
 	defer ring.rwLock.Unlock()
 	ring.taskList = append(ring.taskList, AddTask{member: member})
 	ring.debounceUpdateRing()
 }
 
-func (ring *Hashring) RemoveNode(name string) {
+func (ring *Hashring) RemoveNode(member string) {
 	ring.rwLock.Lock()
 	defer ring.rwLock.Unlock()
-	ring.taskList = append(ring.taskList, RemoveTask{name: name})
+	ring.taskList = append(ring.taskList, RemoveTask{member: member})
 	ring.debounceUpdateRing()
 }
 
-func (ring *Hashring) AddTempNode(member consistent.Member) error {
+func (ring *Hashring) AddTempNode(member string) error {
 	ring.ResetTempRing()
 	ring.rwLock.Lock()
 	defer ring.rwLock.Unlock()
-	ring.tempConsistent.Add(member)
+	ring.tempConsistent.Add(CreateRingMember(member))
 	return ring.notifyPartitionUpdate()
 }
 
@@ -311,6 +311,7 @@ func (ring *Hashring) SetRingMembers(members []string) {
 		ringMembers = append(ringMembers, CreateRingMember(mem))
 	}
 	ring.tempConsistent = consistent.New(ringMembers, ring.consistentConfig)
+	ring.currConsistent = consistent.New(ringMembers, ring.consistentConfig)
 	ring.notifyPartitionUpdate()
 }
 

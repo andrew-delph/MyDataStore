@@ -29,20 +29,14 @@ func TestHashringRejoin(t *testing.T) {
 	c1.RingDebounce = 0.1
 	c1.Load = 1.25
 	hr1 := CreateHashring(c1, nil)
-	hr1.AddNode(TestMember{name: "test1", test: "1"})
-	hr1.AddNode(TestMember{name: "test1", test: "2"})
+	hr1.AddNode("test1")
+	hr1.AddNode("test1")
 
 	hr1.UpdateRing()
 
 	node := hr1.GetCurrMembers()[0]
 
-	member, ok := node.(TestMember)
-	if !ok {
-		t.Error("failed to decode node")
-		t.FailNow()
-	}
-
-	assert.EqualValues(t, "1", member.test, "member.test wrong value")
+	assert.EqualValues(t, "test1", node.String(), "member.test wrong value")
 }
 
 func TestHashringLoad(t *testing.T) {
@@ -51,9 +45,9 @@ func TestHashringLoad(t *testing.T) {
 	c1.PartitionReplicas = 3
 	c1.Load = 1.25
 	hr1 := CreateHashring(c1, nil)
-	hr1.AddNode(TestMember{name: "test1"})
-	hr1.AddNode(TestMember{name: "test2"})
-	hr1.AddNode(TestMember{name: "test3"})
+	hr1.AddNode("test1")
+	hr1.AddNode("test2")
+	hr1.AddNode("test3")
 
 	// c2 := config.GetConfig().Manager
 	// c2.PartitionCount = 100
@@ -63,13 +57,13 @@ func TestHashringLoad(t *testing.T) {
 	c2 := c1
 
 	hr2 := CreateHashring(c2, nil)
-	hr2.AddNode(TestMember{name: "test1"})
-	hr2.AddNode(TestMember{name: "test2"})
+	hr2.AddNode("test1")
+	hr2.AddNode("test2")
 
-	hr2.AddNode(TestMember{name: "testx"})
+	hr2.AddNode("testx")
 	hr2.RemoveNode("testx")
 
-	hr2.AddNode(TestMember{name: "test3"})
+	hr2.AddNode("test3")
 
 	hr1_1, _ := hr1.GetMemberPartions("test1")
 	hr2_1, _ := hr2.GetMemberPartions("test1")
@@ -201,10 +195,10 @@ func TestHashringDebcouneUpdate(t *testing.T) {
 	c.Load = 1.25
 	hr := CreateHashring(c, reqCh)
 
-	hr.AddNode(TestMember{name: "test1"})
-	hr.AddNode(TestMember{name: "test2"})
+	hr.AddNode("test1")
+	hr.AddNode("test2")
 	hr.RemoveNode("test2")
-	hr.AddNode(TestMember{name: "test3"})
+	hr.AddNode("test3")
 
 	assert.EqualValues(t, 0, len(hr.GetCurrMembers()), "wrong number of members")
 
@@ -233,23 +227,23 @@ func TestHashringTempNodes(t *testing.T) {
 	c.Load = 1.25
 	hr := CreateHashring(c, reqCh)
 
-	hr.AddNode(TestMember{name: "test1"})
-	hr.AddNode(TestMember{name: "test2"})
-	hr.AddNode(TestMember{name: "test3"})
+	hr.AddNode("test1")
+	hr.AddNode("test2")
+	hr.AddNode("test3")
 	hr.UpdateRing()
 
 	assert.EqualValues(t, 3, len(hr.GetMembers()), "wrong number of members")
 
-	hr.AddNode(TestMember{name: "test3"})
+	hr.AddNode("test3")
 	hr.UpdateRing()
 	assert.EqualValues(t, 3, len(hr.GetMembers()), "wrong number of members")
 
-	hr.AddTempNode(TestMember{name: "test3"})
+	hr.AddTempNode("test3")
 	assert.EqualValues(t, 3, len(hr.GetMembers()), "wrong number of members")
 
-	hr.AddTempNode(TestMember{name: "test4"})
+	hr.AddTempNode("test4")
 	assert.EqualValues(t, 4, len(hr.GetMembers()), "wrong number of members")
 
-	hr.AddTempNode(TestMember{name: "test5"})
+	hr.AddTempNode("test5")
 	assert.EqualValues(t, 4, len(hr.GetMembers()), "wrong number of members")
 }

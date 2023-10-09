@@ -258,7 +258,7 @@ func (m *Manager) startWorker(workerId int) {
 			case rpc.AddTempNodeTask:
 				// logrus.Warn("AddTempNodeTask")
 				name := task.Name
-				err := m.ring.AddTempNode(CreateRingMember(name))
+				err := m.ring.AddTempNode(name)
 				if err != nil {
 					task.ResCh <- err
 					continue
@@ -401,10 +401,10 @@ func (m *Manager) startWorker(workerId int) {
 			case consensus.FsmTask:
 				logrus.Warnf("FsmTask Epoch %v Members %v", task.Epoch, task.Members)
 				m.SetCurrentEpoch(task.Epoch)
-				task.ResCh <- true
 				m.consistencyController.PublishEpoch(task.Epoch)
 
 				m.ring.SetRingMembers(task.Members)
+				task.ResCh <- true
 
 			case rpc.SetValueTask:
 				logrus.Debugf("worker SetValueTask: %+v", task)
@@ -551,7 +551,7 @@ func (m *Manager) startWorker(workerId int) {
 				}
 
 			case hashring.RingUpdateTask:
-				logrus.Warnf("worker MembersUpdateTask #%+v", len(task.Partitions))
+				// logrus.Warnf("worker MembersUpdateTask #%+v", len(task.Partitions))
 
 				currPartitions := utils.NewIntSet().From(task.Partitions)
 				m.consistencyController.HandleHashringChange(currPartitions)
@@ -569,6 +569,7 @@ func (m *Manager) startWorker(workerId int) {
 func (m *Manager) SetRequest(key, value string) ([]string, error) {
 	nodes, err := m.ring.GetClosestN(key, m.config.Manager.ReplicaCount, true)
 	if err != nil {
+		logrus.Warnf("here! %v", m.ring.GetMembersNames())
 		return nil, err
 	}
 
@@ -583,15 +584,11 @@ func (m *Manager) SetRequest(key, value string) ([]string, error) {
 
 	clientErrors := 0
 
-	for _, node := range nodes {
-		member, ok := node.(RingMember)
-		if !ok {
-			return members, errors.New("failed to decode node")
-		}
+	for _, member := range nodes {
 
-		members = append(members, member.Name)
+		members = append(members, member.String())
 
-		client, err := m.clientManager.GetClient(member.Name)
+		client, err := m.clientManager.GetClient(member.String())
 		if err != nil {
 			clientErrors++
 			errorCh <- err
@@ -651,13 +648,9 @@ func (m *Manager) GetRequest(key string) (*rpc.RpcValue, []string, error) {
 	var statuses []codes.Code
 	var failed_members []string
 	clientErrors := 0
-	for _, node := range nodes {
-		member, ok := node.(RingMember)
-		if !ok {
-			return nil, failed_members, errors.New("failed to decode node")
-		}
+	for _, member := range nodes {
 
-		client, err := m.clientManager.GetClient(member.Name)
+		client, err := m.clientManager.GetClient(member.String())
 		if err != nil {
 			errorCh <- err
 			clientErrors++
@@ -665,7 +658,7 @@ func (m *Manager) GetRequest(key string) (*rpc.RpcValue, []string, error) {
 			continue
 		}
 
-		failed_members = append(failed_members, member.Name)
+		failed_members = append(failed_members, member.String())
 
 		go func() {
 			// ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -735,13 +728,9 @@ func (m *Manager) EpochTreeObjectRequest(partitionId int, epoch int64, timeout t
 	responseCh := make(chan *rpc.RpcEpochTreeObject, m.config.Manager.ReplicaCount)
 	errorCh := make(chan error, m.config.Manager.ReplicaCount)
 
-	for _, node := range nodes {
-		member, ok := node.(RingMember)
-		if !ok {
-			return nil, errors.New("failed to decode node")
-		}
+	for _, member := range nodes {
 
-		client, err := m.clientManager.GetClient(member.Name)
+		client, err := m.clientManager.GetClient(member.String())
 		if err != nil {
 			errorCh <- err
 			logrus.Debugf("EpochTreeObjectRequest err = %v", err)
@@ -870,7 +859,7 @@ func (m *Manager) GetEpochTreeLastValid(partitionId int32) (*rpc.RpcEpochTreeObj
 }
 
 type MemberEpochTreeLastValid struct {
-	member             *RingMember
+	member             string
 	epochTreeLastValid *rpc.RpcEpochTreeObject
 }
 
@@ -884,13 +873,9 @@ func (m *Manager) EpochTreeLastValidRequest(partitionId int32, timeout time.Dura
 	responseCh := make(chan MemberEpochTreeLastValid, m.config.Manager.ReplicaCount)
 	errorCh := make(chan error, m.config.Manager.ReplicaCount)
 
-	for _, node := range nodes {
-		member, ok := node.(RingMember)
-		if !ok {
-			return nil, errors.New("failed to decode node")
-		}
+	for _, member := range nodes {
 
-		client, err := m.clientManager.GetClient(member.Name)
+		client, err := m.clientManager.GetClient(member.String())
 		if err != nil {
 			errorCh <- err
 			logrus.Debugf("EpochTreeLastValidRequest err = %v", err)
@@ -904,7 +889,7 @@ func (m *Manager) EpochTreeLastValidRequest(partitionId int32, timeout time.Dura
 			if err != nil {
 				errorCh <- err
 			} else {
-				responseCh <- MemberEpochTreeLastValid{member: &member, epochTreeLastValid: res}
+				responseCh <- MemberEpochTreeLastValid{member: member.String(), epochTreeLastValid: res}
 			}
 		}()
 	}
@@ -921,12 +906,12 @@ func (m *Manager) EpochTreeLastValidRequest(partitionId int32, timeout time.Dura
 	return membersLastValid, nil
 }
 
-func (m *Manager) SyncPartitionRequest(member *RingMember, partitionId int32, lowerEpoch int64, upperEpoch int64, buckets []int32, timeout time.Duration) error {
+func (m *Manager) SyncPartitionRequest(member string, partitionId int32, lowerEpoch int64, upperEpoch int64, buckets []int32, timeout time.Duration) error {
 	logrus.Debugf("CLIENT SyncPartitionRequest")
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	req := &rpc.RpcStreamBucketsRequest{Partition: partitionId, LowerEpoch: lowerEpoch, UpperEpoch: upperEpoch, Buckets: buckets}
-	client, err := m.clientManager.GetClient(member.Name)
+	client, err := m.clientManager.GetClient(member)
 	if err != nil {
 		return err
 	}

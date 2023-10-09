@@ -13,7 +13,6 @@ go_library(
         "manager.go",
         "merkle_tree.go",
         "metrics.go",
-        "ring_member.go",
     ],
     importpath = "github.com/andrew-delph/my-key-store/main",
     visibility = ["//visibility:private"],

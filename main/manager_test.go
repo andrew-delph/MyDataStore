@@ -359,21 +359,21 @@ func TestManagerAddTempNode(t *testing.T) {
 	go manager.startWorker(1)
 	manager.CurrentEpoch = 100
 
-	manager.ring.AddNode(CreateRingMember("test1"))
-	manager.ring.AddNode(CreateRingMember("test2"))
-	manager.ring.AddNode(CreateRingMember("test3"))
-	manager.ring.AddNode(CreateRingMember("test4"))
+	manager.ring.AddNode("test1")
+	manager.ring.AddNode("test2")
+	manager.ring.AddNode("test3")
+	manager.ring.AddNode("test4")
 	manager.ring.UpdateRing()
 	assert.EqualValues(t, 4, len(manager.ring.GetMembers()), "ring members")
 	assert.EqualValues(t, 4, len(manager.ring.GetCurrMembers()), "ring members")
-	err := manager.ring.AddTempNode(CreateRingMember("test5"))
+	err := manager.ring.AddTempNode("test5")
 	if err != nil {
 		t.Error(err)
 	}
 	assert.EqualValues(t, 5, len(manager.ring.GetMembers()), "ring members")
 	assert.EqualValues(t, 4, len(manager.ring.GetCurrMembers()), "ring members")
 
-	err = manager.ring.AddTempNode(CreateRingMember("test6"))
+	err = manager.ring.AddTempNode("test6")
 	if err != nil {
 		t.Error(err)
 	}
