@@ -227,16 +227,17 @@ func (m *Manager) startWorker(workerId int) {
 					logrus.Debugf("AddVoter success")
 				}
 			}
-
-			if m.GetCurrentEpoch() == int64(0) {
-				err := m.consensusCluster.UpdateFsm(m.GetCurrentEpoch()+1, m.gossipCluster.GetMembersNames(), m.gossipCluster.GetMembersNames())
-				if err != nil {
-					logrus.Error("UpdateFsm err = %v", err)
+			if m.config.Manager.Operator == false {
+				if m.GetCurrentEpoch() == int64(0) {
+					err := m.consensusCluster.UpdateFsm(m.GetCurrentEpoch()+1, m.gossipCluster.GetMembersNames(), m.gossipCluster.GetMembersNames())
+					if err != nil {
+						logrus.Error("UpdateFsm err = %v", err)
+					}
 				}
-			}
-			err := m.consensusCluster.UpdateFsm(m.GetCurrentEpoch(), m.gossipCluster.GetMembersNames(), m.gossipCluster.GetMembersNames())
-			if err != nil {
-				logrus.Warnf("PartitionsUpdateTask err = %v", err)
+				err := m.consensusCluster.UpdateFsm(m.GetCurrentEpoch(), m.gossipCluster.GetMembersNames(), m.gossipCluster.GetMembersNames())
+				if err != nil {
+					logrus.Warnf("PartitionsUpdateTask err = %v", err)
+				}
 			}
 
 		case data, ok := <-m.reqCh:
