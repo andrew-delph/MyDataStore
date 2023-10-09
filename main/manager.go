@@ -280,7 +280,7 @@ func (m *Manager) startWorker(workerId int) {
 					}
 				}
 
-				task.ResCh <- nil
+				task.ResCh <- true
 
 			case http.HealthTask:
 				err := m.consensusCluster.IsHealthy()
@@ -356,22 +356,26 @@ func (m *Manager) startWorker(workerId int) {
 				}
 				m.clientManager.AddClient(task.Name, rpcClient)
 
-				err = m.consensusCluster.UpdateFsm(m.GetCurrentEpoch(), m.gossipCluster.GetMembersNames(), m.gossipCluster.GetMembersNames())
-				if err != nil {
-					logrus.Warnf("JoinTask UpdateMembers err = %v", err)
+				if m.config.Manager.Operator == false {
+					err = m.consensusCluster.UpdateFsm(m.GetCurrentEpoch(), m.gossipCluster.GetMembersNames(), m.gossipCluster.GetMembersNames())
+					if err != nil {
+						logrus.Warnf("JoinTask UpdateMembers err = %v", err)
+					}
 				}
 
 			case gossip.LeaveTask:
 				// logrus.Warnf("worker LeaveTask: %+v", task)
 				m.clientManager.RemoveClient(task.Name)
 				m.consensusCluster.RemoveServer(task.Name)
-				err := m.consensusCluster.UpdateFsm(m.GetCurrentEpoch(), m.gossipCluster.GetMembersNames(), m.gossipCluster.GetMembersNames())
-				if err != nil {
-					logrus.Warnf("LeaveTask UpdateMembers err = %v", err)
+				if m.config.Manager.Operator == false {
+					err := m.consensusCluster.UpdateFsm(m.GetCurrentEpoch(), m.gossipCluster.GetMembersNames(), m.gossipCluster.GetMembersNames())
+					if err != nil {
+						logrus.Warnf("JoinTask UpdateMembers err = %v", err)
+					}
 				}
 
 			case consensus.FsmTask:
-				logrus.Warnf("FsmTask Epoch %v Members %v", task.Epoch, task.Members)
+				logrus.Warnf("FsmTask Epoch %v Members %v TempMembers %v", task.Epoch, task.Members, task.TempMembers)
 				m.SetCurrentEpoch(task.Epoch)
 				m.consistencyController.PublishEpoch(task.Epoch)
 

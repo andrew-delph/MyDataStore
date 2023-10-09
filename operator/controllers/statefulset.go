@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/andrew-delph/my-key-store/rpc"
+	"github.com/andrew-delph/my-key-store/utils"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -87,7 +88,7 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 			return requeueAfter(time.Second*5, nil)
 		}
 
-		logrus.Warnf("IN ROLLOUT %v %v incrementReady = %v updatedReplicas = %v finalUpdate = %v", found.Status.ReadyReplicas, found.Status.Replicas, incrementReady, updatedReplicas, finalUpdate)
+		logrus.Warnf("IN ROLLOUT %v %v incrementReady = %v updatedReplicas = %v finalUpdate = %v", utils.Min(found.Status.ReadyReplicas, updatedReplicas), found.Status.Replicas, incrementReady, updatedReplicas, finalUpdate)
 		// logrus.Warnf("time %v", time.Since(rolloutStatus.LastTransitionTime.Time))
 		if !finalUpdate && incrementReady {
 			nextPartition := found.Status.Replicas - updatedReplicas - 1
@@ -171,7 +172,7 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 			logrus.Errorf("new size: err %v", err)
 		}
 	}
-	members := generateMembers(mykeystore, 1)
+	members := generateMembers(mykeystore, currSize)
 	err = notifyMembers(r, ctx, req, log, mykeystore, members, members)
 	if err != nil {
 		return requeueAfter(time.Second*5, nil)
