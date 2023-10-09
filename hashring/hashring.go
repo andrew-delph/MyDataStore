@@ -94,7 +94,7 @@ func (h hasher) Sum64(data []byte) uint64 {
 }
 
 func (ring *Hashring) IsHealthy() error {
-	if len(ring.GetMembers()) < ring.managerConfig.ReplicaCount && ring.getTaskListSize() > 0 {
+	if len(ring.GetMembers(false)) < ring.managerConfig.ReplicaCount && ring.getTaskListSize() > 0 {
 		return errors.New("waiting on update nodes debounce")
 	}
 	return nil
@@ -154,33 +154,30 @@ func (ring *Hashring) getMemberPartions(member string) ([]int, error) {
 	return belongsTo.List(), nil
 }
 
-func (ring *Hashring) GetCurrMembers() []consistent.Member {
-	ring.rwLock.RLock()
-	defer ring.rwLock.RUnlock()
-	return ring.currConsistent.GetMembers()
-}
-
-func (ring *Hashring) GetMembers() []consistent.Member {
+func (ring *Hashring) GetMembers(temp bool) []consistent.Member {
 	ring.rwLock.RLock()
 	defer ring.rwLock.RUnlock()
 
-	return ring.getMembers()
+	return ring.getMembers(temp)
 }
 
-func (ring *Hashring) getMembers() []consistent.Member {
+func (ring *Hashring) getMembers(temp bool) []consistent.Member {
 	currMembers := ring.currConsistent.GetMembers()
-	tempMembers := ring.tempConsistent.GetMembers()
-	return mergeMemberList(currMembers, tempMembers)
+	if temp {
+		tempMembers := ring.tempConsistent.GetMembers()
+		return mergeMemberList(currMembers, tempMembers)
+	}
+	return currMembers
 }
 
-func (ring *Hashring) GetMembersNames() []string {
+func (ring *Hashring) GetMembersNames(temp bool) []string {
 	ring.rwLock.RLock()
 	defer ring.rwLock.RUnlock()
-	return ring.getMembersNames()
+	return ring.getMembersNames(temp)
 }
 
-func (ring *Hashring) getMembersNames() []string {
-	members := ring.getMembers()
+func (ring *Hashring) getMembersNames(temp bool) []string {
+	members := ring.getMembers(temp)
 	var memberNames []string
 	for _, mem := range members {
 		memberNames = append(memberNames, mem.String())
@@ -331,7 +328,7 @@ func (ring *Hashring) SetTempRingMembers(members []string) bool {
 	ring.rwLock.Lock()
 	defer ring.rwLock.Unlock()
 
-	currentMembers := ring.getMembersNames()
+	currentMembers := ring.getMembersNames(false)
 
 	sort.Strings(currentMembers)
 	sort.Strings(members)

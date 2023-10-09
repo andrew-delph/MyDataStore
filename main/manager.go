@@ -261,13 +261,13 @@ func (m *Manager) startWorker(workerId int) {
 				if task.TempMembers {
 					changed := m.ring.SetTempRingMembers(task.Members)
 					if changed {
-						err = m.consensusCluster.UpdateFsm(m.GetCurrentEpoch()+1, m.ring.GetMembersNames())
+						err = m.consensusCluster.UpdateFsm(m.GetCurrentEpoch()+1, m.ring.GetMembersNames(false))
 						if err != nil {
 							logrus.Error("UpdateFsm temp1 err = %v", err)
 							task.ResCh <- err
 							continue
 						}
-						err = m.consensusCluster.UpdateFsm(m.GetCurrentEpoch()+1, m.ring.GetMembersNames())
+						err = m.consensusCluster.UpdateFsm(m.GetCurrentEpoch()+1, m.ring.GetMembersNames(false))
 						if err != nil {
 							logrus.Error("UpdateFsm temp2 err = %v", err)
 							task.ResCh <- err
@@ -539,7 +539,6 @@ func (m *Manager) startWorker(workerId int) {
 func (m *Manager) SetRequest(key, value string) ([]string, error) {
 	nodes, err := m.ring.GetClosestN(key, m.config.Manager.ReplicaCount, true)
 	if err != nil {
-		logrus.Warnf("here! %v", m.ring.GetMembersNames())
 		return nil, err
 	}
 

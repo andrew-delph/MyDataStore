@@ -364,18 +364,18 @@ func TestManagerAddTempNode(t *testing.T) {
 	manager.ring.AddNode("test3")
 	manager.ring.AddNode("test4")
 	manager.ring.UpdateRing()
-	assert.EqualValues(t, 4, len(manager.ring.GetMembers()), "ring members")
-	assert.EqualValues(t, 4, len(manager.ring.GetCurrMembers()), "ring members")
+	assert.EqualValues(t, 4, len(manager.ring.GetMembers(false)), "ring members")
+	assert.EqualValues(t, 4, len(manager.ring.GetMembers(false)), "ring members")
 	err := manager.ring.AddTempNode("test5")
 	if err != nil {
 		t.Error(err)
 	}
-	assert.EqualValues(t, 5, len(manager.ring.GetMembers()), "ring members")
-	assert.EqualValues(t, 4, len(manager.ring.GetCurrMembers()), "ring members")
+	assert.EqualValues(t, 5, len(manager.ring.GetMembers(true)), "ring members")
+	assert.EqualValues(t, 4, len(manager.ring.GetMembers(false)), "ring members")
 
 	err = manager.ring.AddTempNode("test6")
 	if err != nil {
 		t.Error(err)
 	}
-	assert.EqualValues(t, 5, len(manager.ring.GetMembers()), "ring members")
+	assert.EqualValues(t, 5, len(manager.ring.GetMembers(true)), "ring members")
 }
