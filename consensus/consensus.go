@@ -230,47 +230,7 @@ func (consensusCluster *ConsensusCluster) State() raft.RaftState {
 	return consensusCluster.raftNode.State()
 }
 
-func (consensusCluster *ConsensusCluster) UpdateEpoch() error {
-	err := consensusCluster.raftNode.VerifyLeader().Error()
-	if err != nil {
-		return nil
-	}
-
-	if consensusCluster.epochLock {
-		logrus.Warn("epoch is currently locked")
-	}
-
-	cloneBytes, err := proto.Marshal(consensusCluster.fsm.data)
-	if err != nil {
-		return err
-	}
-
-	clone := &datap.Fsm{}
-	err = proto.Unmarshal(cloneBytes, clone)
-	if err != nil {
-		return err
-	}
-
-	clone.Epoch = clone.Epoch + 1
-
-	updateBytes, err := proto.Marshal(clone)
-	if err != nil {
-		return err
-	}
-
-	logEntry := consensusCluster.raftNode.Apply(updateBytes, 0)
-	err = logEntry.Error()
-
-	if err == nil {
-		logrus.Warnf("Leader Updated Epoch")
-	} else {
-		logrus.Errorf("update fsm Err= %v", err)
-	}
-	logrus.Debugf("Done.")
-	return err
-}
-
-func (consensusCluster *ConsensusCluster) UpdateMembers(Epoch int64, members []string) error {
+func (consensusCluster *ConsensusCluster) UpdateFsm(Epoch int64, members []string) error {
 	err := consensusCluster.raftNode.VerifyLeader().Error()
 	if err != nil {
 		return nil
@@ -286,9 +246,7 @@ func (consensusCluster *ConsensusCluster) UpdateMembers(Epoch int64, members []s
 	logEntry := consensusCluster.raftNode.Apply(updateBytes, 0)
 	err = logEntry.Error()
 
-	if err == nil {
-		logrus.Warnf("Leader Updated Members")
-	} else {
+	if err != nil {
 		logrus.Errorf("update fsm Err= %v", err)
 	}
 	logrus.Debugf("Done.")
