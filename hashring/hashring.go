@@ -313,6 +313,12 @@ func (ring *Hashring) CompareMembers(members, temp_members []string) bool {
 	return a && b
 }
 
+func (ring *Hashring) HasTempMembers() bool {
+	ring.rwLock.RLock()
+	defer ring.rwLock.RUnlock()
+	return utils.CompareStringList(ring.GetMembersNames(true), ring.GetMembersNames(false)) == false
+}
+
 type RingMember struct {
 	Name string
 }

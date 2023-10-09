@@ -202,10 +202,13 @@ func (m *Manager) startWorker(workerId int) {
 			}
 		case <-m.epochTick.C:
 
-			err := m.consensusCluster.UpdateFsm(m.GetCurrentEpoch()+1, m.ring.GetMembersNames(false), m.ring.GetMembersNames(true))
-			if err != nil {
-				logrus.Error("UpdateFsm err = %v", err)
+			if m.ring.HasTempMembers() == false {
+				err := m.consensusCluster.UpdateFsm(m.GetCurrentEpoch()+1, m.ring.GetMembersNames(false), m.ring.GetMembersNames(true))
+				if err != nil {
+					logrus.Error("UpdateFsm err = %v", err)
+				}
 			}
+
 		// case isLeader: <-m.consensusCluster.LeaderCh():
 		case isLeader := <-m.consensusCluster.LeaderCh():
 			// logrus.Warnf("worker LeaderChangeTask: %+v", task)
