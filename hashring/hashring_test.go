@@ -226,24 +226,18 @@ func TestHashringTempNodes(t *testing.T) {
 	c.RingDebounce = 0.5
 	c.Load = 1.25
 	hr := CreateHashring(c, reqCh)
+	members := []string{"test1", "test2", "test3"}
 
-	hr.AddNode("test1")
-	hr.AddNode("test2")
-	hr.AddNode("test3")
-	hr.UpdateRing()
-
+	hr.SetRingMembers(members)
 	assert.EqualValues(t, 3, len(hr.GetMembers()), "wrong number of members")
 
-	hr.AddNode("test3")
-	hr.UpdateRing()
+	changed := hr.SetTempRingMembers(members)
+	assert.EqualValues(t, false, changed, "changed is wrong")
 	assert.EqualValues(t, 3, len(hr.GetMembers()), "wrong number of members")
 
-	hr.AddTempNode("test3")
-	assert.EqualValues(t, 3, len(hr.GetMembers()), "wrong number of members")
+	temp_members := []string{"test1", "test2", "test3", "test4"}
 
-	hr.AddTempNode("test4")
-	assert.EqualValues(t, 4, len(hr.GetMembers()), "wrong number of members")
-
-	hr.AddTempNode("test5")
+	changed = hr.SetTempRingMembers(temp_members)
+	assert.EqualValues(t, true, changed, "changed is wrong")
 	assert.EqualValues(t, 4, len(hr.GetMembers()), "wrong number of members")
 }

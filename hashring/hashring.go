@@ -3,6 +3,7 @@ package hashring
 import (
 	"errors"
 	"reflect"
+	"sort"
 	"sync"
 	"time"
 
@@ -162,13 +163,24 @@ func (ring *Hashring) GetCurrMembers() []consistent.Member {
 func (ring *Hashring) GetMembers() []consistent.Member {
 	ring.rwLock.RLock()
 	defer ring.rwLock.RUnlock()
+
+	return ring.getMembers()
+}
+
+func (ring *Hashring) getMembers() []consistent.Member {
 	currMembers := ring.currConsistent.GetMembers()
 	tempMembers := ring.tempConsistent.GetMembers()
 	return mergeMemberList(currMembers, tempMembers)
 }
 
 func (ring *Hashring) GetMembersNames() []string {
-	members := ring.GetMembers()
+	ring.rwLock.RLock()
+	defer ring.rwLock.RUnlock()
+	return ring.getMembersNames()
+}
+
+func (ring *Hashring) getMembersNames() []string {
+	members := ring.getMembers()
 	var memberNames []string
 	for _, mem := range members {
 		memberNames = append(memberNames, mem.String())
@@ -313,6 +325,28 @@ func (ring *Hashring) SetRingMembers(members []string) {
 	ring.tempConsistent = consistent.New(ringMembers, ring.consistentConfig)
 	ring.currConsistent = consistent.New(ringMembers, ring.consistentConfig)
 	ring.notifyPartitionUpdate()
+}
+
+func (ring *Hashring) SetTempRingMembers(members []string) bool {
+	ring.rwLock.Lock()
+	defer ring.rwLock.Unlock()
+
+	currentMembers := ring.getMembersNames()
+
+	sort.Strings(currentMembers)
+	sort.Strings(members)
+
+	equal := reflect.DeepEqual(currentMembers, members)
+	if equal {
+		return false
+	}
+	var ringMembers []consistent.Member
+	for _, mem := range members {
+		ringMembers = append(ringMembers, CreateRingMember(mem))
+	}
+	ring.tempConsistent = consistent.New(ringMembers, ring.consistentConfig)
+	ring.notifyPartitionUpdate()
+	return true
 }
 
 type RingMember struct {
