@@ -257,11 +257,14 @@ func (m *Manager) startWorker(workerId int) {
 
 			case rpc.UpdateMembersTask:
 				var err error
+				if m.ring.CompareMembers(task.Members, task.TempMembers) == false {
+					logrus.Warn("members already changed")
+					task.ResCh <- true
+					continue
+				}
 
 				if len(task.TempMembers) != len(task.Members) {
-					if m.ring.CompareMembers(task.Members, task.TempMembers) == false {
-						continue
-					}
+
 					err = m.consensusCluster.UpdateFsm(m.GetCurrentEpoch()+1, task.Members, task.TempMembers)
 					if err != nil {
 						logrus.Error("UpdateFsm temp1 err = %v", err)
