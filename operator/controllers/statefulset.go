@@ -124,9 +124,9 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 	reqSize := mykeystore.Spec.Size
 	sizeDiff := reqSize - currSize
 	if sizeDiff > 0 {
-		newPodName := generatePodNode(mykeystore, int(currSize))
-		logrus.Warnf("Create temp node %s", newPodName)
-		err := notifyNewTempNode(r, ctx, req, log, mykeystore, newPodName)
+		members := generateMembers(mykeystore, currSize)
+		temp_members := generateMembers(mykeystore, currSize+1)
+		err := notifyMembers(r, ctx, req, log, mykeystore, members, temp_members)
 		if err != nil {
 			// logrus.Error(err)
 			return requeueAfter(time.Second*5, nil)
@@ -149,9 +149,9 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 		return requeueImmediately()
 
 	} else if sizeDiff < 0 {
-		removePodName := generatePodNode(mykeystore, int(currSize)-1)
-		logrus.Warnf("Remove temp node %s", removePodName)
-		err := notifyRemoveTempNode(r, ctx, req, log, mykeystore, removePodName)
+		members := generateMembers(mykeystore, currSize)
+		temp_members := generateMembers(mykeystore, currSize-1)
+		err := notifyMembers(r, ctx, req, log, mykeystore, members, temp_members)
 		if err != nil {
 			logrus.Error(err)
 			return requeueAfter(time.Second*5, nil)
@@ -171,8 +171,8 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 			logrus.Errorf("new size: err %v", err)
 		}
 	}
-
-	err = notifyResetTempNode(r, ctx, req, log, mykeystore)
+	members := generateMembers(mykeystore, 1)
+	err = notifyMembers(r, ctx, req, log, mykeystore, members, members)
 	if err != nil {
 		return requeueAfter(time.Second*5, nil)
 	}
@@ -257,10 +257,6 @@ func manualRollout(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Reques
 	return nil
 }
 
-func generatePodNode(mykeystore *cachev1alpha1.MyKeyStore, index int) string {
-	return fmt.Sprintf("%s-%d", mykeystore.Name, index)
-}
-
 func waitForPodsHealthy(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Request, log logr.Logger, mykeystore *cachev1alpha1.MyKeyStore) error {
 	pods := &corev1.PodList{}
 	err := r.List(ctx, pods, client.MatchingLabels{"app": mykeystore.Name})
@@ -297,122 +293,53 @@ func waitForPodsHealthy(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 	return nil
 }
 
-func notifyNewTempNode(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Request, log logr.Logger, mykeystore *cachev1alpha1.MyKeyStore, tempNode string) error {
-	// pods := &corev1.PodList{}
-	// err := r.List(ctx, pods, client.MatchingLabels{"app": mykeystore.Name})
-	// if err != nil {
-	// 	return err
-	// }
-	// errorCount := 0
-	// // logrus.Warnf("AddTempNode list= %v err = %v", len(pods.Items), err)
-	// for _, pod := range pods.Items {
-	// 	addr := fmt.Sprintf("%s.%s.%s", pod.Name, mykeystore.Name, pod.Namespace)
-	// 	conn, client, err := rpc.CreateRawRpcClient(addr, 7070)
-	// 	if err != nil {
-	// 		logrus.Errorf("Client %s err = %v", addr, err)
-	// 		errorCount++
-	// 		continue
-	// 	}
-	// 	defer conn.Close()
-	// 	req := &rpc.RpcTempNode{Name: tempNode}
-	// 	res, err := client.AddTempNode(ctx, req)
-	// 	if err != nil {
-	// 		err = rpc.ExtractError(err)
-	// 		logrus.Errorf("notifyNewTempNode Client %s err = %v", pod.Name, err)
-	// 		errorCount++
-	// 		continue
-	// 	} else if res.Error {
-	// 		err = errors.New(res.Message)
-	// 		logrus.Errorf("notifyNewTempNode Client %s err msg = %v", pod.Name, err)
-	// 		errorCount++
-	// 		continue
-	// 	}
-	// 	// logrus.Warnf("AddTempNode Client %s res= %v", pod.Name, res.Message)
-	// }
-
-	// if errorCount > 0 {
-	// 	return fmt.Errorf("notifyNewTempNode had %d errors", errorCount)
-	// }
-	// logrus.Warnf("all pods notifyNewTempNode. # = %v", len(pods.Items))
-	return nil
+func generateMembers(mykeystore *cachev1alpha1.MyKeyStore, size int32) []string {
+	var members []string
+	for i := int32(0); i < size; i++ {
+		members = append(members, fmt.Sprintf("%s-%d", mykeystore.Name, i))
+	}
+	return members
 }
 
-func notifyRemoveTempNode(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Request, log logr.Logger, mykeystore *cachev1alpha1.MyKeyStore, tempNode string) error {
-	// pods := &corev1.PodList{}
-	// err := r.List(ctx, pods, client.MatchingLabels{"app": mykeystore.Name})
-	// if err != nil {
-	// 	return err
-	// }
-	// errorCount := 0
-	// // logrus.Warnf("AddTempNode list= %v err = %v", len(pods.Items), err)
-	// for _, pod := range pods.Items {
-	// 	addr := fmt.Sprintf("%s.%s.%s", pod.Name, mykeystore.Name, pod.Namespace)
-	// 	conn, client, err := rpc.CreateRawRpcClient(addr, 7070)
-	// 	if err != nil {
-	// 		logrus.Errorf("notifyRemoveTempNode Client %s err = %v", addr, err)
-	// 		errorCount++
-	// 		continue
-	// 	}
-	// 	defer conn.Close()
-	// 	req := &rpc.RpcTempNode{Name: tempNode}
-	// 	res, err := client.RemoveTempNode(ctx, req)
-	// 	if err != nil {
-	// 		err = rpc.ExtractError(err)
-	// 		logrus.Errorf("notifyRemoveTempNode Client %s err = %v", pod.Name, err)
-	// 		errorCount++
-	// 		continue
-	// 	} else if res.Error {
-	// 		err = errors.New(res.Message)
-	// 		logrus.Errorf("notifyRemoveTempNode Client %s err msg = %v", pod.Name, err)
-	// 		errorCount++
-	// 		continue
-	// 	}
-	// 	// logrus.Warnf("AddTempNode Client %s res= %v", pod.Name, res.Message)
-	// }
+func notifyMembers(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Request, log logr.Logger, mykeystore *cachev1alpha1.MyKeyStore, members, temp_members []string) error {
+	logrus.Warnf("notifyMembers members = %v temp_members = %v", members, temp_members)
+	pods := &corev1.PodList{}
+	err := r.List(ctx, pods, client.MatchingLabels{"app": mykeystore.Name})
+	if err != nil {
+		return err
+	}
+	errorCount := 0
+	// logrus.Warnf("AddTempNode list= %v err = %v", len(pods.Items), err)
+	for _, pod := range pods.Items {
+		addr := fmt.Sprintf("%s.%s.%s", pod.Name, mykeystore.Name, pod.Namespace)
+		conn, client, err := rpc.CreateRawRpcClient(addr, 7070)
+		if err != nil {
+			// logrus.Errorf("Client %s err = %v", addr, err)
+			errorCount++
+			continue
+		}
+		defer conn.Close()
+		req := &rpc.RpcMembers{}
+		req.Members = members
+		req.TempMembers = temp_members
+		res, err := client.UpdateMembers(ctx, req)
+		if err != nil {
+			// logrus.Errorf("ResetTempNode Client %s err = %v", pod.Name, err)
+			errorCount++
+			continue
+		} else if res.Error {
+			err = errors.New(res.Message)
+			// logrus.Errorf("ResetTempNode Client %s err msg = %v", pod.Name, err)
+			errorCount++
+			continue
+		}
+		// logrus.Warnf("ResetTempNode Client %s res= %v", pod.Name, res.Message)
+	}
 
-	// if errorCount > 0 {
-	// 	return fmt.Errorf("notifyRemoveTempNode had %d errors", errorCount)
-	// }
-	// logrus.Warnf("all pods notifyRemoveTempNode. # = %v", len(pods.Items))
-	return nil
-}
-
-func notifyResetTempNode(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Request, log logr.Logger, mykeystore *cachev1alpha1.MyKeyStore) error {
-	// pods := &corev1.PodList{}
-	// err := r.List(ctx, pods, client.MatchingLabels{"app": mykeystore.Name})
-	// if err != nil {
-	// 	return err
-	// }
-	// errorCount := 0
-	// // logrus.Warnf("AddTempNode list= %v err = %v", len(pods.Items), err)
-	// for _, pod := range pods.Items {
-	// 	addr := fmt.Sprintf("%s.%s.%s", pod.Name, mykeystore.Name, pod.Namespace)
-	// 	conn, client, err := rpc.CreateRawRpcClient(addr, 7070)
-	// 	if err != nil {
-	// 		// logrus.Errorf("Client %s err = %v", addr, err)
-	// 		errorCount++
-	// 		continue
-	// 	}
-	// 	defer conn.Close()
-	// 	req := &rpc.RpcStandardObject{}
-	// 	res, err := client.ResetTempNode(ctx, req)
-	// 	if err != nil {
-	// 		// logrus.Errorf("ResetTempNode Client %s err = %v", pod.Name, err)
-	// 		errorCount++
-	// 		continue
-	// 	} else if res.Error {
-	// 		err = errors.New(res.Message)
-	// 		// logrus.Errorf("ResetTempNode Client %s err msg = %v", pod.Name, err)
-	// 		errorCount++
-	// 		continue
-	// 	}
-	// 	// logrus.Warnf("ResetTempNode Client %s res= %v", pod.Name, res.Message)
-	// }
-
-	// if errorCount > 0 {
-	// 	return fmt.Errorf("ResetTempNode had %d errors", errorCount)
-	// }
-	// logrus.Warnf("all pods ResetTempNode. # = %v", len(pods.Items))
+	if errorCount > 0 {
+		return fmt.Errorf("ResetTempNode had %d errors", errorCount)
+	}
+	logrus.Warnf("all pods ResetTempNode. # = %v", len(pods.Items))
 	return nil
 }
 
