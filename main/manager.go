@@ -262,7 +262,7 @@ func (m *Manager) startWorker(workerId int) {
 			case rpc.UpdateMembersTask:
 				var err error
 				if m.ring.CompareMembers(task.Members, task.TempMembers) == true {
-					logrus.Warn("members already changed")
+					// logrus.Warn("members already changed")
 					task.ResCh <- true
 					continue
 				}
