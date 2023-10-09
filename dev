@@ -69,9 +69,9 @@ case $1 in
             echo "Error: The argument must be a positive integer."
             exit 1
         fi
-        # docker-compose up -d --scale store=$2 || true
+        docker-compose up -d --scale store=$2 || true
         # kubectl scale statefulset store --replicas=$2
-        kubectl patch mykeystore store --type=merge -p "{\"spec\":{\"size\":$2}}" || true
+        # kubectl patch mykeystore store --type=merge -p "{\"spec\":{\"size\":$2}}" || true
 
         ;;
     *)

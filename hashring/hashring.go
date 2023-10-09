@@ -27,6 +27,20 @@ type Hashring struct {
 	reqCh     chan interface{}
 }
 
+type AddTask struct {
+	member consistent.Member
+}
+
+type RemoveTask struct {
+	name string
+}
+
+type RingUpdateTask struct {
+	Members    []string
+	Partitions []int
+	ResCh      chan interface{}
+}
+
 func CreateHashring(managerConfig config.ManagerConfig, reqCh chan interface{}) *Hashring {
 	consistentConfig := consistent.Config{
 		PartitionCount:    managerConfig.PartitionCount,
@@ -60,6 +74,16 @@ func mergeMemberList(listA, listB []consistent.Member) []consistent.Member {
 	}
 
 	return res
+}
+
+func MemberListtoStringList(listA []consistent.Member) []string {
+	var strList []string
+
+	for _, mem := range listA {
+		strList = append(strList, mem.String())
+	}
+
+	return strList
 }
 
 type hasher struct{}
@@ -143,6 +167,15 @@ func (ring *Hashring) GetMembers() []consistent.Member {
 	return mergeMemberList(currMembers, tempMembers)
 }
 
+func (ring *Hashring) GetMembersNames() []string {
+	members := ring.GetMembers()
+	var memberNames []string
+	for _, mem := range members {
+		memberNames = append(memberNames, mem.String())
+	}
+	return memberNames
+}
+
 func (ring *Hashring) GetClosestN(key string, count int, includeSelf bool) ([]consistent.Member, error) {
 	ring.rwLock.RLock()
 	defer ring.rwLock.RUnlock()
@@ -223,28 +256,14 @@ func (ring *Hashring) UpdateRing() {
 }
 
 func (ring *Hashring) notifyPartitionUpdate() error {
-	myPartitions, err := ring.getMyPartions()
 	resCh := make(chan interface{})
+	myPartitiosn, err := ring.getMyPartions()
 	if err != nil {
 		return err
-	} else {
-		ring.reqCh <- PartitionsUpdateTask{MyPartitions: myPartitions, ResCh: resCh}
 	}
+	ring.reqCh <- RingUpdateTask{ResCh: resCh, Partitions: myPartitiosn}
 	<-resCh
 	return nil
-}
-
-type AddTask struct {
-	member consistent.Member
-}
-
-type RemoveTask struct {
-	name string
-}
-
-type PartitionsUpdateTask struct {
-	MyPartitions []int
-	ResCh        chan interface{}
 }
 
 func (ring *Hashring) AddNode(member consistent.Member) {
@@ -282,4 +301,27 @@ func (ring *Hashring) ResetTempRing() {
 	defer ring.rwLock.Unlock()
 	currMembers := ring.currConsistent.GetMembers()
 	ring.tempConsistent = consistent.New(currMembers, ring.consistentConfig)
+}
+
+func (ring *Hashring) SetRingMembers(members []string) {
+	ring.rwLock.Lock()
+	defer ring.rwLock.Unlock()
+	var ringMembers []consistent.Member
+	for _, mem := range members {
+		ringMembers = append(ringMembers, CreateRingMember(mem))
+	}
+	ring.tempConsistent = consistent.New(ringMembers, ring.consistentConfig)
+	ring.notifyPartitionUpdate()
+}
+
+type RingMember struct {
+	Name string
+}
+
+func CreateRingMember(name string) RingMember {
+	return RingMember{Name: name}
+}
+
+func (m RingMember) String() string {
+	return string(m.Name)
 }

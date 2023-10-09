@@ -39,7 +39,7 @@ func (fsm *FSM) Apply(logEntry *raft.Log) interface{} {
 	}
 
 	resCh := make(chan interface{})
-	fsm.reqCh <- EpochTask{Epoch: data.Epoch, ResCh: resCh}
+	fsm.reqCh <- FsmTask{Epoch: data.Epoch, ResCh: resCh, Members: data.Members}
 	rawRes := <-resCh
 
 	logrus.Debug("rawRes %v", rawRes)

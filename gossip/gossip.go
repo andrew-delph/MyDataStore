@@ -88,6 +88,15 @@ func (gossipCluster *GossipCluster) GetMembers() []*memberlist.Node {
 	return gossipCluster.list.Members()
 }
 
+func (gossipCluster *GossipCluster) GetMembersNames() []string {
+	members := gossipCluster.list.Members()
+	var memberNames []string
+	for _, mem := range members {
+		memberNames = append(memberNames, mem.Name)
+	}
+	return memberNames
+}
+
 type Delegate struct{}
 
 // Msg implements memberlist.Delegate interface.

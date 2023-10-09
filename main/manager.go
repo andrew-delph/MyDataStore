@@ -326,7 +326,7 @@ func (m *Manager) startWorker(workerId int) {
 				task.ResCh <- http.GetResponse{Value: valueStr, Error: errorStr, Failed_members: failed_members}
 
 			case gossip.JoinTask:
-				logrus.Debugf("worker JoinTask: %+v", task)
+				// logrus.Warnf("worker JoinTask: %+v", task)
 
 				err := m.consensusCluster.AddVoter(task.Name, task.IP)
 				if err != nil {
@@ -344,26 +344,37 @@ func (m *Manager) startWorker(workerId int) {
 				}
 				m.clientManager.AddClient(task.Name, rpcClient)
 
-				m.ring.RemoveNode(task.Name)
-				m.ring.AddNode(CreateRingMember(task.Name))
+				err = m.consensusCluster.UpdateMembers(m.GetCurrentEpoch(), m.gossipCluster.GetMembersNames())
+				if err != nil {
+					logrus.Warnf("JoinTask UpdateMembers err = %v", err)
+				}
 
 			case gossip.LeaveTask:
 				// logrus.Warnf("worker LeaveTask: %+v", task)
 				m.clientManager.RemoveClient(task.Name)
 				m.consensusCluster.RemoveServer(task.Name)
-				m.ring.RemoveNode(task.Name)
+				err := m.consensusCluster.UpdateMembers(m.GetCurrentEpoch(), m.gossipCluster.GetMembersNames())
+				if err != nil {
+					logrus.Warnf("LeaveTask UpdateMembers err = %v", err)
+				}
 
-			case consensus.EpochTask:
+			case consensus.FsmTask:
+				logrus.Warnf("FsmTask Epoch %v Members %v", task.Epoch, task.Members)
 				m.SetCurrentEpoch(task.Epoch)
-				m.consistencyController.PublishEpoch(task.Epoch)
 				task.ResCh <- true
+				m.consistencyController.PublishEpoch(task.Epoch)
+
+				m.ring.SetRingMembers(task.Members)
 
 			case consensus.LeaderChangeTask:
 				// logrus.Warnf("worker LeaderChangeTask: %+v", task)
 
+				logrus.Warn("members: ", m.gossipCluster.GetMembersNames())
+
 				if !task.IsLeader {
 					continue
 				}
+				logrus.Warn("I AM THE LEADER")
 
 				for _, member := range m.gossipCluster.GetMembers() {
 					err := m.consensusCluster.AddVoter(member.Name, member.Addr.String())
@@ -381,6 +392,10 @@ func (m *Manager) startWorker(workerId int) {
 					if err != nil {
 						logrus.Error("UpdateEpoch err = %v", err)
 					}
+				}
+				err := m.consensusCluster.UpdateMembers(m.GetCurrentEpoch(), m.gossipCluster.GetMembersNames())
+				if err != nil {
+					logrus.Warnf("PartitionsUpdateTask err = %v", err)
 				}
 
 			case rpc.SetValueTask:
@@ -527,11 +542,12 @@ func (m *Manager) startWorker(workerId int) {
 					task.ResCh <- SyncPartitionResponse{Valid: true, LowerEpoch: lastValidEpoch, UpperEpoch: task.UpperEpoch + 1}
 				}
 
-			case hashring.PartitionsUpdateTask:
-				logrus.Debugf("worker PartitionsUpdate #%+v", len(task.MyPartitions))
+			case hashring.RingUpdateTask:
+				logrus.Warnf("worker MembersUpdateTask #%+v", len(task.Partitions))
 
-				currPartitions := utils.NewIntSet().From(task.MyPartitions)
+				currPartitions := utils.NewIntSet().From(task.Partitions)
 				m.consistencyController.HandleHashringChange(currPartitions)
+
 				task.ResCh <- true
 
 			default:

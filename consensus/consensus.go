@@ -39,9 +39,10 @@ type LeaderChangeTask struct {
 	IsLeader bool
 }
 
-type EpochTask struct {
-	Epoch int64
-	ResCh chan interface{}
+type FsmTask struct {
+	Epoch   int64
+	Members []string
+	ResCh   chan interface{}
 }
 
 func CreateConsensusCluster(consensusConfig config.ConsensusConfig, reqCh chan interface{}) *ConsensusCluster {
@@ -286,26 +287,15 @@ func (consensusCluster *ConsensusCluster) UpdateEpoch() error {
 	return err
 }
 
-func (consensusCluster *ConsensusCluster) UpdateMembers(members []string) error {
+func (consensusCluster *ConsensusCluster) UpdateMembers(Epoch int64, members []string) error {
 	err := consensusCluster.raftNode.VerifyLeader().Error()
 	if err != nil {
 		return nil
 	}
 
-	cloneBytes, err := proto.Marshal(consensusCluster.fsm.data)
-	if err != nil {
-		return err
-	}
+	fsmUpdate := &datap.Fsm{Epoch: Epoch, Members: members}
 
-	clone := &datap.Fsm{}
-	err = proto.Unmarshal(cloneBytes, clone)
-	if err != nil {
-		return err
-	}
-
-	clone.Members = members
-
-	updateBytes, err := proto.Marshal(clone)
+	updateBytes, err := proto.Marshal(fsmUpdate)
 	if err != nil {
 		return err
 	}

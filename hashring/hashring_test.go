@@ -221,7 +221,7 @@ func TestHashringTempNodes(t *testing.T) {
 	go func() {
 		for {
 			rawEvent := <-reqCh
-			event := rawEvent.(PartitionsUpdateTask)
+			event := rawEvent.(RingUpdateTask)
 			event.ResCh <- true
 		}
 	}()
