@@ -84,7 +84,6 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 		updatedReplicas := found.Status.UpdatedReplicas
 		finalUpdate := found.Status.UpdatedReplicas == found.Status.Replicas
 		if time.Since(rolloutStatus.LastTransitionTime.Time) < time.Second*10 {
-			logrus.Warnf("waiting status %+v", found.Status)
 			return requeueAfter(time.Second*5, nil)
 		}
 
