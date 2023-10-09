@@ -305,6 +305,14 @@ func (ring *Hashring) SetRingMembers(members, temp_members []string) {
 	ring.notifyPartitionUpdate()
 }
 
+func (ring *Hashring) CompareMembers(members, temp_members []string) bool {
+	ring.rwLock.RLock()
+	defer ring.rwLock.RUnlock()
+	a := utils.CompareStringList(members, ring.GetMembersNames(false))
+	b := utils.CompareStringList(temp_members, ring.GetMembersNames(true))
+	return a && b
+}
+
 type RingMember struct {
 	Name string
 }

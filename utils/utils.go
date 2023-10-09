@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"reflect"
+	"sort"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -159,4 +161,11 @@ func RecieveChannelTimeout(ch chan interface{}, timeoutSeconds int) interface{} 
 		logrus.Error("READ TIMEOUT")
 		return errors.New("receive operation timed out")
 	}
+}
+
+func CompareStringList(listA, listB []string) bool {
+	sort.Strings(listA)
+	sort.Strings(listB)
+
+	return reflect.DeepEqual(listA, listB)
 }
