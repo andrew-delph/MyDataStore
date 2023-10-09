@@ -74,7 +74,7 @@ func (fsm *FSM) Restore(serialized io.ReadCloser) error {
 	}
 
 	fsm.data = data
-	logrus.Warnf("Restore raft %v", data)
+	logrus.Warnf("Restore raft. Epoch = %v", data.Epoch)
 
 	return serialized.Close()
 }

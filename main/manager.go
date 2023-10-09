@@ -385,7 +385,7 @@ func (m *Manager) startWorker(workerId int) {
 				}
 
 			case consensus.FsmTask:
-				logrus.Warnf("FsmTask Epoch %v Members %v TempMembers %v", task.Epoch, task.Members, task.TempMembers)
+				logrus.Warnf("FsmTask Epoch %v Members %v TempMembers %v", task.Epoch, len(task.Members), len(task.TempMembers))
 				m.SetCurrentEpoch(task.Epoch)
 				m.consistencyController.PublishEpoch(task.Epoch)
 

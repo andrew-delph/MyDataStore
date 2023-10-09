@@ -310,6 +310,7 @@ func (ring *Hashring) CompareMembers(members, temp_members []string) bool {
 	defer ring.rwLock.RUnlock()
 	a := utils.CompareStringList(members, ring.GetMembersNames(false))
 	b := utils.CompareStringList(temp_members, ring.GetMembersNames(true))
+	logrus.Warnf("a %v b %v", a, b)
 	return a && b
 }
 
