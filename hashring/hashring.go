@@ -161,12 +161,10 @@ func (ring *Hashring) GetMembers(temp bool) []consistent.Member {
 }
 
 func (ring *Hashring) getMembers(temp bool) []consistent.Member {
-	currMembers := ring.currConsistent.GetMembers()
 	if temp {
-		tempMembers := ring.tempConsistent.GetMembers()
-		return mergeMemberList(currMembers, tempMembers)
+		return ring.tempConsistent.GetMembers()
 	}
-	return currMembers
+	return ring.currConsistent.GetMembers()
 }
 
 func (ring *Hashring) GetMembersNames(temp bool) []string {
@@ -311,6 +309,7 @@ func (ring *Hashring) CompareMembers(members, temp_members []string) bool {
 	a := utils.CompareStringList(members, ring.GetMembersNames(false))
 	b := utils.CompareStringList(temp_members, ring.GetMembersNames(true))
 	logrus.Warnf("a %v b %v", a, b)
+
 	return a && b
 }
 

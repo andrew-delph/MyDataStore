@@ -296,3 +296,8 @@ func (consensusCluster *ConsensusCluster) Shutdown() error {
 	}
 	return consensusCluster.raftNode.LeadershipTransfer().Error()
 }
+
+func (consensusCluster *ConsensusCluster) Isleader() bool {
+	err := consensusCluster.raftNode.VerifyLeader().Error()
+	return err == nil
+}

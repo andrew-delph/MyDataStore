@@ -261,6 +261,11 @@ func (m *Manager) startWorker(workerId int) {
 
 			case rpc.UpdateMembersTask:
 				var err error
+
+				if m.consensusCluster.Isleader() == false {
+					task.ResCh <- true
+					continue
+				}
 				if m.ring.CompareMembers(task.Members, task.TempMembers) == true {
 					// logrus.Warn("members already changed")
 					task.ResCh <- true
