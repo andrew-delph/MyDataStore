@@ -3,7 +3,6 @@ package hashring
 import (
 	"errors"
 	"reflect"
-	"sort"
 	"sync"
 	"time"
 
@@ -289,61 +288,21 @@ func (ring *Hashring) RemoveNode(member string) {
 	ring.debounceUpdateRing()
 }
 
-func (ring *Hashring) AddTempNode(member string) error {
-	ring.ResetTempRing()
-	ring.rwLock.Lock()
-	defer ring.rwLock.Unlock()
-	ring.tempConsistent.Add(CreateRingMember(member))
-	return ring.notifyPartitionUpdate()
-}
-
-func (ring *Hashring) RemoveTempNode(name string) error {
-	ring.ResetTempRing()
-	ring.rwLock.Lock()
-	defer ring.rwLock.Unlock()
-	ring.tempConsistent.Remove(name)
-	return ring.notifyPartitionUpdate()
-}
-
-func (ring *Hashring) ResetTempRing() {
-	ring.rwLock.Lock()
-	defer ring.rwLock.Unlock()
-	currMembers := ring.currConsistent.GetMembers()
-	ring.tempConsistent = consistent.New(currMembers, ring.consistentConfig)
-}
-
-func (ring *Hashring) SetRingMembers(members []string) {
+func (ring *Hashring) SetRingMembers(members, temp_members []string) {
 	ring.rwLock.Lock()
 	defer ring.rwLock.Unlock()
 	var ringMembers []consistent.Member
 	for _, mem := range members {
 		ringMembers = append(ringMembers, CreateRingMember(mem))
 	}
-	ring.tempConsistent = consistent.New(ringMembers, ring.consistentConfig)
+
+	var tempRingMembers []consistent.Member
+	for _, mem := range temp_members {
+		tempRingMembers = append(tempRingMembers, CreateRingMember(mem))
+	}
+	ring.tempConsistent = consistent.New(tempRingMembers, ring.consistentConfig)
 	ring.currConsistent = consistent.New(ringMembers, ring.consistentConfig)
 	ring.notifyPartitionUpdate()
-}
-
-func (ring *Hashring) SetTempRingMembers(members []string) bool {
-	ring.rwLock.Lock()
-	defer ring.rwLock.Unlock()
-
-	currentMembers := ring.getMembersNames(false)
-
-	sort.Strings(currentMembers)
-	sort.Strings(members)
-
-	equal := reflect.DeepEqual(currentMembers, members)
-	if equal {
-		return false
-	}
-	var ringMembers []consistent.Member
-	for _, mem := range members {
-		ringMembers = append(ringMembers, CreateRingMember(mem))
-	}
-	ring.tempConsistent = consistent.New(ringMembers, ring.consistentConfig)
-	ring.notifyPartitionUpdate()
-	return true
 }
 
 type RingMember struct {

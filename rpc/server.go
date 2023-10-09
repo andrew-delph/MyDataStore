@@ -69,7 +69,7 @@ type PartitionsHealthCheckTask struct {
 type UpdateMembersTask struct {
 	ResCh       chan interface{}
 	Members     []string
-	TempMembers bool
+	TempMembers []string
 }
 
 func (rpcWrapper *RpcWrapper) Stop() error {

@@ -37,9 +37,10 @@ type ConsensusCluster struct {
 }
 
 type FsmTask struct {
-	Epoch   int64
-	Members []string
-	ResCh   chan interface{}
+	Epoch       int64
+	Members     []string
+	TempMembers []string
+	ResCh       chan interface{}
 }
 
 func CreateConsensusCluster(consensusConfig config.ConsensusConfig, reqCh chan interface{}) *ConsensusCluster {
@@ -237,13 +238,13 @@ func (consensusCluster *ConsensusCluster) State() raft.RaftState {
 	return consensusCluster.raftNode.State()
 }
 
-func (consensusCluster *ConsensusCluster) UpdateFsm(Epoch int64, members []string) error {
+func (consensusCluster *ConsensusCluster) UpdateFsm(Epoch int64, members, temp_members []string) error {
 	err := consensusCluster.raftNode.VerifyLeader().Error()
 	if err != nil {
 		return nil
 	}
 
-	fsmUpdate := &datap.Fsm{Epoch: Epoch, Members: members}
+	fsmUpdate := &datap.Fsm{Epoch: Epoch, Members: members, TempMembers: temp_members}
 
 	updateBytes, err := proto.Marshal(fsmUpdate)
 	if err != nil {

@@ -68,11 +68,12 @@ message EpochTreeObject{
 message Fsm{
   int64 epoch = 1;
   repeated string members = 2;
+  repeated string temp_members = 3;
 }
 
 message Members{
   repeated string members = 1;
-  bool tempMembers = 2;
+  repeated string temp_members = 2;
 }
 
 

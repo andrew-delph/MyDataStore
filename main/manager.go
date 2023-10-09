@@ -202,7 +202,7 @@ func (m *Manager) startWorker(workerId int) {
 			}
 		case <-m.epochTick.C:
 
-			err := m.consensusCluster.UpdateFsm(m.GetCurrentEpoch()+1, m.gossipCluster.GetMembersNames())
+			err := m.consensusCluster.UpdateFsm(m.GetCurrentEpoch()+1, m.gossipCluster.GetMembersNames(), m.gossipCluster.GetMembersNames())
 			if err != nil {
 				logrus.Error("UpdateFsm err = %v", err)
 			}
@@ -229,12 +229,12 @@ func (m *Manager) startWorker(workerId int) {
 			}
 
 			if m.GetCurrentEpoch() == int64(0) {
-				err := m.consensusCluster.UpdateFsm(m.GetCurrentEpoch()+1, m.gossipCluster.GetMembersNames())
+				err := m.consensusCluster.UpdateFsm(m.GetCurrentEpoch()+1, m.gossipCluster.GetMembersNames(), m.gossipCluster.GetMembersNames())
 				if err != nil {
 					logrus.Error("UpdateFsm err = %v", err)
 				}
 			}
-			err := m.consensusCluster.UpdateFsm(m.GetCurrentEpoch(), m.gossipCluster.GetMembersNames())
+			err := m.consensusCluster.UpdateFsm(m.GetCurrentEpoch(), m.gossipCluster.GetMembersNames(), m.gossipCluster.GetMembersNames())
 			if err != nil {
 				logrus.Warnf("PartitionsUpdateTask err = %v", err)
 			}
@@ -258,24 +258,26 @@ func (m *Manager) startWorker(workerId int) {
 			case rpc.UpdateMembersTask:
 				var err error
 
-				if task.TempMembers {
-					changed := m.ring.SetTempRingMembers(task.Members)
-					if changed {
-						err = m.consensusCluster.UpdateFsm(m.GetCurrentEpoch()+1, m.ring.GetMembersNames(false))
-						if err != nil {
-							logrus.Error("UpdateFsm temp1 err = %v", err)
-							task.ResCh <- err
-							continue
-						}
-						err = m.consensusCluster.UpdateFsm(m.GetCurrentEpoch()+1, m.ring.GetMembersNames(false))
-						if err != nil {
-							logrus.Error("UpdateFsm temp2 err = %v", err)
-							task.ResCh <- err
-							continue
-						}
+				if len(task.TempMembers) != len(task.Members) {
+					err = m.consensusCluster.UpdateFsm(m.GetCurrentEpoch()+1, task.Members, task.TempMembers)
+					if err != nil {
+						logrus.Error("UpdateFsm temp1 err = %v", err)
+						task.ResCh <- err
+						continue
+					}
+					err = m.consensusCluster.UpdateFsm(m.GetCurrentEpoch()+1, task.Members, task.TempMembers)
+					if err != nil {
+						logrus.Error("UpdateFsm temp2 err = %v", err)
+						task.ResCh <- err
+						continue
 					}
 				} else {
-					m.ring.SetRingMembers(task.Members)
+					err = m.consensusCluster.UpdateFsm(m.GetCurrentEpoch(), task.Members, task.TempMembers)
+					if err != nil {
+						logrus.Error("UpdateFsm err = %v", err)
+						task.ResCh <- err
+						continue
+					}
 				}
 
 				task.ResCh <- nil
@@ -354,7 +356,7 @@ func (m *Manager) startWorker(workerId int) {
 				}
 				m.clientManager.AddClient(task.Name, rpcClient)
 
-				err = m.consensusCluster.UpdateFsm(m.GetCurrentEpoch(), m.gossipCluster.GetMembersNames())
+				err = m.consensusCluster.UpdateFsm(m.GetCurrentEpoch(), m.gossipCluster.GetMembersNames(), m.gossipCluster.GetMembersNames())
 				if err != nil {
 					logrus.Warnf("JoinTask UpdateMembers err = %v", err)
 				}
@@ -363,7 +365,7 @@ func (m *Manager) startWorker(workerId int) {
 				// logrus.Warnf("worker LeaveTask: %+v", task)
 				m.clientManager.RemoveClient(task.Name)
 				m.consensusCluster.RemoveServer(task.Name)
-				err := m.consensusCluster.UpdateFsm(m.GetCurrentEpoch(), m.gossipCluster.GetMembersNames())
+				err := m.consensusCluster.UpdateFsm(m.GetCurrentEpoch(), m.gossipCluster.GetMembersNames(), m.gossipCluster.GetMembersNames())
 				if err != nil {
 					logrus.Warnf("LeaveTask UpdateMembers err = %v", err)
 				}
@@ -373,7 +375,7 @@ func (m *Manager) startWorker(workerId int) {
 				m.SetCurrentEpoch(task.Epoch)
 				m.consistencyController.PublishEpoch(task.Epoch)
 
-				m.ring.SetRingMembers(task.Members)
+				m.ring.SetRingMembers(task.Members, task.TempMembers)
 				task.ResCh <- true
 
 			case rpc.SetValueTask:
