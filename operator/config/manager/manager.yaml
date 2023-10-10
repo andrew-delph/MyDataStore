@@ -72,7 +72,7 @@ spec:
           name: manager
           env:
             - name: MYKEYSTORE_IMAGE
-              value: docker.io/andrew-delph/main:store_image
+              value: ghcr.io/andrew-delph/main:store_image
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
