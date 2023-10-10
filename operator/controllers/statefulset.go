@@ -82,14 +82,27 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 		incrementReady := found.Status.ReadyReplicas == found.Status.Replicas
 		updatedReplicas := found.Status.UpdatedReplicas
 		finalUpdate := found.Status.UpdatedReplicas == found.Status.Replicas
+		nextPartition := found.Status.Replicas - updatedReplicas - 1
+
 		if time.Since(rolloutStatus.LastTransitionTime.Time) < time.Second*10 {
+			return requeueAfter(time.Second*5, nil)
+		}
+
+		updateId := fmt.Sprintf("%s-%d-%d", found.Status.CurrentRevision, nextPartition, found.Status.Replicas)
+		logrus.Warnf("updateId %v", updateId)
+		err = verifyEpochUpdate(r, ctx, req, log, mykeystore, updateId)
+		if err != nil {
+			return requeueAfter(time.Second*5, nil)
+		}
+		err = waitForPodsHealthy(r, ctx, req, log, mykeystore)
+		if err != nil {
 			return requeueAfter(time.Second*5, nil)
 		}
 
 		// logrus.Warnf("IN ROLLOUT %v %v incrementReady = %v updatedReplicas = %v finalUpdate = %v", utils.Min(found.Status.ReadyReplicas, updatedReplicas), found.Status.Replicas, incrementReady, updatedReplicas, finalUpdate)
 		// logrus.Warnf("time %v", time.Since(rolloutStatus.LastTransitionTime.Time))
 		if !finalUpdate && incrementReady {
-			nextPartition := found.Status.Replicas - updatedReplicas - 1
+
 			logrus.Warnf("nextPartition ready! nextPartition %d", nextPartition)
 			err = manualRollout(r, ctx, req, log, mykeystore, found, nextPartition)
 			if err != nil {
@@ -214,16 +227,7 @@ func setRolloutStatus(r *MyKeyStoreReconciler, ctx context.Context, log logr.Log
 
 func manualRollout(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Request, log logr.Logger, mykeystore *cachev1alpha1.MyKeyStore, found *appsv1.StatefulSet, ordinal int32) error {
 	var err error
-	updateId := fmt.Sprintf("%s-%d-%d", found.Status.CurrentRevision, ordinal, found.Status.Replicas)
-	logrus.Warnf("updateId %v", updateId)
-	err = verifyEpochUpdate(r, ctx, req, log, mykeystore, updateId)
-	if err != nil {
-		return err
-	}
-	err = waitForPodsHealthy(r, ctx, req, log, mykeystore)
-	if err != nil {
-		return err
-	}
+
 	found.Spec.UpdateStrategy.RollingUpdate.Partition = &ordinal
 	if err = r.Update(ctx, found); err != nil {
 		log.Error(err, "Failed to update Deployment",
