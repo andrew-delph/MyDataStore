@@ -25,6 +25,9 @@ logs:
 watch:
 	watch kubectl get pods -n k6
 	
+stop:
+	kubectl  delete  -f resources/k6-output-grafana-cloud.yaml -n k6 || true
+
 delete:
 	kubectl  delete  -f resources/k6-output-grafana-cloud.yaml -n k6 || true
 	helm uninstall loki --namespace=monitoring --wait || true
