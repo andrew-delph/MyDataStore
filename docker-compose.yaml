@@ -38,7 +38,7 @@ services:
 
   store:
     # hostname: store
-    image: docker.io/andrew-delph/main:store_image
+    image: ghcr.io/andrew-delph/main:store_image
     scale: 5
     depends_on:
       # - zookeeper
@@ -57,7 +57,7 @@ services:
   # store-profile:
   #   # hostname: store
   #   # scale: 1
-  #   image: docker.io/andrew-delph/main:store_image
+  #   image: ghcr.io/andrew-delph/main:store_image
   #   environment:
   #     - PROFILE_SERVER=true
   #     - BOOTSTRAP_TIMEOUT=1

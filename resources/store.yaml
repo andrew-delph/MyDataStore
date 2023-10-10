@@ -19,7 +19,7 @@ spec:
         app: store
     spec:
       containers:
-        - image: docker.io/andrew-delph/main:store_image
+        - image: ghcr.io/andrew-delph/main:store_image
           # imagePullPolicy: "Always"
           imagePullPolicy: Never
           name: store

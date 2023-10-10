@@ -23,7 +23,7 @@ export let options = {
       // How long the test lasts
       duration: "2h",
       // How many iterations per timeUnit
-      rate: 10,
+      rate: 100,
       // Start `rate` iterations per second
       timeUnit: "1s",
       // Pre-allocate VUs
@@ -34,8 +34,8 @@ export let options = {
     //   executor: "ramping-arrival-rate",
     //   startRate: 50,
     //   stages: [
-    //     { target: 75, duration: "2m" },
-    //     { target: 100, duration: "1h" },
+    //     { target: 30, duration: "2m" },
+    //     { target: 300, duration: "1h" },
     //   ],
     //   // Start `rate` iterations per second
     //   timeUnit: "1s",

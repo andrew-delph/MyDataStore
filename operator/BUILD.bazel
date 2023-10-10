@@ -26,7 +26,7 @@ go_binary(
     name = "operator",
     embed = [":go_default_library"],
     env = {
-        # "MYKEYSTORE_IMAGE": "docker.io/andrew-delph/main:store_image",
+        # "MYKEYSTORE_IMAGE": "ghcr.io/andrew-delph/main:store_image",
         "MYKEYSTORE_IMAGE": "strm/helloworld-http:latest",
     },
     visibility = ["//visibility:public"],
@@ -51,16 +51,16 @@ container_image(
     # },
     # files = ["//config:default-config"],
     ports = ["80"],
-    repository = "docker.io/andrew-delph",
+    repository = "ghcr.io/andrew-delph",
     tags = ["latest"],
 )
 
 container_push(
     name = "image_push",
     format = "Docker",
-    image = ":store_image",
+    image = ":operator_image",
     registry = "ghcr.io",
-    repository = "andrew-delph/my-key-store",
+    repository = "andrew-delph/operator",
     tag = "latest",
 )
 
