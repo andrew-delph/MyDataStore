@@ -35,7 +35,6 @@ SECONDS=0  # Reset the SECONDS variable
 if [ $ROLL_OUT_FLAG -eq 0 ]; then
     echo "The 'rollout' flag is not set. Setting up."
     (cd operator && kustomize build config/crd | kubectl apply -f - || true)
-    bazel run //main:image_push
     kubectl apply -f ./operator/config/samples/ || true
 else
     echo "The 'rollout' flag is set."

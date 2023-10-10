@@ -24,8 +24,8 @@ spec:
     #   requests:
     #     memory: 200Mi
     env:
-      # - name: K6_OUT
-      #   value: experimental-prometheus-rw
+      - name: K6_OUT
+        value: experimental-prometheus-rw
       - name: K6_PROMETHEUS_RW_TREND_STATS
         value: "avg,p(90),p(99),min,max"
       - name: ADDRESS
