@@ -5,4 +5,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: ghcr.io/andrew-delph/operator
-  newTag: "1696955381"
+  newTag: "1696969023"

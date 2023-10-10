@@ -18,31 +18,31 @@ export let options = {
     //   duration: "2h",
     //   exec: "default",
     // },
-    // constant_arrival: {
-    //   executor: "constant-arrival-rate",
-    //   // How long the test lasts
-    //   duration: "2h",
-    //   // How many iterations per timeUnit
-    //   rate: 40,
-    //   // Start `rate` iterations per second
-    //   timeUnit: "1s",
-    //   // Pre-allocate VUs
-    //   preAllocatedVUs: 400,
-    //   maxVUs: 2000,
-    // },
-    ramping_arrival: {
-      executor: "ramping-arrival-rate",
-      startRate: 50,
-      stages: [
-        { target: 30, duration: "2m" },
-        { target: 300, duration: "1h" },
-      ],
+    constant_arrival: {
+      executor: "constant-arrival-rate",
+      // How long the test lasts
+      duration: "2h",
+      // How many iterations per timeUnit
+      rate: 100,
       // Start `rate` iterations per second
       timeUnit: "1s",
       // Pre-allocate VUs
-      preAllocatedVUs: 50,
-      maxVUs: 10000,
+      preAllocatedVUs: 400,
+      maxVUs: 2000,
     },
+    // ramping_arrival: {
+    //   executor: "ramping-arrival-rate",
+    //   startRate: 50,
+    //   stages: [
+    //     { target: 30, duration: "2m" },
+    //     { target: 300, duration: "1h" },
+    //   ],
+    //   // Start `rate` iterations per second
+    //   timeUnit: "1s",
+    //   // Pre-allocate VUs
+    //   preAllocatedVUs: 50,
+    //   maxVUs: 10000,
+    // },
     // epoch: {
     //   executor: "constant-arrival-rate",
     //   exec: "epoch",
