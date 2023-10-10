@@ -3,15 +3,17 @@
 # Exit on any error
 set -e
 
+# eval $(minikube docker-env)
+
 STATEFULSET_NAME="store"
 NAMESPACE="default"
 
-eval $(minikube docker-env)
 TAG=$(date +%s)
 NEW_IMAGE=docker.io/andrew-delph/main:$TAG
 
 bazel run --execution_log_json_file=events.json //main:store_image
 docker tag docker.io/andrew-delph/main:store_image $NEW_IMAGE
+docker push $NEW_IMAGE
 
 
 ROLL_OUT_FLAG=0

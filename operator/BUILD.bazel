@@ -58,7 +58,7 @@ container_image(
 container_push(
     name = "image_push",
     format = "Docker",
-    image = ":store_image",
+    image = ":operator_image",
     registry = "ghcr.io",
     repository = "andrew-delph/my-key-store",
     tag = "latest",
