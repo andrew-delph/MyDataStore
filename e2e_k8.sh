@@ -7,7 +7,7 @@ LOCAL_PORT=8080
 REMOTE_PORT=8080
 
 # Start kubectl port-forward in the background
-kubectl port-forward -n $NAMESPACE svc/$SERVICE_NAME $LOCAL_PORT:$REMOTE_PORT &
+kubectl port-forward -n $NAMESPACE svc/$SERVICE_NAME $LOCAL_PORT:$REMOTE_PORT > /dev/null &
 # Get the PID of kubectl port-forward
 PORT_FORWARD_PID=$!
 
