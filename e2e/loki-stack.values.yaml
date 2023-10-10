@@ -9,6 +9,8 @@ grafana:
   adminPassword: password
   image:
     tag: ""
+  nodeSelector:
+    vke.vultr.com/node-pool: main
   service:
     annotations: {}
     appProtocol: ""
