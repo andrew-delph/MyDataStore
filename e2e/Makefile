@@ -8,10 +8,10 @@ init:
 	curl https://raw.githubusercontent.com/grafana/k6-operator/main/bundle.yaml | kubectl apply -f -
 
 setup:
-	kubectl --context minikube create namespace k6 || echo "namespace already exists"
-	kubectl --context minikube delete configmap test-scripts --ignore-not-found -n k6
-	kubectl --context minikube delete configmap prometheus-config --ignore-not-found -n k6
-	kubectl --context minikube create configmap test-scripts  \
+	kubectl create namespace k6 || echo "namespace already exists"
+	kubectl  delete configmap test-scripts --ignore-not-found -n k6
+	kubectl  delete configmap prometheus-config --ignore-not-found -n k6
+	kubectl  create configmap test-scripts  \
 		--from-file=./test.js -n k6
 
 run:
@@ -21,14 +21,10 @@ run:
 logs:
 	stern -n k6 .*
 
-prod:
-	make setup
-	./run-kube.sh resources/k6-output-grafana-cloud.yaml --external
-
 watch:
-	watch -n 15 kubectl get pods -n k6
+	watch -n 15 kubectl get pods -n k6 -n k6-operator-system
 	
 delete:
-	kubectl --context minikube delete  -f resources/k6-output-grafana-cloud.yaml -n k6
+	kubectl  delete  -f resources/k6-output-grafana-cloud.yaml -n k6
 	# cd dependencies/k6-operator && make delete
 
