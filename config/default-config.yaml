@@ -6,7 +6,7 @@ manager:
   req_channel_size: 20
   workers_count: 100
   partition_count: 15
-  partition_concurrency: 5
+  partition_concurrency: 10
   partition_buckets: 1000
   partition_replicas: 2
   data_path: "/data/storage"

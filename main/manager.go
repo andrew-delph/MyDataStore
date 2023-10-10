@@ -908,7 +908,7 @@ func (m *Manager) EpochTreeLastValidRequest(partitionId int32, timeout time.Dura
 		case res := <-responseCh:
 			membersLastValid = append(membersLastValid, res)
 		case err := <-errorCh:
-			logrus.Debugf("GetEpochTree err = %v", err)
+			logrus.Debugf("EpochTreeLastValidRequest err = %v", err)
 		}
 	}
 	return membersLastValid, nil

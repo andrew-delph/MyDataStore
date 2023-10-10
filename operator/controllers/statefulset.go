@@ -184,6 +184,7 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 		if err != nil {
 			logrus.Errorf("new size: err %v", err)
 		}
+		return requeueImmediately()
 	}
 	members := generateMembers(mykeystore, currSize)
 	err = notifyMembers(r, ctx, req, log, mykeystore, members, members)
@@ -352,7 +353,7 @@ func generateMembers(mykeystore *cachev1alpha1.MyKeyStore, size int32) []string 
 }
 
 func notifyMembers(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Request, log logr.Logger, mykeystore *cachev1alpha1.MyKeyStore, members, temp_members []string) error {
-	// logrus.Warnf("notifyMembers members = %v temp_members = %v", members, temp_members)
+	logrus.Warnf("notifyMembers members = %v temp_members = %v", len(members), len(temp_members))
 	pods := &corev1.PodList{}
 	err := r.List(ctx, pods, client.MatchingLabels{"app": mykeystore.Name})
 	if err != nil {
