@@ -12,7 +12,7 @@ plugins:
       group: cache
       kind: MyKeyStore
       options:
-        image: docker.io/andrew-delph/main:store_image
+        image: ghcr.io/andrew-delph/main:store_image
       version: v1alpha1
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}

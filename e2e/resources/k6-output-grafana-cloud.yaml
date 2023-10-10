@@ -9,7 +9,7 @@ kind: K6
 metadata:
   name: k6-output-grafana-cloud
 spec:
-  parallelism: 1
+  parallelism: 3
   script:
     configMap:
       # Remember...we created the 'test-scripts' ConfigMap with the available scripts inside.
@@ -29,9 +29,9 @@ spec:
       - name: K6_PROMETHEUS_RW_TREND_STATS
         value: "avg,p(90),p(99),min,max"
       - name: ADDRESS
-        value: "store-external.default.svc.cluster.local:8080"
+        value: "store.default.svc.cluster.local:8080"
       - name: K6_PROMETHEUS_RW_SERVER_URL
-        value: "http://prometheus-service.default:9090/api/v1/write"
+        value: "http://loki-prometheus-server.monitoring:80/api/v1/write"
       # - name: K6_LOG_FORMAT
       #   value: json
     # envFrom:

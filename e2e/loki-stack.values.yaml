@@ -1,0 +1,190 @@
+test_pod:
+  enabled: true
+  image: bats/bats:v1.1.0
+  pullPolicy: IfNotPresent
+
+grafana:
+  enabled: true
+  adminUser: admin
+  adminPassword: password
+  image:
+    tag: ""
+  nodeSelector:
+    vke.vultr.com/node-pool: main
+  service:
+    annotations: {}
+    appProtocol: ""
+    enabled: true
+    labels: {}
+    port: 80
+    portName: service
+    targetPort: 3000
+    nodePort: 30007
+    type: NodePort
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+      annotations: {}
+      multicluster:
+        global:
+          enabled: false
+        etcd:
+          enabled: false
+      provider:
+        foldersFromFilesStructure: true
+        updateIntervalSeconds: 30
+        allowUiUpdates: false
+    datasources:
+      enabled: true
+      defaultDatasourceEnabled: true
+      isDefaultDatasource: true
+      uid: prometheus
+      annotations: {}
+      createPrometheusReplicasDatasources: false
+      label: grafana_datasource
+      labelValue: "1"
+
+      exemplarTraceIdDestinations: {}
+  persistence:
+    enabled: false
+    existingClaim: storage-loki-0
+
+prometheus:
+  enabled: true
+  server:
+    image:
+      tag: v2.42.0
+    # priorityClassName: high-priority
+    service:
+      type: NodePort
+      nodePort: 30008
+
+    # global:
+    # scrape_interval: 3m
+    # extraArgs:
+    #   log.level: debug
+    extraFlags:
+      - web.enable-lifecycle
+      - enable-feature=remote-write-receiver
+      # - storage.tsdb.max-block-duration=20m
+      # - storage.tsdb.min-block-duration=20m
+      # - storage.tsdb.retention.size=300MB
+      # - web.enable-remote-write-receiver
+      # - log.level=debug
+    # global:
+    #   query_log_file: /prometheus/query.log
+    persistentVolume:
+      enabled: true
+      # existingClaim: "prometheus-pvc"
+  kubeStateMetrics:
+    enabled: false
+  alertmanager:
+    image:
+      tag: v0.25.0
+    enabled: false
+    service:
+      type: NodePort
+      nodePort: 30009
+    # priorityClassName: high-priority
+    persistentVolume:
+      enabled: false
+    configFromSecret: "loki-prometheus-alertmanager"
+  # alertmanagerFiles:
+  #   alertmanager.yml:
+  #     global: {}
+  #     route:
+  #       receiver: 'gmail-notifications'
+  #     receivers:
+  #       - name: 'gmail-notifications'
+  #         email_configs:
+  #           - to: example@gmail.ca
+  #             from: example@gmail.com
+  #             smarthost: smtp.gmail.com:587
+  #             auth_username: example@gmail.com
+  #             auth_identity: example@gmail.com
+  #             auth_password: example
+  #             send_resolved: true
+
+  # extraScrapeConfigs: |
+  #   - job_name: rabbitmq
+  #     scrape_interval: 3m
+  #     scrape_timeout: 1m
+  #     basic_auth:
+  #       username: guest
+  #       password: guest
+  #     static_configs:
+  #       - targets:
+  #           - rabbitmq.default.svc.cluster.local:15692
+
+loki:
+  enabled: true
+  isDefault: false
+  url: http://{{(include "loki.serviceName" .)}}:{{ .Values.loki.service.port }}
+  readinessProbe:
+    httpGet:
+      path: /ready
+      port: http-metrics
+    initialDelaySeconds: 45
+  livenessProbe:
+    httpGet:
+      path: /ready
+      port: http-metrics
+    initialDelaySeconds: 45
+  datasource:
+    jsonData: "{}"
+    uid: ""
+  persistence:
+    enabled: true
+    size: 40Gi
+
+promtail:
+  enabled: true
+  # priorityClassName: high-priority
+  config:
+    serverPort: 3101
+    clients:
+      - url: http://{{ .Release.Name }}:3100/loki/api/v1/push
+    snippets:
+      # addScrapeJobLabel: true
+      # extraLimitsConfig: |
+      #   readline_rate: 1000
+      #   readline_burst: 2000
+      #   readline_rate_enabled: true
+      extraRelabelConfigs:
+        # keep all kubernetes labels
+        - action: labelmap
+          regex: __meta_kubernetes_pod_label_(.+)
+        - source_labels: [serving_knative_dev_service]
+          regex: "(.+)"
+          target_label: "app"
+      pipelineStages:
+        - drop:
+            source: "namespace"
+            expression: "(kube-public|kube-system)"
+        # - drop:
+        #     older_than: 1h
+        #     drop_counter_reason: 'line_too_old'
+        - cri:
+        - docker:
+        - json:
+            expressions:
+              level: level
+        - static_labels:
+            level: unknown
+        # - labels:
+        #     level: stream
+        - labels:
+            level:
+        - output:
+            source: msg
+
+# proxy is currently only used by loki test pod
+# Note: If http_proxy/https_proxy are set, then no_proxy should include the
+# loki service name, so that tests are able to communicate with the loki
+# service.
+proxy:
+  http_proxy: ""
+  https_proxy: ""
+  no_proxy: ""

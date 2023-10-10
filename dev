@@ -23,10 +23,8 @@ case $1 in
         ;;
     k8-r)
         kubectl delete -f ./operator/config/samples/ || true
-        ./deploy_k8.sh
         ./deploy_operator.sh
-        kubectl apply -f ./resources/prom.yaml
-        kubectl create configmap prometheus-config --from-file=prometheus.yml || true
+        ./deploy_k8.sh
         ;;
     k8-operator)
         ./deploy_operator.sh
@@ -38,7 +36,7 @@ case $1 in
         tmux kill-session -t k8_dev
         ;;
     k8-e2e)
-        k6 run -e ADDRESS="192.168.49.2:30000" e2e/test.js
+        ./e2e_k8.sh
         ;;
     dc-e2e)
         k6 run e2e/test.js

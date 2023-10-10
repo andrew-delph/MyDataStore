@@ -92,7 +92,7 @@ container_image(
     },
     files = ["//config:default-config"],
     ports = ["80"],
-    repository = "docker.io/andrew-delph",
+    repository = "ghcr.io/andrew-delph",
     tags = ["latest"],
     # repository = "gcr.io/$PROJECT_ID"
     # repository = "us-central1-docker.pkg.dev/builder-project/repo1/greeter_server",
