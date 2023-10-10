@@ -200,6 +200,8 @@ func (m *Manager) startWorker(workerId int) {
 			if err != nil {
 				// logrus.Warnf("consistencyController health err= %v", err)
 			}
+
+			// logrus.Warnf("curr %v temp %v", len(m.ring.GetMembersNames(false)), len(m.ring.GetMembersNames(true)))
 		case <-m.epochTick.C:
 
 			if m.ring.HasTempMembers() == false {

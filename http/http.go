@@ -62,6 +62,7 @@ func CreateHttpServer(httpConfig config.HttpConfig, reqCh chan interface{}) Http
 func handleShuttingDown(w http.ResponseWriter, r *http.Request) {
 	// w.WriteHeader(http.StatusServiceUnavailable)
 	// fmt.Fprintln(w, "Service is shutting down. Please retry your request on another server.")
+	time.Sleep(time.Second)
 	r.Close = true
 	requestedURL := r.RequestURI
 	logrus.Warn("requestedURL ", requestedURL)

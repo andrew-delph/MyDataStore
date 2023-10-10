@@ -62,6 +62,8 @@ func (fsm *FSM) Snapshot() (raft.FSMSnapshot, error) {
 }
 
 func (fsm *FSM) Restore(serialized io.ReadCloser) error {
+	applyLock.Lock()
+	defer applyLock.Unlock()
 	var snapshot FSMSnapshot
 	if err := json.NewDecoder(serialized).Decode(&snapshot); err != nil {
 		return err
@@ -74,6 +76,12 @@ func (fsm *FSM) Restore(serialized io.ReadCloser) error {
 	}
 
 	fsm.data = data
+	resCh := make(chan interface{})
+	fsm.reqCh <- FsmTask{Epoch: data.Epoch, ResCh: resCh, Members: data.Members, TempMembers: data.TempMembers}
+	rawRes := <-resCh
+
+	logrus.Debug("rawRes %v", rawRes)
+
 	logrus.Warnf("Restore raft. Epoch = %v", data.Epoch)
 
 	return serialized.Close()
