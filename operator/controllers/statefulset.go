@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/andrew-delph/my-key-store/rpc"
-	"github.com/andrew-delph/my-key-store/utils"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -87,7 +86,7 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 			return requeueAfter(time.Second*5, nil)
 		}
 
-		logrus.Warnf("IN ROLLOUT %v %v incrementReady = %v updatedReplicas = %v finalUpdate = %v", utils.Min(found.Status.ReadyReplicas, updatedReplicas), found.Status.Replicas, incrementReady, updatedReplicas, finalUpdate)
+		// logrus.Warnf("IN ROLLOUT %v %v incrementReady = %v updatedReplicas = %v finalUpdate = %v", utils.Min(found.Status.ReadyReplicas, updatedReplicas), found.Status.Replicas, incrementReady, updatedReplicas, finalUpdate)
 		// logrus.Warnf("time %v", time.Since(rolloutStatus.LastTransitionTime.Time))
 		if !finalUpdate && incrementReady {
 			nextPartition := found.Status.Replicas - updatedReplicas - 1
@@ -214,6 +213,7 @@ func setRolloutStatus(r *MyKeyStoreReconciler, ctx context.Context, log logr.Log
 }
 
 func manualRollout(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Request, log logr.Logger, mykeystore *cachev1alpha1.MyKeyStore, found *appsv1.StatefulSet, ordinal int32) error {
+	logrus.Warnf("UpdateRevision %v CurrentRevision %v", found.Status.UpdateRevision, found.Status.CurrentRevision)
 	found.Spec.UpdateStrategy.RollingUpdate.Partition = &ordinal
 	var err error
 	if err = r.Update(ctx, found); err != nil {
@@ -302,7 +302,7 @@ func generateMembers(mykeystore *cachev1alpha1.MyKeyStore, size int32) []string 
 }
 
 func notifyMembers(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Request, log logr.Logger, mykeystore *cachev1alpha1.MyKeyStore, members, temp_members []string) error {
-	logrus.Warnf("notifyMembers members = %v temp_members = %v", members, temp_members)
+	// logrus.Warnf("notifyMembers members = %v temp_members = %v", members, temp_members)
 	pods := &corev1.PodList{}
 	err := r.List(ctx, pods, client.MatchingLabels{"app": mykeystore.Name})
 	if err != nil {
