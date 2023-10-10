@@ -97,7 +97,7 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 			}
 
 		} else if finalUpdate && incrementReady {
-			logrus.Warn("FINAL UPDATE!")
+			logrus.Warnf("FINAL UPDATE! time: %v", time.Since(rolloutStatus.LastTransitionTime.Time))
 			err = setRolloutStatus(r, ctx, log, mykeystore, found, false, "rollout finished!")
 			if err != nil {
 				logrus.Errorf("setRolloutStatus err = %v", err)
