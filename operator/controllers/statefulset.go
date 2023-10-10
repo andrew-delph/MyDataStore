@@ -198,7 +198,7 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 	})
 
 	if err := r.Status().Update(ctx, mykeystore); err != nil {
-		log.Error(err, "Failed to update MyKeyStore status")
+		logrus.Errorf("Failed to update MyKeyStore status err = %v", err)
 		return requeueIfError(err)
 	}
 
@@ -219,7 +219,7 @@ func setRolloutStatus(r *MyKeyStoreReconciler, ctx context.Context, log logr.Log
 	})
 
 	if err := r.Status().Update(ctx, mykeystore); err != nil {
-		log.Error(err, "Failed to update MyKeyStore status")
+		logrus.Errorf("Failed to update MyKeyStore status err = %v", err)
 		return err
 	}
 	return nil
@@ -238,7 +238,7 @@ func manualRollout(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Reques
 		// raise the issue "the object has been modified, please apply
 		// your changes to the latest version and try again" which would re-trigger the reconciliation
 		if err := r.Get(ctx, req.NamespacedName, mykeystore); err != nil {
-			log.Error(err, "Failed to re-fetch mykeystore")
+			logrus.Errorf("Failed to re-fetch mykeystore err = %v", err)
 			return err
 		}
 
@@ -250,7 +250,7 @@ func manualRollout(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Reques
 		})
 
 		if err := r.Status().Update(ctx, mykeystore); err != nil {
-			log.Error(err, "Failed to update MyKeyStore status")
+			logrus.Errorf("Failed to update MyKeyStore status err = %v", err)
 			return err
 		}
 
@@ -264,7 +264,7 @@ func manualRollout(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Reques
 	})
 
 	if err := r.Status().Update(ctx, mykeystore); err != nil {
-		log.Error(err, "Failed to update MyKeyStore status")
+		logrus.Errorf("Failed to update MyKeyStore status err = %v", err)
 		return err
 	}
 	return nil
@@ -282,7 +282,7 @@ func waitForPodsHealthy(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 		addr := fmt.Sprintf("%s.%s.%s", pod.Name, mykeystore.Name, pod.Namespace)
 		conn, client, err := rpc.CreateRawRpcClient(addr, 7070)
 		if err != nil {
-			logrus.Errorf("Client %s err = %v", addr, err)
+			// logrus.Errorf("Client %s err = %v", addr, err)
 			errorCount++
 		}
 		defer conn.Close()
@@ -290,11 +290,10 @@ func waitForPodsHealthy(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 		res, err := client.PartitionsHealthCheck(ctx, req)
 		if err != nil {
 			err = rpc.ExtractError(err)
-			logrus.Errorf("Client %s err = %v", pod.Name, err)
+			// logrus.Errorf("Client %s err = %v", pod.Name, err)
 			errorCount++
 		} else if res.Error {
-			err = errors.New(res.Message)
-			logrus.Errorf("Client %s err msg = %v", pod.Name, err)
+			// logrus.Errorf("Client %s err msg = %v", pod.Name, res.Message)
 			errorCount++
 		}
 		// logrus.Warnf("Client %s res= %v", pod.Name, res.Message)
@@ -318,7 +317,7 @@ func verifyEpochUpdate(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Re
 		addr := fmt.Sprintf("%s.%s.%s", pod.Name, mykeystore.Name, pod.Namespace)
 		conn, client, err := rpc.CreateRawRpcClient(addr, 7070)
 		if err != nil {
-			logrus.Errorf("verifyEpochUpdate Client %s err = %v", addr, err)
+			// logrus.Errorf("verifyEpochUpdate Client %s err = %v", addr, err)
 			errorCount++
 		}
 		defer conn.Close()
@@ -326,11 +325,11 @@ func verifyEpochUpdate(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Re
 		res, err := client.UpdateEpoch(ctx, req)
 		if err != nil {
 			err = rpc.ExtractError(err)
-			logrus.Errorf("verifyEpochUpdate Client %s err = %v", pod.Name, err)
+			// logrus.Errorf("verifyEpochUpdate Client %s err = %v", pod.Name, err)
 			errorCount++
 		} else if res.Error {
 			err = errors.New(res.Message)
-			logrus.Errorf("verifyEpochUpdate Client %s err msg = %v", pod.Name, err)
+			// logrus.Errorf("verifyEpochUpdate Client %s err msg = %v", pod.Name, err)
 			errorCount++
 		}
 		// logrus.Warnf("Client %s res= %v", pod.Name, res.Message)
