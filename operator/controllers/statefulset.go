@@ -213,7 +213,8 @@ func setRolloutStatus(r *MyKeyStoreReconciler, ctx context.Context, log logr.Log
 }
 
 func manualRollout(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Request, log logr.Logger, mykeystore *cachev1alpha1.MyKeyStore, found *appsv1.StatefulSet, ordinal int32) error {
-	logrus.Warnf("UpdateRevision %v CurrentRevision %v", found.Status.UpdateRevision, found.Status.CurrentRevision)
+	updateId := fmt.Sprintf("%s-%d", found.Status.CurrentRevision, ordinal)
+	logrus.Warnf("UpdateRevision %v CurrentRevision %v updateId %v", found.Status.UpdateRevision, found.Status.CurrentRevision, updateId)
 	found.Spec.UpdateStrategy.RollingUpdate.Partition = &ordinal
 	var err error
 	if err = r.Update(ctx, found); err != nil {

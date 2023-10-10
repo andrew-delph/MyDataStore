@@ -24,6 +24,8 @@ service InternalNodeService {
   rpc PartitionsHealthCheck(StandardObject) returns (StandardObject);
 
   rpc UpdateMembers(Members) returns (StandardObject);
+
+  rpc UpdateEpoch(StandardObject) returns (StandardObject);
   
 }
 

@@ -44,9 +44,10 @@ type Manager struct {
 	consistencyController *ConsistencyController
 	clientManager         *ClientManager
 
-	debugTick    *time.Ticker
-	epochTick    *time.Ticker
-	CurrentEpoch int64
+	debugTick         *time.Ticker
+	epochTick         *time.Ticker
+	CurrentEpoch      int64
+	LastEpochUpdateId string
 }
 
 func NewManager(c config.Config) Manager {
@@ -274,28 +275,40 @@ func (m *Manager) startWorker(workerId int) {
 					continue
 				}
 
-				if len(task.TempMembers) != len(task.Members) {
-
-					err = m.consensusCluster.UpdateFsm(m.GetCurrentEpoch()+1, task.Members, task.TempMembers)
-					if err != nil {
-						logrus.Error("UpdateFsm temp1 err = %v", err)
-						task.ResCh <- err
-						continue
-					}
-					err = m.consensusCluster.UpdateFsm(m.GetCurrentEpoch()+1, task.Members, task.TempMembers)
-					if err != nil {
-						logrus.Error("UpdateFsm temp2 err = %v", err)
-						task.ResCh <- err
-						continue
-					}
-				} else {
-					err = m.consensusCluster.UpdateFsm(m.GetCurrentEpoch(), task.Members, task.TempMembers)
-					if err != nil {
-						logrus.Error("UpdateFsm err = %v", err)
-						task.ResCh <- err
-						continue
-					}
+				err = m.consensusCluster.UpdateFsm(m.GetCurrentEpoch(), task.Members, task.TempMembers)
+				if err != nil {
+					logrus.Error("UpdateFsm err = %v", err)
+					task.ResCh <- err
+					continue
 				}
+
+				task.ResCh <- true
+
+			case rpc.UpdateEpochTask:
+				var err error
+
+				if m.consensusCluster.Isleader() == false {
+					task.ResCh <- true
+					continue
+				}
+
+				if m.LastEpochUpdateId == task.UpdateId {
+					task.ResCh <- true
+				}
+
+				err = m.consensusCluster.UpdateFsm(m.GetCurrentEpoch()+1, m.ring.GetMembersNames(false), m.ring.GetMembersNames(true))
+				if err != nil {
+					logrus.Warnf("JoinTask UpdateMembers err = %v", err)
+					task.ResCh <- err
+				}
+
+				err = m.consensusCluster.UpdateFsm(m.GetCurrentEpoch()+1, m.ring.GetMembersNames(false), m.ring.GetMembersNames(true))
+				if err != nil {
+					logrus.Warnf("JoinTask UpdateMembers err = %v", err)
+					task.ResCh <- err
+				}
+
+				m.LastEpochUpdateId = task.UpdateId
 
 				task.ResCh <- true
 

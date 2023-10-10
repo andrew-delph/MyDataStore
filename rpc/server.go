@@ -72,6 +72,11 @@ type UpdateMembersTask struct {
 	TempMembers []string
 }
 
+type UpdateEpochTask struct {
+	ResCh    chan interface{}
+	UpdateId string
+}
+
 func (rpcWrapper *RpcWrapper) Stop() error {
 	rpcWrapper.grpc.GracefulStop()
 	return nil
@@ -222,6 +227,26 @@ func (rpcWrapper *RpcWrapper) UpdateMembers(ctx context.Context, req *datap.Memb
 	logrus.Debugf("ResetTempNode")
 	resCh := make(chan interface{})
 	rpcWrapper.reqCh <- UpdateMembersTask{ResCh: resCh, Members: req.GetMembers(), TempMembers: req.GetTempMembers()}
+	rawRes := utils.RecieveChannelTimeout(resCh, 20)
+	switch res := rawRes.(type) {
+	case bool:
+		return &datap.StandardObject{
+			Message: "temp node removed",
+			Error:   false,
+		}, nil
+	case error:
+		return nil, res
+	default:
+		logrus.Panicf("rpc unkown res type: %v", reflect.TypeOf(res))
+	}
+	return nil, nil
+}
+
+func (rpcWrapper *RpcWrapper) UpdateEpoch(ctx context.Context, req *datap.StandardObject) (*datap.StandardObject, error) {
+	logrus.Debugf("UpdateEpoch")
+	updateId := req.Message
+	resCh := make(chan interface{})
+	rpcWrapper.reqCh <- UpdateEpochTask{ResCh: resCh, UpdateId: updateId}
 	rawRes := utils.RecieveChannelTimeout(resCh, 20)
 	switch res := rawRes.(type) {
 	case bool:
