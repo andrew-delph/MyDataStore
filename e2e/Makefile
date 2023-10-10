@@ -6,6 +6,7 @@ build:
 init:
 	@echo "init"
 	curl https://raw.githubusercontent.com/grafana/k6-operator/main/bundle.yaml | kubectl apply -f -
+	make monitoring
 
 setup:
 	kubectl create namespace k6 || echo "namespace already exists"
@@ -25,8 +26,8 @@ watch:
 	watch kubectl get pods -n k6 -n k6-operator-system
 	
 delete:
-	kubectl  delete  -f resources/k6-output-grafana-cloud.yaml -n k6
-	# cd dependencies/k6-operator && make delete
+	kubectl  delete  -f resources/k6-output-grafana-cloud.yaml -n k6 || true
+	helm uninstall loki --namespace=monitoring --wait || true
 
 monitoring:
 	helm repo add grafana https://grafana.github.io/helm-charts
