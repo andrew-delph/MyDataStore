@@ -294,17 +294,20 @@ func (m *Manager) startWorker(workerId int) {
 
 				if m.LastEpochUpdateId == task.UpdateId {
 					task.ResCh <- true
+					continue
 				}
+
+				logrus.Warnf("UpdateEpochTask %s", task.UpdateId)
 
 				err = m.consensusCluster.UpdateFsm(m.GetCurrentEpoch()+1, m.ring.GetMembersNames(false), m.ring.GetMembersNames(true))
 				if err != nil {
-					logrus.Warnf("JoinTask UpdateMembers err = %v", err)
+					logrus.Warnf("UpdateEpochTask UpdateMembers err = %v", err)
 					task.ResCh <- err
 				}
 
 				err = m.consensusCluster.UpdateFsm(m.GetCurrentEpoch()+1, m.ring.GetMembersNames(false), m.ring.GetMembersNames(true))
 				if err != nil {
-					logrus.Warnf("JoinTask UpdateMembers err = %v", err)
+					logrus.Warnf("UpdateEpochTask UpdateMembers err = %v", err)
 					task.ResCh <- err
 				}
 

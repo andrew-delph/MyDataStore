@@ -213,10 +213,18 @@ func setRolloutStatus(r *MyKeyStoreReconciler, ctx context.Context, log logr.Log
 }
 
 func manualRollout(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Request, log logr.Logger, mykeystore *cachev1alpha1.MyKeyStore, found *appsv1.StatefulSet, ordinal int32) error {
-	updateId := fmt.Sprintf("%s-%d", found.Status.CurrentRevision, ordinal)
-	logrus.Warnf("UpdateRevision %v CurrentRevision %v updateId %v", found.Status.UpdateRevision, found.Status.CurrentRevision, updateId)
-	found.Spec.UpdateStrategy.RollingUpdate.Partition = &ordinal
 	var err error
+	updateId := fmt.Sprintf("%s-%d-%d", found.Status.CurrentRevision, ordinal, found.Status.Replicas)
+	logrus.Warnf("updateId %v", updateId)
+	err = verifyEpochUpdate(r, ctx, req, log, mykeystore, updateId)
+	if err != nil {
+		return err
+	}
+	err = waitForPodsHealthy(r, ctx, req, log, mykeystore)
+	if err != nil {
+		return err
+	}
+	found.Spec.UpdateStrategy.RollingUpdate.Partition = &ordinal
 	if err = r.Update(ctx, found); err != nil {
 		log.Error(err, "Failed to update Deployment",
 			"Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
@@ -291,6 +299,42 @@ func waitForPodsHealthy(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 		return fmt.Errorf("waitForPodsHealthy had %d errors", errorCount)
 	}
 	logrus.Warnf("all pods health. # = %v", len(pods.Items))
+	return nil
+}
+
+func verifyEpochUpdate(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Request, log logr.Logger, mykeystore *cachev1alpha1.MyKeyStore, updateId string) error {
+	pods := &corev1.PodList{}
+	err := r.List(ctx, pods, client.MatchingLabels{"app": mykeystore.Name})
+	if err != nil {
+		return err
+	}
+	errorCount := 0
+	// logrus.Warnf("list= %v err = %v", len(pods.Items), err)
+	for _, pod := range pods.Items {
+		addr := fmt.Sprintf("%s.%s.%s", pod.Name, mykeystore.Name, pod.Namespace)
+		conn, client, err := rpc.CreateRawRpcClient(addr, 7070)
+		if err != nil {
+			logrus.Errorf("verifyEpochUpdate Client %s err = %v", addr, err)
+			errorCount++
+		}
+		defer conn.Close()
+		req := &rpc.RpcStandardObject{Message: updateId}
+		res, err := client.UpdateEpoch(ctx, req)
+		if err != nil {
+			err = rpc.ExtractError(err)
+			logrus.Errorf("verifyEpochUpdate Client %s err = %v", pod.Name, err)
+			errorCount++
+		} else if res.Error {
+			err = errors.New(res.Message)
+			logrus.Errorf("verifyEpochUpdate Client %s err msg = %v", pod.Name, err)
+			errorCount++
+		}
+		// logrus.Warnf("Client %s res= %v", pod.Name, res.Message)
+	}
+	if errorCount > 0 {
+		return fmt.Errorf("verifyEpochUpdate had %d errors", errorCount)
+	}
+	logrus.Warnf("all pods verifyEpochUpdate. # = %v", len(pods.Items))
 	return nil
 }
 
