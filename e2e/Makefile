@@ -23,7 +23,7 @@ logs:
 	stern -n k6 .*
 
 watch:
-	watch kubectl get pods -n k6 -n k6-operator-system 
+	watch kubectl get pods -n k6
 	
 delete:
 	kubectl  delete  -f resources/k6-output-grafana-cloud.yaml -n k6 || true
