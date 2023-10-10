@@ -88,34 +88,21 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 			return requeueAfter(time.Second*5, nil)
 		}
 
-		updateId := fmt.Sprintf("%s-%d-%d", found.Status.CurrentRevision, nextPartition, found.Status.Replicas)
-		logrus.Warnf("updateId %v", updateId)
-		err = verifyEpochUpdate(r, ctx, req, log, mykeystore, updateId)
-		if err != nil {
-			logrus.Error(err)
-			return requeueAfter(time.Second*5, nil)
-		}
-		err = waitForPodsHealthy(r, ctx, req, log, mykeystore)
-		if err != nil {
-			logrus.Error(err)
-			return requeueAfter(time.Second*5, nil)
-		}
-
 		// logrus.Warnf("IN ROLLOUT %v %v incrementReady = %v updatedReplicas = %v finalUpdate = %v", utils.Min(found.Status.ReadyReplicas, updatedReplicas), found.Status.Replicas, incrementReady, updatedReplicas, finalUpdate)
 		// logrus.Warnf("time %v", time.Since(rolloutStatus.LastTransitionTime.Time))
-		if !finalUpdate && incrementReady {
-
+		if incrementReady {
 			logrus.Warnf("nextPartition ready! nextPartition %d", nextPartition)
 			err = manualRollout(r, ctx, req, log, mykeystore, found, nextPartition)
 			if err != nil {
 				logrus.Warnf("manualRollout err = %v", err)
 			}
 
-		} else if finalUpdate && incrementReady {
-			logrus.Warnf("FINAL UPDATE! time: %v", time.Since(rolloutStatus.LastTransitionTime.Time))
-			err = setRolloutStatus(r, ctx, log, mykeystore, found, false, "rollout finished!")
-			if err != nil {
-				logrus.Errorf("setRolloutStatus err = %v", err)
+			if finalUpdate {
+				logrus.Warnf("FINAL UPDATE! time: %v", time.Since(rolloutStatus.LastTransitionTime.Time))
+				err = setRolloutStatus(r, ctx, log, mykeystore, found, false, "rollout finished!")
+				if err != nil {
+					logrus.Errorf("setRolloutStatus err = %v", err)
+				}
 			}
 		}
 		return requeueAfter(time.Second*5, nil)
@@ -230,6 +217,18 @@ func setRolloutStatus(r *MyKeyStoreReconciler, ctx context.Context, log logr.Log
 
 func manualRollout(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.Request, log logr.Logger, mykeystore *cachev1alpha1.MyKeyStore, found *appsv1.StatefulSet, ordinal int32) error {
 	var err error
+	updateId := fmt.Sprintf("%s-%d-%d", found.Status.CurrentRevision, ordinal, found.Status.Replicas)
+	logrus.Warnf("updateId %v", updateId)
+	err = verifyEpochUpdate(r, ctx, req, log, mykeystore, updateId)
+	if err != nil {
+		logrus.Error(err)
+		return err
+	}
+	err = waitForPodsHealthy(r, ctx, req, log, mykeystore)
+	if err != nil {
+		logrus.Error(err)
+		return err
+	}
 
 	found.Spec.UpdateStrategy.RollingUpdate.Partition = &ordinal
 	if err = r.Update(ctx, found); err != nil {
