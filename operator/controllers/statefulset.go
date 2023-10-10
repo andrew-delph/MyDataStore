@@ -92,10 +92,12 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 		logrus.Warnf("updateId %v", updateId)
 		err = verifyEpochUpdate(r, ctx, req, log, mykeystore, updateId)
 		if err != nil {
+			logrus.Error(err)
 			return requeueAfter(time.Second*5, nil)
 		}
 		err = waitForPodsHealthy(r, ctx, req, log, mykeystore)
 		if err != nil {
+			logrus.Error(err)
 			return requeueAfter(time.Second*5, nil)
 		}
 
@@ -140,7 +142,7 @@ func ProcessStatefulSet(r *MyKeyStoreReconciler, ctx context.Context, req ctrl.R
 		temp_members := generateMembers(mykeystore, currSize+1)
 		err := notifyMembers(r, ctx, req, log, mykeystore, members, temp_members)
 		if err != nil {
-			// logrus.Error(err)
+			logrus.Error(err)
 			return requeueAfter(time.Second*5, nil)
 		}
 
