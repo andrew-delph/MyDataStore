@@ -22,9 +22,14 @@ logs:
 	stern -n k6 .*
 
 watch:
-	watch -n 15 kubectl get pods -n k6 -n k6-operator-system
+	watch kubectl get pods -n k6 -n k6-operator-system
 	
 delete:
 	kubectl  delete  -f resources/k6-output-grafana-cloud.yaml -n k6
 	# cd dependencies/k6-operator && make delete
 
+monitoring:
+	helm repo add grafana https://grafana.github.io/helm-charts
+	kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
+	helm upgrade --install loki --namespace=monitoring grafana/loki-stack -f loki-stack.values.yaml
+	bash ./create_dashboards.sh
