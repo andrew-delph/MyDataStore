@@ -33,4 +33,5 @@
 - future improvements
   - scan query
   - SAGA/2PC
+  - read repairs
 - tradeoffs
