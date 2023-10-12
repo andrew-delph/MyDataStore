@@ -32,4 +32,5 @@
 - benchmarks
 - future improvements
   - scan query
+  - SAGA/2PC
 - tradeoffs
