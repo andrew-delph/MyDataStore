@@ -166,7 +166,7 @@ export function remove() {
 }
 
 // options = { duration: "2h", vus: 1 };
-options = { iterations: 2000, vus: 100 };
+options = { iterations: 10000, vus: 500 };
 export default function () {
   const iterationNumber = exec.scenario.iterationInTest;
 
