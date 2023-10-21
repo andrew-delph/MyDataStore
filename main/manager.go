@@ -250,10 +250,18 @@ func (m *Manager) startWorker(workerId int) {
 				logrus.Warn("Channel closed!")
 				return
 			}
-			if m.config.Manager.ThreadRequests {
-				go m.handleTask(data)
-			} else {
-				m.handleTask(data)
+			switch task := data.(type) {
+
+			case StopWorkerTask:
+				logrus.Warn("StopWorkerTask!")
+				defer task.wg.Done()
+				return
+			default:
+				if m.config.Manager.ThreadRequests {
+					go m.handleTask(data)
+				} else {
+					m.handleTask(data)
+				}
 			}
 
 		}
