@@ -1,15 +1,15 @@
-# my-key-store
+# MyDataStore
 
-my-key-store is a leaderless distributed database designed for research and learning purposes, drawing inspiration from "Designing Data-Intensive Applications" by Martin Kleppmann. Key advantages include:
+MyDataStore is a leaderless distributed database designed for research and learning purposes, drawing inspiration from "Designing Data-Intensive Applications" by Martin Kleppmann. Key advantages include:
 
 - **High Availability and Fault Tolerance**: By avoiding a single point of failure and distributing data across multiple nodes, the system remains operational even if some nodes fail.
 - **Scalability**: New nodes can be seamlessly integrated to accommodate increased data and traffic demands.
 - **Consistent Performance**: The absence of a central leader node eliminates potential bottlenecks, ensuring steady system performance.
-- **Ideal for Critical Applications**: The combination of availability, fault tolerance, and scalability makes my-key-store well-suited for applications with stringent reliability requirements.
+- **Ideal for Critical Applications**: The combination of availability, fault tolerance, and scalability makes MyDataStore well-suited for applications with stringent reliability requirements.
 
 ## Core Concepts
 
-my-key-store implements several core concepts from the book "Designing Data-Intensive Applications". These include:
+MyDataStore implements several core concepts from the book "Designing Data-Intensive Applications". These include:
 
 1. **Gossip Protocol for Node Discovery**:
 
@@ -59,7 +59,7 @@ my-key-store implements several core concepts from the book "Designing Data-Inte
 
 ### Prerequisites
 
-- Bazel: Bazel is a build tool that is required for building and testing my-key-store. You can install Bazel following the instructions on the [official Bazel website](https://bazel.build/).
+- Bazel: Bazel is a build tool that is required for building and testing MyDataStore. You can install Bazel following the instructions on the [official Bazel website](https://bazel.build/).
 
 ### Dev Script
 
