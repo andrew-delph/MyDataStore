@@ -2,39 +2,35 @@
 
 MyDataStore is a leaderless distributed database designed for research and learning purposes, drawing inspiration from "Designing Data-Intensive Applications" by Martin Kleppmann. Key advantages include:
 
-- **High Availability and Fault Tolerance**: By avoiding a single point of failure and distributing data across multiple nodes, the system remains operational even if some nodes fail.
-- **Scalability**: New nodes can be seamlessly integrated to accommodate increased data and traffic demands.
-- **Consistent Performance**: The absence of a central leader node eliminates potential bottlenecks, ensuring steady system performance.
-- **Ideal for Critical Applications**: The combination of availability, fault tolerance, and scalability makes MyDataStore well-suited for applications with stringent reliability requirements.
+- **High Availability and Fault Tolerance**: The absence of a central leader node eliminates single point of failure and distributing data across multiple nodes, the system remains operational even if some nodes fail.
+- **Leaderless Consensus**: Implmentation of the raft consensus algorithm is used to agree upon cluster organization.
+- **Variable Consistency**: Read and write quorums are configurable, ensuring consistency, fast reads, or faster writes."
 
 ## Core Concepts
 
 MyDataStore implements several core concepts from the book "Designing Data-Intensive Applications". These include:
 
-1. **Gossip Protocol for Node Discovery**:
+1. **Node Discovery**:
 
-   - It is used for service discovery, helping nodes in the system to find each other.
-   - It can determine when a node joins or leaves the cluster, updating the system's state accordingly.
+   - Node discovery is implemented using a gossip protocol, which enables efficient and scalable membership validation and communication.
 
-2. **Hashring for Key Determination**:
+2. **Consistent Hashing**:
 
-   - A hashring technique is used to evenly distribute big data loads over many servers with a randomly generated key.
-   - This consistently determines how to assign a piece of data to a specific processor.
-   - The hashring assigns partitions to each node.
-   - Given a key, the hashring can determine the partitions that own it.
+   - A hashring technique is used to evenly distribute data into partitions and distribute partitions across the cluster.
+   - The cluster leader determins the member list, the following members replciate the hashring ensuring a consistent cluster hashing.
 
-3. **Read/Write Quorums and Read Repairs**:
+3. **Quorums and Read Repairs**:
 
    - The system uses a read quorum and a write quorum for operations.
-   - A read quorum is the minimum number of nodes that must participate in a read operation.
-   - A write quorum is the minimum number of nodes that must participate in a write operation.
-   - Read repairs are used to maintain consistency in the system by actively comparing data from different replicas and triggering repairs when inconsistencies are detected.
+   - - here N is number of replciated partitions, W is minimum nodes used to write, and R is minimum nodes used to read.
+   - - R + W > N is used to ensure consistency and no stale reads.
+   - - Lower W can be used for faster writes.
+   - - Lower R can be used for faster reads.
+   - Read repairs are used to write to nodes which return stale data in a read operation.
 
 4. **Timestamps for Conflict Resolution**:
 
    - Timestamp-based conflict resolution is used to handle conflicts in the system.
-   - This method requires time synchronization across the system.
-   - It ensures that the most recent version of any document will always win in case of conflicts.
 
 5. **Using Raft for Consensus**:
 
@@ -42,7 +38,7 @@ MyDataStore implements several core concepts from the book "Designing Data-Inten
    - The elected leader maintains a log that is verified by the consensus algorithm to ensure data integrity and consistency.
    - In this project, the log is used to keep track of the members currently in the cluster and the current epoch of the cluster, providing a reliable source of truth for the system state.
 
-6. **Data Replication and Verification**:
+6. **Periodic Partition Verification and Replication**:
 
    - Data replication and verification is a process that ensures data consistency and integrity across the distributed system.
    - It involves synchronizing partitions with epochs.
@@ -50,10 +46,22 @@ MyDataStore implements several core concepts from the book "Designing Data-Inten
    - It compares these trees across nodes.
    - It resolves inconsistencies by requesting specific buckets.
    - It updates data with bucket transfers.
+   - The raft leader periodically increments a varaible called Epoch.
+   - Epochs are stored with the value write.
+   - Upon Epoch increment, each node creates a merkle tree for (Partition, Epoch, Data) then starts comparing the tree hash to the hash of other members.
+   - Additional details:
+   - - Merkle trees organize data into hashed buckets on key.
+   - - Validation nodes will construct a remote tree with limied data of tree hash.
+   - - - This is done so that all data does not need to be checked otherwise the process is redudant and takes a long time.
+   - - BFS is used on local and remote tree to find buckets which are not in sync.
+   - - A node can then request the out of sync bucket range instead of the whole partition. This speeds up the process of partition replication if out of sync. For a given partition and epoch, of a 1/64 values will need to be sync in this range.
 
-7. **Data Storage Engine**:
+7. **Data Storage Engine and Indexing**:
    - The system works with Badger and LevelDB as its data storage engines.
    - Both Badger and LevelDB are Log-Structured Merge-tree (LSM tree) based data structures, which provide high write throughput.
+   - Indexes:
+   - - (epoch, parition, key)
+   - - (key)
 
 ## Development
 
