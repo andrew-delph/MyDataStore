@@ -41,11 +41,6 @@ MyDataStore implements several core concepts from the book "Designing Data-Inten
 6. **Periodic Partition Verification and Replication**:
 
    - Data replication and verification is a process that ensures data consistency and integrity across the distributed system.
-   - It involves synchronizing partitions with epochs.
-   - It creates Merkle trees for each owned partition.
-   - It compares these trees across nodes.
-   - It resolves inconsistencies by requesting specific buckets.
-   - It updates data with bucket transfers.
    - The raft leader periodically increments a varaible called Epoch.
    - Epochs are stored with the value write.
    - Upon Epoch increment, each node creates a merkle tree for (Partition, Epoch, Data) then starts comparing the tree hash to the hash of other members.
@@ -57,11 +52,15 @@ MyDataStore implements several core concepts from the book "Designing Data-Inten
    - - A node can then request the out of sync bucket range instead of the whole partition. This speeds up the process of partition replication if out of sync. For a given partition and epoch, of a 1/64 values will need to be sync in this range.
 
 7. **Data Storage Engine and Indexing**:
+
    - The system works with Badger and LevelDB as its data storage engines.
    - Both Badger and LevelDB are Log-Structured Merge-tree (LSM tree) based data structures, which provide high write throughput.
    - Indexes:
    - - (epoch, parition, key)
    - - (key)
+
+8. **Kubernetes operator**
+   - Assists autoscaling.
 
 ## Development
 
